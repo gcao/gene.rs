@@ -1,8 +1,11 @@
 extern crate gene;
 extern crate ordered_float;
 
+use std::collections::BTreeMap;
+
 use gene::parser::{Error, Parser};
 use gene::Value;
+use gene::types::Gene;
 
 #[test]
 fn test_read_empty() {
@@ -529,4 +532,15 @@ fn test_comments() {
     assert_eq!(parser.read(), Some(Ok(Value::Vector(Vec::new()))));
     assert_eq!(parser.read(), Some(Ok(Value::Map(BTreeMap::new()))));
     assert_eq!(parser.read(), None);
+}
+
+#[test]
+fn test_genes() {
+    let mut parser = Parser::new(
+        "() (1 2 3) (true, false, nil)
+                                  (((\"foo\" \"bar\")))",
+    );
+
+    assert_eq!(parser.read(), Some(Ok(Value::Gene(Gene::new(Value::Nil, None, None)))));
+    // assert_eq!(parser.read(), Some(Ok(Value::Gene(Gene::new(Value::Nil, Some(BTreeMap::new()), Some(Vec::new()))))));
 }

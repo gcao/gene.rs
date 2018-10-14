@@ -5,6 +5,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use ordered_float::OrderedFloat;
 
 pub mod parser;
+pub mod types;
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Value {
@@ -21,6 +22,7 @@ pub enum Value {
     Map(BTreeMap<Value, Value>),
     Set(BTreeSet<Value>),
     Tagged(String, Box<Value>),
+    Gene(types::Gene),
 }
 
 impl From<bool> for Value {

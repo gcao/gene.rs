@@ -69,6 +69,7 @@ fn from_map() {
     n.insert(Value::Integer(1), Value::Integer(2));
     assert_eq!(Value::from(m), Value::Map(n));
 }
+
 #[test]
 fn from_set() {
     let mut m = BTreeSet::new();

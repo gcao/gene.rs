@@ -4,6 +4,7 @@ use std::str::CharIndices;
 use ordered_float::OrderedFloat;
 
 use Value;
+use types::Gene;
 
 pub struct Parser<'a> {
     str: &'a str,
