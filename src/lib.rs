@@ -1,6 +1,6 @@
 extern crate ordered_float;
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap};
 
 use ordered_float::OrderedFloat;
 
@@ -16,11 +16,8 @@ pub enum Value {
     Symbol(String),
     Integer(i64),
     Float(OrderedFloat<f64>),
-    List(Vec<Value>),
     Vector(Vec<Value>),
     Map(BTreeMap<Value, Value>),
-    Set(BTreeSet<Value>),
-    Tagged(String, Box<Value>),
     Gene(types::Gene),
 }
 
@@ -85,18 +82,5 @@ where
             map.insert(Value::from(k), Value::from(v));
         }
         Value::Map(map)
-    }
-}
-
-impl<A> From<BTreeSet<A>> for Value
-where
-    Value: From<A>,
-{
-    fn from(s: BTreeSet<A>) -> Self {
-        let mut set = BTreeSet::new();
-        s.into_iter().for_each(|a| {
-            set.insert(Value::from(a));
-        });
-        Value::Set(set)
     }
 }

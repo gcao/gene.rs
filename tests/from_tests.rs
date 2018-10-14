@@ -4,7 +4,7 @@ extern crate ordered_float;
 use gene::parser::{Error, Parser};
 use gene::Value;
 use ordered_float::OrderedFloat;
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap};
 
 #[test]
 fn from_bool() {
@@ -68,16 +68,4 @@ fn from_map() {
     let mut n = BTreeMap::new();
     n.insert(Value::Integer(1), Value::Integer(2));
     assert_eq!(Value::from(m), Value::Map(n));
-}
-
-#[test]
-fn from_set() {
-    let mut m = BTreeSet::new();
-    m.insert(1);
-    m.insert(2);
-
-    let mut n = BTreeSet::new();
-    n.insert(Value::Integer(1));
-    n.insert(Value::Integer(2));
-    assert_eq!(Value::from(m), Value::Set(n));
 }

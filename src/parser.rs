@@ -150,7 +150,7 @@ impl<'a> Parser<'a> {
                     if self.peek() == Some(close) {
                         self.chars.next();
                         return Ok(match open {
-                            '(' => Value::List(items),
+                            // '(' => Value::Gene(items),
                             '[' => Value::Vector(items),
                             '{' => {
                                 let mut map = BTreeMap::new();
@@ -188,55 +188,6 @@ impl<'a> Parser<'a> {
                             })
                         }
                     }
-                }
-            }
-            (start, '#') => {
-                self.chars.next();
-                match self.chars.next() {
-                    Some((_, open @ '{')) => {
-                        let close = '}';
-                        let mut items = vec![];
-                        loop {
-                            self.whitespace();
-
-                            if self.peek() == Some(close) {
-                                self.chars.next();
-                                return Ok(Value::Set(items.into_iter().collect()));
-                            }
-
-                            match self.read() {
-                                Some(Ok(value)) => items.push(value),
-                                Some(Err(err)) => return Err(err),
-                                None => {
-                                    return Err(Error {
-                                        lo: start,
-                                        hi: self.str.len(),
-                                        message: format!("unclosed `#{}`", open),
-                                    })
-                                }
-                            }
-                        }
-                    }
-                    Some((start, ch)) if is_symbol_head(ch) => {
-                        self.chars.next();
-                        let end = self.advance_while(is_symbol_tail);
-
-                        let tag = &self.str[start..end];
-                        let value = self.read();
-
-                        match value {
-                            Some(Ok(v)) => return Ok(Value::Tagged(tag.into(), Box::new(v))),
-                            Some(e) => return e,
-                            None => {
-                                return Err(Error {
-                                    lo: start,
-                                    hi: self.str.len(),
-                                    message: "malformed tagged value".into(),
-                                })
-                            }
-                        }
-                    }
-                    _ => unimplemented!(),
                 }
             }
             (start, ch) if is_symbol_head(ch) => {
@@ -294,28 +245,20 @@ impl<'a> Parser<'a> {
 
 fn is_symbol_head(ch: char) -> bool {
     match ch {
-        'a'...'z'
-        | 'A'...'Z'
-        | '.'
-        | '*'
-        | '+'
-        | '!'
-        | '-'
-        | '_'
-        | '?'
-        | '$'
-        | '%'
-        | '&'
-        | '='
-        | '<'
-        | '>' => true,
-        _ => false,
+        ' ' |
+        '"' |
+        '\'' |
+        '(' |
+        ')' |
+        '[' |
+        ']' |
+        '{' |
+        '}' |
+        ',' => false,
+        _   => true,
     }
 }
 
 fn is_symbol_tail(ch: char) -> bool {
-    is_symbol_head(ch) || match ch {
-        '0'...'9' | ':' | '#' | '/' => true,
-        _ => false,
-    }
+    is_symbol_head(ch)
 }
