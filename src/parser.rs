@@ -134,11 +134,6 @@ impl<'a> Parser<'a> {
                     }
                 }
             }
-            (start, ':') => {
-                self.chars.next();
-                let end = self.advance_while(is_symbol_tail);
-                Ok(Value::Keyword(self.str[start + 1..end].into()))
-            }
             (start, open @ '(') | (start, open @ '[') | (start, open @ '{') => {
                 let close = match open {
                     '(' => ')',

@@ -14,7 +14,6 @@ pub enum Value {
     String(String),
     Char(char),
     Symbol(String),
-    Keyword(String),
     Integer(i64),
     Float(OrderedFloat<f64>),
     List(Vec<Value>),

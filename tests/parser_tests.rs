@@ -143,32 +143,6 @@ namespaced/symbol
 }
 
 #[test]
-fn test_read_keywords() {
-    let mut parser = Parser::new(
-        r#"
-:foo
-:+foo
-:-foo
-:.foo
-:.*+!-_?$%&=<>:#123
-:+
-:-
-"#,
-    );
-    assert_eq!(parser.read(), Some(Ok(Value::Keyword("foo".into()))));
-    assert_eq!(parser.read(), Some(Ok(Value::Keyword("+foo".into()))));
-    assert_eq!(parser.read(), Some(Ok(Value::Keyword("-foo".into()))));
-    assert_eq!(parser.read(), Some(Ok(Value::Keyword(".foo".into()))));
-    assert_eq!(
-        parser.read(),
-        Some(Ok(Value::Keyword(".*+!-_?$%&=<>:#123".into())))
-    );
-    assert_eq!(parser.read(), Some(Ok(Value::Keyword("+".into()))));
-    assert_eq!(parser.read(), Some(Ok(Value::Keyword("-".into()))));
-    assert_eq!(parser.read(), None);
-}
-
-#[test]
 fn test_read_booleans_and_nil() {
     let mut parser = Parser::new("true false nil");
     assert_eq!(parser.read(), Some(Ok(Value::Boolean(true))));
@@ -464,7 +438,6 @@ fn test_tagged_values() {
     let mut parser = Parser::new(
         r#"
 #color (255, 31, 191)
-#foo/bar :baz
 #nested #tags "works"
 #noclose
 "#,
@@ -478,13 +451,6 @@ fn test_tagged_values() {
                 Value::Integer(31),
                 Value::Integer(191),
             ]))
-        )))
-    );
-    assert_eq!(
-        parser.read(),
-        Some(Ok(Value::Tagged(
-            "foo/bar".into(),
-            Box::new(Value::Keyword("baz".into()))
         )))
     );
     assert_eq!(
