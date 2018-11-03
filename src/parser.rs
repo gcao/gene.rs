@@ -9,6 +9,7 @@ use types::Gene;
 pub struct Parser<'a> {
     str: &'a str,
     chars: CharIndices<'a>,
+
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -17,6 +18,11 @@ pub struct Error {
     pub hi: usize,
     pub message: String,
 }
+
+// pub enum Parsed {
+//     Unparsed,
+//     Value(Value)
+// }
 
 impl<'a> Parser<'a> {
     pub fn new(str: &'a str) -> Parser<'a> {
@@ -207,6 +213,17 @@ impl<'a> Parser<'a> {
             _ => unimplemented!(),
         })
     }
+
+    // fn read_string(&mut self, c: char) -> Parsed {
+    //     match c {
+    //         '"' => {
+    //             return Parsed::Value(Value::String(r"".to_string()))
+    //         }
+    //         _ => {
+    //             return Parsed::Unparsed
+    //         }
+    //     }
+    // }
 
     fn peek(&self) -> Option<char> {
         self.chars.clone().next().map(|(_, ch)| ch)

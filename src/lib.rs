@@ -7,6 +7,13 @@ use ordered_float::OrderedFloat;
 pub mod parser;
 pub mod types;
 
+use types::Gene;
+
+pub struct Pair {
+    key: String,
+    val: Value
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Value {
     Nil,
@@ -14,6 +21,9 @@ pub enum Value {
     String(String),
     Char(char),
     Symbol(String),
+    Key(String), // ^a
+    KeyTrue(String), // ^^a
+    KeyFalse(String), // ^!a
     Integer(i64),
     Float(OrderedFloat<f64>),
     Vector(Vec<Value>),
@@ -82,5 +92,12 @@ where
             map.insert(Value::from(k), Value::from(v));
         }
         Value::Map(map)
+    }
+}
+
+impl From<Gene> for Value
+{
+    fn from(g: Gene) -> Self {
+        Value::Gene(g)
     }
 }

@@ -1,0 +1,22 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug",
+      "type": "lldb",
+      "request": "launch",
+      "program": "${workspaceRoot}/target/debug/gene",
+      "args": [],
+      "cwd": "${workspaceRoot}",
+    },
+    {
+      "name": "Debug-LLDB-Lib",
+      "type": "lldb",
+      "request": "launch",
+      "preLaunchTask": "rust lib debug copier",
+      "program": "${workspaceRoot}/target/debug/gene",
+      "args": [],
+      "cwd": "${workspaceRoot}",
+    }
+  ]
+}

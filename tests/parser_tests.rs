@@ -221,8 +221,7 @@ fn test_read_maps() {
     use std::collections::BTreeMap;
 
     let mut parser = Parser::new(
-        "{} {1 2} {true, false}
-                                  {{\"foo\" \"bar\"} \"baz\"}",
+        "{} {^a 1} {^a 1 ^b 2} {^^a} {^!a} {^^a ^b 1}",
     );
 
     assert_eq!(parser.read(), Some(Ok(Value::Map(BTreeMap::new()))));
@@ -231,32 +230,7 @@ fn test_read_maps() {
         parser.read(),
         Some(Ok(Value::Map({
             let mut map = BTreeMap::new();
-            map.insert(Value::Integer(1), Value::Integer(2));
-            map
-        })))
-    );
-
-    assert_eq!(
-        parser.read(),
-        Some(Ok(Value::Map({
-            let mut map = BTreeMap::new();
-            map.insert(Value::Boolean(true), Value::Boolean(false));
-            map
-        })))
-    );
-
-    assert_eq!(
-        parser.read(),
-        Some(Ok(Value::Map({
-            let mut map = BTreeMap::new();
-            map.insert(
-                Value::Map({
-                    let mut map = BTreeMap::new();
-                    map.insert(Value::String("foo".into()), Value::String("bar".into()));
-                    map
-                }),
-                Value::String("baz".into()),
-            );
+            map.insert(Value::String("a".into()), Value::Integer(1));
             map
         })))
     );
