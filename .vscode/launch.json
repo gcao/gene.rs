@@ -10,6 +10,7 @@
       "cwd": "${workspaceRoot}",
     },
     {
+      // https://github.com/vadimcn/vscode-lldb/issues/35#issuecomment-380634734
       "name": "Debug-LLDB-Lib",
       "type": "lldb",
       "request": "launch",

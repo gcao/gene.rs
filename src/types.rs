@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use Value;
+use super::Value;
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Gene {

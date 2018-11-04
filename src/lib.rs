@@ -7,7 +7,7 @@ use ordered_float::OrderedFloat;
 pub mod parser;
 pub mod types;
 
-use types::Gene;
+use self::types::Gene;
 
 pub struct Pair {
     key: String,
@@ -16,7 +16,7 @@ pub struct Pair {
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Value {
-    Nil,
+    Null,
     Boolean(bool),
     String(String),
     Char(char),

@@ -72,6 +72,11 @@ fn test_read_chars() {
 }
 
 #[test]
+fn test_read_words() {
+    assert_eq!(Parser::new("ab").read(), Some(Ok("ab".into())));
+}
+
+#[test]
 fn test_read_strings() {
     let mut parser = Parser::new(
         r#"
@@ -143,11 +148,11 @@ namespaced/symbol
 }
 
 #[test]
-fn test_read_booleans_and_nil() {
-    let mut parser = Parser::new("true false nil");
+fn test_read_booleans_and_null() {
+    let mut parser = Parser::new("true false null");
     assert_eq!(parser.read(), Some(Ok(Value::Boolean(true))));
     assert_eq!(parser.read(), Some(Ok(Value::Boolean(false))));
-    assert_eq!(parser.read(), Some(Ok(Value::Nil)));
+    assert_eq!(parser.read(), Some(Ok(Value::Null)));
     assert_eq!(parser.read(), None);
 }
 
@@ -162,7 +167,7 @@ fn test_read_commas() {
 #[test]
 fn test_read_vectors() {
     let mut parser = Parser::new(
-        "[] [1 2 3] [true, false, nil]
+        "[] [1 2 3] [true, false, null]
                                   [[[\"foo\" \"bar\"]]]",
     );
 
@@ -182,7 +187,7 @@ fn test_read_vectors() {
         Some(Ok(Value::Vector(vec![
             Value::Boolean(true),
             Value::Boolean(false),
-            Value::Nil,
+            Value::Null,
         ])))
     );
 
@@ -304,10 +309,10 @@ fn test_comments() {
 #[test]
 fn test_genes() {
     let mut parser = Parser::new(
-        "() (1 2 3) (true, false, nil)
+        "() (1 2 3) (true, false, null)
                                   (((\"foo\" \"bar\")))",
     );
 
-    assert_eq!(parser.read(), Some(Ok(Value::Gene(Gene::new(Value::Nil, None, None)))));
-    // assert_eq!(parser.read(), Some(Ok(Value::Gene(Gene::new(Value::Nil, Some(BTreeMap::new()), Some(Vec::new()))))));
+    assert_eq!(parser.read(), Some(Ok(Value::Gene(Gene::new(Value::Null, None, None)))));
+    // assert_eq!(parser.read(), Some(Ok(Value::Gene(Gene::new(Value::Null, Some(BTreeMap::new()), Some(Vec::new()))))));
 }
