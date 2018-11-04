@@ -272,7 +272,7 @@ impl<'a> Parser<'a> {
 
     // Read word till whitespace or ,)]} or end of input
     pub fn read_word(&mut self, start: usize) -> Option<Result<String, Error>> {
-        let end = self.advance_while(|ch| ch.is_whitespace() || ch == ',');
+        let end = self.advance_while(|ch| !is_whitespace(ch));
         return Some(Ok(self.str[start..end].into()));
     }
 
@@ -294,7 +294,7 @@ impl<'a> Parser<'a> {
     fn whitespace(&mut self) {
         loop {
             // Skip whitespace.
-            self.advance_while(|ch| ch.is_whitespace() || ch == ',');
+            self.advance_while(is_whitespace);
             // Skip comment if present.
             if self.chars.clone().next().map_or(false, |(_, ch)| ch == ';') {
                 self.advance_while(|ch| ch != '\n');
@@ -331,6 +331,10 @@ impl<'a> Parser<'a> {
             None => return
         }
     }
+}
+
+fn is_whitespace(ch: char) -> bool {
+    return ch.is_whitespace() || ch == ',';
 }
 
 fn is_symbol_head(ch: char) -> bool {
