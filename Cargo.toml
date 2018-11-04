@@ -11,4 +11,3 @@ repository = "https://github.com/gcao/gene-rs"
 categories = ["parser-implementations"]
 
 [dependencies]
-ordered-float = "0.4.0"
