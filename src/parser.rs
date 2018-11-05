@@ -1,5 +1,7 @@
 use std::str::CharIndices;
 
+use ordered_float::OrderedFloat;
+
 use super::types::Value;
 
 pub struct Parser<'a> {
@@ -25,7 +27,8 @@ impl<'a> Parser<'a> {
     }
 
     pub fn read(&mut self) -> Option<Result<Value, Error>> {
-        self.next();
+        // Will stop after hitting first non-whitespace char
+        self.skip_whitespaces();
 
         if self.chr.is_none() {
             return Some(Ok(Value::Null));
@@ -35,6 +38,26 @@ impl<'a> Parser<'a> {
         if ch == '[' {
             let arr = vec![];
             return Some(Ok(Value::Array(arr)));
+
+        } else if ch == '"' {
+            let start = self.pos.unwrap() + 1;
+            self.advance_while(|ch| ch != '"');
+            let end = self.pos.unwrap();
+            return Some(Ok(Value::String(self.str[start..end].into())));
+
+        } else if ch.is_digit(10) {
+            let start = self.pos.unwrap();
+            self.advance_while(|ch| !is_whitespace(ch));
+            let end = self.pos.unwrap() + 1;
+            let s = &self.str[start..end];
+            println!("here: {}", s);
+            if s.contains('.') {
+                let number = s.parse::<f64>().unwrap();
+                return Some(Ok(Value::Float(OrderedFloat(number))));
+            } else {
+                let number = s.parse::<i64>().unwrap();
+                return Some(Ok(Value::Integer(number)));
+            }
 
         } else if is_symbol_head(ch) {
             let mut s = String::from("");
@@ -68,11 +91,9 @@ impl<'a> Parser<'a> {
 
     fn advance_while<F: FnMut(char) -> bool>(&mut self, mut f: F) -> usize {
         loop {
-            match self.chars.clone().next() {
+            match self.next() {
                 Some((pos, ch)) => {
-                    if f(ch) {
-                        self.next();
-                    } else {
+                    if !f(ch) {
                         return pos;
                     }
                 }
@@ -91,6 +112,10 @@ impl<'a> Parser<'a> {
             None => return None,
         }
     }
+
+    fn skip_whitespaces(&mut self) {
+        self.advance_while(is_whitespace);
+    }
 }
 
 pub fn is_whitespace(ch: char) -> bool {
@@ -102,7 +127,7 @@ fn is_symbol_head(ch: char) -> bool {
         return false;
     }
 
-    if ('0'..'9').contains(&ch) {
+    if ch.is_digit(10) {
         return false;
     }
 

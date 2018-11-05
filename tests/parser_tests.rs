@@ -9,6 +9,11 @@ fn test_read_empty_input() {
 }
 
 #[test]
+fn test_read_number() {
+    assert_eq!(Parser::new("1").read(), Some(Ok(Value::Integer(1))));
+}
+
+#[test]
 fn test_read_word() {
     assert_eq!(Parser::new("ab").read_word(), Some(Ok("ab".into())));
     assert_eq!(Parser::new("ab cd").read_word(), Some(Ok("ab".into())));
@@ -18,9 +23,14 @@ fn test_read_word() {
 #[test]
 fn test_read_keywords() {
     assert_eq!(Parser::new("true").read(), Some(Ok(Value::Boolean(true))));
-    assert_eq!(Parser::new("true false").read(), Some(Ok(Value::Boolean(true))));
+    assert_eq!(Parser::new(" true ").read(), Some(Ok(Value::Boolean(true))));
     assert_eq!(Parser::new("false").read(), Some(Ok(Value::Boolean(false))));
     assert_eq!(Parser::new("null").read(), Some(Ok(Value::Null)));
+}
+
+#[test]
+fn test_read_string() {
+    assert_eq!(Parser::new("\"ab\"").read(), Some(Ok(Value::String("ab".into()))));
 }
 
 #[test]

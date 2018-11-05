@@ -2,5 +2,5 @@
 #   watch(%r{file/path}) { `command(s)` }
 #
 guard :shell do
-  watch(/(src|tests)\/.*/) { `cargo test` }
+  watch(/Cargo\.toml|(src|tests)\/.*/) { `cargo test` }
 end
