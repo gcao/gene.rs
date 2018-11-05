@@ -5,8 +5,9 @@
 extern crate gene;
 
 use gene::parser::Parser;
+use gene::types::Value;
 
 #[test]
-fn test_read_word() {
-    assert_eq!(Parser::new("ab").read_word(), Some(Ok("ab".into())));
+fn test_read_keywords() {
+    assert_eq!(Parser::new("true").read(), Some(Ok(Value::Boolean(true))));
 }

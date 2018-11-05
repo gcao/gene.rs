@@ -1,5 +1,7 @@
 use std::str::CharIndices;
 
+use super::types::Value;
+
 pub struct Parser<'a> {
     str: &'a str,
     chars: CharIndices<'a>,
@@ -9,6 +11,7 @@ pub struct Parser<'a> {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Error {
+    pub message: String,
 }
 
 impl<'a> Parser<'a> {
@@ -18,6 +21,29 @@ impl<'a> Parser<'a> {
             chars: str.char_indices(),
             pos: None,
             chr: None,
+        }
+    }
+
+    pub fn read(&mut self) -> Option<Result<Value, Error>> {
+        self.next();
+
+        // TODO: check end of input
+
+        let ch = self.chr.unwrap();
+        if is_symbol_head(ch) {
+            let mut s = String::from("");
+            let word = self.read_word();
+            if !word.is_none() {
+                s.push_str(&word.unwrap().unwrap());
+            }
+
+            if s == "true" {
+                return Some(Ok(Value::Boolean(true)));
+            } else {
+                return Some(Ok(Value::Todo));
+            }
+        } else {
+            return None;
         }
     }
 
@@ -61,4 +87,28 @@ impl<'a> Parser<'a> {
 
 pub fn is_whitespace(ch: char) -> bool {
     return ch.is_whitespace() || ch == ',';
+}
+
+fn is_symbol_head(ch: char) -> bool {
+    if is_whitespace(ch) {
+        return false;
+    }
+
+    if ('0'..'9').contains(&ch) {
+        return false;
+    }
+
+    match ch {
+        '-' |
+        '^' |
+        '"' |
+        '\'' |
+        '(' |
+        ')' |
+        '[' |
+        ']' |
+        '{' |
+        '}' => false,
+        _   => true,
+    }
 }
