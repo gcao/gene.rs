@@ -45,36 +45,52 @@ impl<'a> Parser<'a> {
             let end = self.pos.unwrap();
             return Some(Ok(Value::String(self.str[start..end].into())));
 
-        } else if ch.is_digit(10) {
-            let start = self.pos.unwrap();
-            self.advance_while(|ch| !is_whitespace(ch));
-            let end = self.pos.unwrap() + 1;
-            let s = &self.str[start..end];
-            println!("here: {}", s);
-            if s.contains('.') {
-                let number = s.parse::<f64>().unwrap();
-                return Some(Ok(Value::Float(OrderedFloat(number))));
+        } else if ch == '+' || ch == '-' {
+            let next = self.peek();
+            if !next.is_none() && next.unwrap().is_digit(10) {
+                return self.read_number();
             } else {
-                let number = s.parse::<i64>().unwrap();
-                return Some(Ok(Value::Integer(number)));
+                return self.read_keyword_or_symbol();
             }
+
+        } else if ch.is_digit(10) {
+            return self.read_number();
 
         } else if is_symbol_head(ch) {
-            let mut s = String::from("");
-            let word = self.read_word();
-            if !word.is_none() {
-                s.push_str(&word.unwrap().unwrap());
-            }
-
-            match s.as_str() {
-                "null"  => Some(Ok(Value::Null)),
-                "true"  => Some(Ok(Value::Boolean(true))),
-                "false" => Some(Ok(Value::Boolean(false))),
-                _       => Some(Ok(Value::Symbol(s)))
-            }
+            return self.read_keyword_or_symbol();
 
         } else {
             return None;
+        }
+    }
+
+    pub fn read_number(&mut self) -> Option<Result<Value, Error>> {
+        let start = self.pos.unwrap();
+        self.advance_while(|ch| !is_whitespace(ch));
+        let end = self.pos.unwrap() + 1;
+        let s = &self.str[start..end];
+        println!("here: {}", s);
+        if s.contains('.') {
+            let number = s.parse::<f64>().unwrap();
+            return Some(Ok(Value::Float(OrderedFloat(number))));
+        } else {
+            let number = s.parse::<i64>().unwrap();
+            return Some(Ok(Value::Integer(number)));
+        }
+    }
+
+    pub fn read_keyword_or_symbol(&mut self) -> Option<Result<Value, Error>> {
+        let mut s = String::from("");
+        let word = self.read_word();
+        if !word.is_none() {
+            s.push_str(&word.unwrap().unwrap());
+        }
+
+        match s.as_str() {
+            "null"  => Some(Ok(Value::Null)),
+            "true"  => Some(Ok(Value::Boolean(true))),
+            "false" => Some(Ok(Value::Boolean(false))),
+            _       => Some(Ok(Value::Symbol(s)))
         }
     }
 
@@ -113,6 +129,10 @@ impl<'a> Parser<'a> {
         }
     }
 
+    fn peek(&self) -> Option<char> {
+        self.chars.clone().next().map(|(_, ch)| ch)
+    }
+
     fn skip_whitespaces(&mut self) {
         self.advance_while(is_whitespace);
     }
@@ -122,7 +142,7 @@ pub fn is_whitespace(ch: char) -> bool {
     return ch.is_whitespace() || ch == ',';
 }
 
-fn is_symbol_head(ch: char) -> bool {
+pub fn is_symbol_head(ch: char) -> bool {
     if is_whitespace(ch) {
         return false;
     }

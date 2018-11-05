@@ -1,5 +1,7 @@
 extern crate gene;
 
+use ordered_float::OrderedFloat;
+
 use gene::parser::Parser;
 use gene::types::Value;
 
@@ -11,6 +13,11 @@ fn test_read_empty_input() {
 #[test]
 fn test_read_number() {
     assert_eq!(Parser::new("1").read(), Some(Ok(Value::Integer(1))));
+    assert_eq!(Parser::new("+1").read(), Some(Ok(Value::Integer(1))));
+    assert_eq!(Parser::new("-1").read(), Some(Ok(Value::Integer(-1))));
+
+    assert_eq!(Parser::new("1.1").read(), Some(Ok(Value::Float(OrderedFloat(1.1)))));
+    assert_eq!(Parser::new("-1.1").read(), Some(Ok(Value::Float(OrderedFloat(-1.1)))));
 }
 
 #[test]

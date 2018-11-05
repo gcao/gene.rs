@@ -15,7 +15,7 @@
         "-f",
         {
           // ls -1t   shows one file per line, sort by time
-          "value": "$(ls -1t $(cargo test --no-run --message-format=json temp_tests | jq -r 'select(.profile.test == true) | .filenames[]') | head -n1)",
+          "value": "$(ls -1t target/debug/temp_tests* | grep -v '\\.d' | head -n1)",
           "quoting": "weak"
         },
         "${workspaceRoot}/target/debug/gene",
