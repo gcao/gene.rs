@@ -37,10 +37,11 @@ impl<'a> Parser<'a> {
                 s.push_str(&word.unwrap().unwrap());
             }
 
-            if s == "true" {
-                return Some(Ok(Value::Boolean(true)));
-            } else {
-                return Some(Ok(Value::Todo));
+            match s.as_str() {
+                "null"  => Some(Ok(Value::Null)),
+                "true"  => Some(Ok(Value::Boolean(true))),
+                "false" => Some(Ok(Value::Boolean(false))),
+                _       => Some(Ok(Value::Symbol(s)))
             }
         } else {
             return None;

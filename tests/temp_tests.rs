@@ -8,6 +8,6 @@ use gene::parser::Parser;
 use gene::types::Value;
 
 #[test]
-fn test_read_keywords() {
-    assert_eq!(Parser::new("true").read(), Some(Ok(Value::Boolean(true))));
+fn test_read_symbols() {
+    assert_eq!(Parser::new("a").read(), Some(Ok(Value::Symbol("a".into()))));
 }
