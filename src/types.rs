@@ -4,4 +4,5 @@ pub enum Value {
     Null,
     Boolean(bool),
     Symbol(String),
+    Array(Vec<Value>),
 }

@@ -27,10 +27,16 @@ impl<'a> Parser<'a> {
     pub fn read(&mut self) -> Option<Result<Value, Error>> {
         self.next();
 
-        // TODO: check end of input
+        if self.chr.is_none() {
+            return Some(Ok(Value::Null));
+        }
 
         let ch = self.chr.unwrap();
-        if is_symbol_head(ch) {
+        if ch == '[' {
+            let arr = vec![];
+            return Some(Ok(Value::Array(arr)));
+
+        } else if is_symbol_head(ch) {
             let mut s = String::from("");
             let word = self.read_word();
             if !word.is_none() {
@@ -43,6 +49,7 @@ impl<'a> Parser<'a> {
                 "false" => Some(Ok(Value::Boolean(false))),
                 _       => Some(Ok(Value::Symbol(s)))
             }
+
         } else {
             return None;
         }
