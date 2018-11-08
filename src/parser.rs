@@ -4,6 +4,7 @@ use ordered_float::OrderedFloat;
 use std::collections::{BTreeMap};
 
 use super::types::Value;
+use super::types::Gene;
 use super::types::Pair;
 
 pub struct Parser<'a> {
@@ -45,7 +46,32 @@ impl<'a> Parser<'a> {
         }
 
         let ch = self.chr.unwrap();
-        if ch == '[' {
+        if ch == '(' {
+            self.next();
+            let mut _type = Value::Null;
+            let mut properties = BTreeMap::<String, Box<Value>>::new();
+            let mut data = Vec::<Box<Value>>::new();
+            loop {
+                self.skip_whitespaces();
+
+                if self.chr.unwrap() == ')' {
+                    self.next();
+                    break;
+                } else {
+                    // TODO
+                    let result = self.read();
+                    if !result.is_none() {
+                        _type = result.unwrap().unwrap();
+                    }
+                }
+            }
+            return Some(Ok(Value::Gene(Gene {
+                _type: Box::new(_type),
+                properties: properties,
+                data: data,
+            })));
+
+        } else if ch == '[' {
             self.next();
             let mut arr: Vec<Value> = vec![];
             loop {
@@ -81,6 +107,7 @@ impl<'a> Parser<'a> {
                 }
             }
             return Some(Ok(Value::Map(map)));
+
         } else if ch == '"' {
             self.next();
             let start = self.pos.unwrap();

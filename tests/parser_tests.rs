@@ -82,3 +82,7 @@ fn test_read_map() {
         );
     }
 }
+
+#[test]
+fn test_read_gene() {
+}

@@ -13,6 +13,24 @@ pub enum Value {
     Symbol(String),
     Array(Vec<Value>),
     Map(BTreeMap<String, Value>),
+    Gene(Gene),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Gene {
+    pub _type: Box<Value>,
+    pub properties: BTreeMap<String, Box<Value>>,
+    pub data: Vec<Box<Value>>,
+}
+
+impl Gene {
+    pub fn new(_type: Value) -> Gene {
+        return Gene {
+            _type: Box::new(_type),
+            properties: BTreeMap::new(),
+            data: vec![],
+        }
+    }
 }
 
 pub struct Pair {
@@ -21,7 +39,7 @@ pub struct Pair {
 }
 
 impl Pair {
-    pub fn new(key: String, val: Value) ->Pair {
+    pub fn new(key: String, val: Value) -> Pair {
         return Pair {
             key: key,
             val: val,
