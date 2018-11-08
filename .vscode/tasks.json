@@ -15,7 +15,7 @@
         "-f",
         {
           // ls -1t   shows one file per line, sort by time
-          "value": "$(ls -1t target/debug/temp_tests* | grep -v '\\.d' | head -n1)",
+          "value": "$(cargo test --no-run temp_tests; ls -1t target/debug/temp_tests* | grep -v '\\.d' | head -n1)",
           "quoting": "weak"
         },
         "${workspaceRoot}/target/debug/gene",

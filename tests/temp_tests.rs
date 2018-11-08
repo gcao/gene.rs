@@ -11,8 +11,5 @@ use gene::parser::Parser;
 use gene::types::Value;
 
 #[test]
-fn test_read_array() {
-    // assert_eq!(Parser::new("[1]").read(),
-    //   Some(Ok(Value::Array(vec![Value::Integer(1)])))
-    // );
+fn test_this() {
 }

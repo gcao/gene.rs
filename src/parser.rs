@@ -36,13 +36,26 @@ impl<'a> Parser<'a> {
 
         let ch = self.chr.unwrap();
         if ch == '[' {
-            let arr = vec![];
+            self.next();
+            let mut arr: Vec<Value> = vec![];
+            loop {
+                self.skip_whitespaces();
+
+                if self.chr.unwrap() == ']' {
+                    break;
+                } else {
+                    let val = self.read();
+                    if !val.is_none() {
+                        arr.push(val.unwrap().unwrap());
+                    }
+                }
+            }
             return Some(Ok(Value::Array(arr)));
 
         } else if ch == '"' {
-            let start = self.pos.unwrap() + 1;
-            self.advance_while(|ch| ch != '"');
-            let end = self.pos.unwrap();
+            self.next();
+            let start = self.pos.unwrap();
+            let end = self.advance_while(|ch| ch != '"');
             return Some(Ok(Value::String(self.str[start..end].into())));
 
         } else if ch == '+' || ch == '-' {
@@ -66,8 +79,7 @@ impl<'a> Parser<'a> {
 
     pub fn read_number(&mut self) -> Option<Result<Value, Error>> {
         let start = self.pos.unwrap();
-        self.advance_while(|ch| !is_whitespace(ch));
-        let end = self.pos.unwrap() + 1;
+        let end = self.advance_while(|ch| !is_whitespace(ch) && !is_sep(ch));
         let s = &self.str[start..end];
         println!("here: {}", s);
         if s.contains('.') {
@@ -106,14 +118,22 @@ impl<'a> Parser<'a> {
     }
 
     fn advance_while<F: FnMut(char) -> bool>(&mut self, mut f: F) -> usize {
+        if self.str.len() == 0 {
+            return 0;
+        }
+
+        // Kick off the iterator
+        if self.pos.is_none() {
+            self.next();
+        }
+
         loop {
-            match self.next() {
-                Some((pos, ch)) => {
-                    if !f(ch) {
-                        return pos;
-                    }
+            if f(self.chr.unwrap()) {
+                if self.next().is_none() {
+                    return self.pos.unwrap() + 1;
                 }
-                None => return self.str.len(),
+            } else {
+                return self.pos.unwrap();
             }
         }
     }
@@ -136,10 +156,27 @@ impl<'a> Parser<'a> {
     fn skip_whitespaces(&mut self) {
         self.advance_while(is_whitespace);
     }
+
+    // fn reached_end(&mut self) -> bool {
+    //     return self.str.len() == 0 ||
+    //       (!self.pos.is_none() && self.pos.unwrap() == self.str.len() - 1);
+    // }
 }
 
 pub fn is_whitespace(ch: char) -> bool {
     return ch.is_whitespace() || ch == ',';
+}
+
+pub fn is_sep(ch: char) -> bool {
+    match ch {
+        '(' |
+        ')' |
+        '[' |
+        ']' |
+        '{' |
+        '}' => true,
+        _   => false,
+    }
 }
 
 pub fn is_symbol_head(ch: char) -> bool {
