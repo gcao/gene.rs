@@ -1,8 +1,10 @@
 use std::str::CharIndices;
 
 use ordered_float::OrderedFloat;
+use std::collections::{BTreeMap};
 
 use super::types::Value;
+use super::types::Pair;
 
 pub struct Parser<'a> {
     str: &'a str,
@@ -12,8 +14,16 @@ pub struct Parser<'a> {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct Error {
-    pub message: String,
+pub struct Error<'a> {
+    pub message: &'a str,
+}
+
+impl<'a> Error<'a> {
+    pub fn new(s: &'a str) -> Error<'a> {
+        Error {
+            message: s,
+        }
+    }
 }
 
 impl<'a> Parser<'a> {
@@ -42,6 +52,7 @@ impl<'a> Parser<'a> {
                 self.skip_whitespaces();
 
                 if self.chr.unwrap() == ']' {
+                    self.next();
                     break;
                 } else {
                     let val = self.read();
@@ -52,6 +63,24 @@ impl<'a> Parser<'a> {
             }
             return Some(Ok(Value::Array(arr)));
 
+        } else if ch == '{' {
+            self.next();
+            let mut map = BTreeMap::new();
+            loop {
+                self.skip_whitespaces();
+
+                if self.chr.unwrap() == '}' {
+                    self.next();
+                    break;
+                } else {
+                    let result = self.read_pair();
+                    if !result.is_none() {
+                        let pair = result.unwrap().unwrap();
+                        map.insert(pair.key, pair.val);
+                    }
+                }
+            }
+            return Some(Ok(Value::Map(map)));
         } else if ch == '"' {
             self.next();
             let start = self.pos.unwrap();
@@ -81,7 +110,6 @@ impl<'a> Parser<'a> {
         let start = self.pos.unwrap();
         let end = self.advance_while(|ch| !is_whitespace(ch) && !is_sep(ch));
         let s = &self.str[start..end];
-        println!("here: {}", s);
         if s.contains('.') {
             let number = s.parse::<f64>().unwrap();
             return Some(Ok(Value::Float(OrderedFloat(number))));
@@ -115,6 +143,17 @@ impl<'a> Parser<'a> {
             };
         let end = self.advance_while(|ch| !is_whitespace(ch));
         return Some(Ok(self.str[start..end].into()));
+    }
+
+    pub fn read_pair(&mut self) -> Option<Result<Pair, Error>> {
+        if self.chr.unwrap() != '^' {
+            return Some(Err(Error::new("Error")));
+        } else {
+            self.next();
+            let key = self.read_word().unwrap().unwrap();
+            let val = self.read().unwrap().unwrap();
+            return Some(Ok(Pair::new(key, val)));
+        }
     }
 
     fn advance_while<F: FnMut(char) -> bool>(&mut self, mut f: F) -> usize {

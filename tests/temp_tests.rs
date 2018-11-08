@@ -6,6 +6,7 @@ extern crate ordered_float;
 extern crate gene;
 
 use ordered_float::OrderedFloat;
+use std::collections::{BTreeMap};
 
 use gene::parser::Parser;
 use gene::types::Value;
