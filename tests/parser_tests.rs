@@ -26,6 +26,7 @@ fn test_read_word() {
     assert_eq!(Parser::new("ab").read_word(), Some(Ok("ab".into())));
     assert_eq!(Parser::new("ab cd").read_word(), Some(Ok("ab".into())));
     assert_eq!(Parser::new("ab,cd").read_word(), Some(Ok("ab".into())));
+    assert_eq!(Parser::new("你好").read_word(), Some(Ok("你好".into())));
 }
 
 #[test]
@@ -39,6 +40,7 @@ fn test_read_keywords() {
 #[test]
 fn test_read_string() {
     assert_eq!(Parser::new("\"ab\"").read(), Some(Ok(Value::String("ab".into()))));
+    assert_eq!(Parser::new("\"你好\"").read(), Some(Ok(Value::String("你好".into()))));
 }
 
 #[test]

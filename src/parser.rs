@@ -169,7 +169,7 @@ impl<'a> Parser<'a> {
         loop {
             if f(self.chr.unwrap()) {
                 if self.next().is_none() {
-                    return self.pos.unwrap() + 1;
+                    return self.str.len();
                 }
             } else {
                 return self.pos.unwrap();
