@@ -14,11 +14,4 @@ use gene::types::Gene;
 
 #[test]
 fn test_this() {
-    {
-        let result = Gene::new(Value::Integer(1));
-        assert_eq!(
-            Parser::new("(1)").read(),
-            Some(Ok(Value::Gene(result)))
-        );
-    }
 }

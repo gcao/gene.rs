@@ -5,6 +5,7 @@ use std::collections::{BTreeMap};
 
 use gene::parser::Parser;
 use gene::types::Value;
+use gene::types::Gene;
 
 #[test]
 fn test_read_empty_input() {
@@ -85,4 +86,28 @@ fn test_read_map() {
 
 #[test]
 fn test_read_gene() {
+    {
+        let result = Gene::new(Value::Integer(1));
+        assert_eq!(
+            Parser::new("(1)").read(),
+            Some(Ok(Value::Gene(result)))
+        );
+    }
+    {
+        let mut result = Gene::new(Value::Integer(1));
+        result.data.push(Box::new(Value::Array(Vec::new())));
+        assert_eq!(
+            Parser::new("(1 [])").read(),
+            Some(Ok(Value::Gene(result)))
+        );
+    }
+    {
+        let mut result = Gene::new(Value::Integer(1));
+        result.props.insert("key".into(), Box::new(Value::Integer(123)));
+        result.data.push(Box::new(Value::Array(Vec::new())));
+        assert_eq!(
+            Parser::new("(1 ^key 123 [])").read(),
+            Some(Ok(Value::Gene(result)))
+        );
+    }
 }

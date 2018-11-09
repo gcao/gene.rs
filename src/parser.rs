@@ -48,8 +48,9 @@ impl<'a> Parser<'a> {
         let ch = self.chr.unwrap();
         if ch == '(' {
             self.next();
-            let mut _type = Value::Null;
-            let mut properties = BTreeMap::<String, Box<Value>>::new();
+            let mut typeIsSet = false;
+            let mut Type = Value::Null;
+            let mut props = BTreeMap::<String, Box<Value>>::new();
             let mut data = Vec::<Box<Value>>::new();
             loop {
                 self.skip_whitespaces();
@@ -57,17 +58,28 @@ impl<'a> Parser<'a> {
                 if self.chr.unwrap() == ')' {
                     self.next();
                     break;
+                } else if self.chr.unwrap() == '^' {
+                    let result = self.read_pair();
+                    if !result.is_none() {
+                        let pair = result.unwrap().unwrap();
+                        props.insert(pair.key, Box::new(pair.val));
+                    }
                 } else {
-                    // TODO
                     let result = self.read();
                     if !result.is_none() {
-                        _type = result.unwrap().unwrap();
+                        let val = result.unwrap().unwrap();
+                        if typeIsSet {
+                            data.push(Box::new(val));
+                        } else {
+                            typeIsSet = true;
+                            Type = val;
+                        }
                     }
                 }
             }
             return Some(Ok(Value::Gene(Gene {
-                _type: Box::new(_type),
-                properties: properties,
+                Type: Box::new(Type),
+                props: props,
                 data: data,
             })));
 

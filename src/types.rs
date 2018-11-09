@@ -5,6 +5,7 @@ use std::collections::{BTreeMap};
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Value {
+    Void,
     Null,
     Boolean(bool),
     Integer(i64),
@@ -18,16 +19,16 @@ pub enum Value {
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Gene {
-    pub _type: Box<Value>,
-    pub properties: BTreeMap<String, Box<Value>>,
+    pub Type: Box<Value>,
+    pub props: BTreeMap<String, Box<Value>>,
     pub data: Vec<Box<Value>>,
 }
 
 impl Gene {
-    pub fn new(_type: Value) -> Gene {
+    pub fn new(Type: Value) -> Gene {
         return Gene {
-            _type: Box::new(_type),
-            properties: BTreeMap::new(),
+            Type: Box::new(Type),
+            props: BTreeMap::new(),
             data: vec![],
         }
     }
