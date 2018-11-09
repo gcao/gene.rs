@@ -124,6 +124,16 @@ impl<'a> Parser<'a> {
             self.next();
             return self.read_string();
 
+        } else if ch == '#' {
+            let next_ch = self.peek().unwrap();
+            if is_whitespace(next_ch) || next_ch == '!' {
+                self.next();
+                self.advance_while(|ch| ch != '\n');
+                return self.read();
+            } else {
+                return Some(Ok(Value::Symbol(self.read_word().unwrap().unwrap())));
+            }
+
         } else if ch == '+' || ch == '-' {
             let next = self.peek();
             if !next.is_none() && next.unwrap().is_digit(10) {
