@@ -48,7 +48,7 @@ impl<'a> Parser<'a> {
         let ch = self.chr.unwrap();
         if ch == '(' {
             self.next();
-            let mut typeIsSet = false;
+            let mut type_is_set = false;
             let mut Type = Value::Null;
             let mut props = BTreeMap::<String, Box<Value>>::new();
             let mut data = Vec::<Box<Value>>::new();
@@ -68,10 +68,10 @@ impl<'a> Parser<'a> {
                     let result = self.read();
                     if !result.is_none() {
                         let val = result.unwrap().unwrap();
-                        if typeIsSet {
+                        if type_is_set {
                             data.push(Box::new(val));
                         } else {
-                            typeIsSet = true;
+                            type_is_set = true;
                             Type = val;
                         }
                     }
@@ -159,10 +159,16 @@ impl<'a> Parser<'a> {
     }
 
     pub fn read_keyword_or_symbol(&mut self) -> Option<Result<Value, Error>> {
+        let is_escape = self.chr.unwrap() == '\\';
+
         let mut s = String::from("");
         let word = self.read_word();
         if !word.is_none() {
             s.push_str(&word.unwrap().unwrap());
+        }
+
+        if is_escape {
+            return Some(Ok(Value::Symbol(s)));
         }
 
         match s.as_str() {
@@ -173,18 +179,37 @@ impl<'a> Parser<'a> {
         }
     }
 
-    pub fn read_word(&mut self) -> Option<Result<String, Error>> {
-        let start =
-            if self.pos.is_none() {
-                0
+    fn read_word(&mut self) -> Option<Result<String, Error>> {
+        let mut result = String::from("");
+
+        let mut escaped = false;
+
+        loop {
+            let ch = self.chr.unwrap();
+            if ch == '\\' {
+                // Do not treat whitespace, ()[]{} etc as special char
+                escaped = true;
             } else {
-                self.pos.unwrap()
-            };
-        let end = self.advance_while(|ch| !is_whitespace(ch));
-        return Some(Ok(self.str[start..end].into()));
+                if escaped {
+                    escaped = false;
+                    result.push(ch);
+                } else if is_whitespace(ch) {
+                    break;
+                } else {
+                    result.push(ch);
+                }
+            }
+
+            // Move forward
+            if self.next().is_none() {
+                break;
+            }
+        }
+
+        return Some(Ok(result.into()));
     }
 
-    pub fn read_pair(&mut self) -> Option<Result<Pair, Error>> {
+    fn read_pair(&mut self) -> Option<Result<Pair, Error>> {
         if self.chr.unwrap() != '^' {
             return Some(Err(Error::new("Error")));
         } else {
@@ -267,7 +292,6 @@ pub fn is_symbol_head(ch: char) -> bool {
     }
 
     match ch {
-        '-' |
         '^' |
         '"' |
         '\'' |
