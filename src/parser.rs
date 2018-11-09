@@ -232,7 +232,7 @@ impl<'a> Parser<'a> {
                 if escaped {
                     escaped = false;
                     result.push(ch);
-                } else if is_whitespace(ch) {
+                } else if is_whitespace(ch) || is_sep(ch) {
                     break;
                 } else {
                     result.push(ch);
@@ -253,9 +253,22 @@ impl<'a> Parser<'a> {
             return Some(Err(Error::new("Error")));
         } else {
             self.next();
-            let key = self.read_word().unwrap().unwrap();
-            let val = self.read().unwrap().unwrap();
-            return Some(Ok(Pair::new(key, val)));
+            let ch = self.chr.unwrap();
+            if ch == '^' {
+                self.next();
+                let key = self.read_word().unwrap().unwrap();
+                let val = Value::Boolean(true);
+                return Some(Ok(Pair::new(key, val)));
+            } else if ch == '!' {
+                self.next();
+                let key = self.read_word().unwrap().unwrap();
+                let val = Value::Boolean(false);
+                return Some(Ok(Pair::new(key, val)));
+            } else {
+                let key = self.read_word().unwrap().unwrap();
+                let val = self.read().unwrap().unwrap();
+                return Some(Ok(Pair::new(key, val)));
+            }
         }
     }
 

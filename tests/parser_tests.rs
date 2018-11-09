@@ -87,6 +87,22 @@ fn test_read_map() {
     }
     {
         let mut map = BTreeMap::new();
+        map.insert("key".into(), Value::Boolean(true));
+        assert_eq!(
+            Parser::new("{^^key}").read(),
+            Some(Ok(Value::Map(map)))
+        );
+    }
+    {
+        let mut map = BTreeMap::new();
+        map.insert("key".into(), Value::Boolean(false));
+        assert_eq!(
+            Parser::new("{^!key}").read(),
+            Some(Ok(Value::Map(map)))
+        );
+    }
+    {
+        let mut map = BTreeMap::new();
         let arr = Value::Array(vec![Value::Integer(123)]);
         map.insert("key".into(), arr);
         assert_eq!(
