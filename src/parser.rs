@@ -122,9 +122,7 @@ impl<'a> Parser<'a> {
 
         } else if ch == '"' {
             self.next();
-            let start = self.pos.unwrap();
-            let end = self.advance_while(|ch| ch != '"');
-            return Some(Ok(Value::String(self.str[start..end].into())));
+            return self.read_string();
 
         } else if ch == '+' || ch == '-' {
             let next = self.peek();
@@ -145,7 +143,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    pub fn read_number(&mut self) -> Option<Result<Value, Error>> {
+    fn read_number(&mut self) -> Option<Result<Value, Error>> {
         let start = self.pos.unwrap();
         let end = self.advance_while(|ch| !is_whitespace(ch) && !is_sep(ch));
         let s = &self.str[start..end];
@@ -158,7 +156,38 @@ impl<'a> Parser<'a> {
         }
     }
 
-    pub fn read_keyword_or_symbol(&mut self) -> Option<Result<Value, Error>> {
+    fn read_string(&mut self) -> Option<Result<Value, Error>> {
+        let mut result = String::from("");
+
+        let mut escaped = false;
+
+        loop {
+            let ch = self.chr.unwrap();
+            if ch == '\\' {
+                // Do not treat whitespace, ()[]{} etc as special char
+                escaped = true;
+            } else {
+                if escaped {
+                    escaped = false;
+                    result.push(ch);
+                } else if ch == '"' {
+                    break;
+                } else {
+                    result.push(ch);
+                }
+            }
+
+            // Move forward
+            if self.next().is_none() {
+                break;
+            }
+        }
+
+        return Some(Ok(Value::String(result.into())));
+    }
+
+
+    fn read_keyword_or_symbol(&mut self) -> Option<Result<Value, Error>> {
         let is_escape = self.chr.unwrap() == '\\';
 
         let mut s = String::from("");

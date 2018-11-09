@@ -44,12 +44,14 @@ fn test_read_keywords() {
 #[test]
 fn test_read_string() {
     assert_eq!(Parser::new("\"ab\"").read(), Some(Ok(Value::String("ab".into()))));
+    assert_eq!(Parser::new("\"ab \\\"cd\\\"\"").read(), Some(Ok(Value::String("ab \"cd\"".into()))));
     assert_eq!(Parser::new("\"你好\"").read(), Some(Ok(Value::String("你好".into()))));
 }
 
 #[test]
 fn test_read_symbols() {
     assert_eq!(Parser::new("ab").read(), Some(Ok(Value::Symbol("ab".into()))));
+    assert_eq!(Parser::new("你好").read(), Some(Ok(Value::Symbol("你好".into()))));
 }
 
 #[test]
