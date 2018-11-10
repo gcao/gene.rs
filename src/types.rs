@@ -5,8 +5,8 @@ use std::collections::{BTreeMap};
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Value {
-    Void,
-    Null,
+    Void, // Same as undefined, different from null, can be represented as ()
+    Null, // Default value for any type, equivalent to false, 0, "", [], {}, (null) etc
     Boolean(bool),
     Integer(i64),
     Float(OrderedFloat<f64>),

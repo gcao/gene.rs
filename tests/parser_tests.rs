@@ -9,7 +9,8 @@ use gene::types::Gene;
 
 #[test]
 fn test_read_empty_input() {
-    assert_eq!(Parser::new("").read(), Some(Ok(Value::Null)));
+    assert_eq!(Parser::new("").read(), None);
+    assert_eq!(Parser::new("  ").read(), None);
 }
 
 #[test]
@@ -59,6 +60,11 @@ fn test_skip_comment() {
 fn test_read_symbols() {
     assert_eq!(Parser::new("ab").read(), Some(Ok(Value::Symbol("ab".into()))));
     assert_eq!(Parser::new("你好").read(), Some(Ok(Value::Symbol("你好".into()))));
+    {
+        let mut parser = Parser::new("ab");
+        assert_eq!(parser.read(), Some(Ok(Value::Symbol("ab".into()))));
+        assert_eq!(parser.read(), None);
+    }
 }
 
 #[test]

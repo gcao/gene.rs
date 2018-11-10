@@ -38,27 +38,33 @@ impl<'a> Parser<'a> {
     }
 
     pub fn parse(&mut self) -> Result<Value, Error> {
-        self.skip_whitespaces();
+        let mut result = Vec::<Value>::new();
 
-        if self.chr.is_none() {
-            return Ok(Value::Null);
-        } else {
-            let result = Vec::<Value>::new();
-
-            if result.len() > 1 {
-                return Ok(Value::Stream(result));
+        loop {
+            let item = self.read();
+            if item.is_none() {
+                break;
             } else {
-                return Ok(result[0].clone());
+                result.push(item.unwrap().unwrap());
             }
+        }
+
+        if result.len() == 1 {
+            let first = result[0].clone();
+            return Ok(first);
+        } else {
+            return Ok(Value::Stream(result));
         }
     }
 
     pub fn read(&mut self) -> Option<Result<Value, Error>> {
+        self.start();
+
         // Will stop after hitting first non-whitespace char
         self.skip_whitespaces();
 
         if self.chr.is_none() {
-            return Some(Ok(Value::Null));
+            return None;
         }
 
         let ch = self.chr.unwrap();
@@ -294,24 +300,22 @@ impl<'a> Parser<'a> {
         }
     }
 
+    /// Return the index of next char or str.len()
     fn advance_while<F: FnMut(char) -> bool>(&mut self, mut f: F) -> usize {
-        if self.str.len() == 0 {
-            return 0;
-        }
-
-        // Kick off the iterator
-        if self.pos.is_none() {
-            self.next();
-        }
-
         loop {
-            if f(self.chr.unwrap()) {
-                if self.next().is_none() {
-                    return self.str.len();
-                }
+            if self.chr.is_none() {
+                return self.str.len();
+            } else if f(self.chr.unwrap()) {
+                self.next();
             } else {
                 return self.pos.unwrap();
             }
+        }
+    }
+
+    fn start(&mut self) {
+        if self.pos.is_none() {
+            self.next();
         }
     }
 
@@ -322,7 +326,11 @@ impl<'a> Parser<'a> {
                 self.chr = Some(ch);
                 return Some((pos, ch));
             }
-            None => return None,
+            None => {
+                self.pos = Some(self.str.len());
+                self.chr = None;
+                return None;
+            }
         }
     }
 
