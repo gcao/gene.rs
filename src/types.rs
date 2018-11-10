@@ -15,6 +15,7 @@ pub enum Value {
     Array(Vec<Value>),
     Map(BTreeMap<String, Value>),
     Gene(Gene),
+    Stream(Vec<Value>),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
