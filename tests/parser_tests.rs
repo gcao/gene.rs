@@ -189,12 +189,12 @@ fn test_quote() {
 #[test]
 fn test_parse() {
     {
-        let mut result = Gene::new(Value::Stream(
-            vec![Value::Symbol("ab".into(), Value::Symbol("cd".into()]
-        ));
+        let result = Value::Stream(
+            vec![Value::Symbol("ab".into()), Value::Symbol("cd".into())]
+        );
         assert_eq!(
             Parser::new("ab cd").parse(),
-            Some(Ok(Value::Gene(result)))
+            Ok(result)
         );
     }
 }

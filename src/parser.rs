@@ -37,6 +37,22 @@ impl<'a> Parser<'a> {
         }
     }
 
+    pub fn parse(&mut self) -> Result<Value, Error> {
+        self.skip_whitespaces();
+
+        if self.chr.is_none() {
+            return Ok(Value::Null);
+        } else {
+            let result = Vec::<Value>::new();
+
+            if result.len() > 1 {
+                return Ok(Value::Stream(result));
+            } else {
+                return Ok(result[0].clone());
+            }
+        }
+    }
+
     pub fn read(&mut self) -> Option<Result<Value, Error>> {
         // Will stop after hitting first non-whitespace char
         self.skip_whitespaces();
