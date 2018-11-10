@@ -124,6 +124,23 @@ fn test_read_gene() {
     }
     {
         let mut result = Gene::new(Value::Integer(1));
+        result.data.push(Box::new(Value::Integer(2)));
+        assert_eq!(
+            Parser::new("(1 2)").read(),
+            Some(Ok(Value::Gene(result)))
+        );
+    }
+    {
+        let mut result = Gene::new(Value::Integer(1));
+        result.props.insert("key".into(), Box::new(Value::Integer(2)));
+        result.data.push(Box::new(Value::Integer(3)));
+        assert_eq!(
+            Parser::new("(1 ^key 2 3)").read(),
+            Some(Ok(Value::Gene(result)))
+        );
+    }
+    {
+        let mut result = Gene::new(Value::Integer(1));
         result.data.push(Box::new(Value::Array(Vec::new())));
         assert_eq!(
             Parser::new("(1 [])").read(),
@@ -136,6 +153,34 @@ fn test_read_gene() {
         result.data.push(Box::new(Value::Array(Vec::new())));
         assert_eq!(
             Parser::new("(1 ^key 123 [])").read(),
+            Some(Ok(Value::Gene(result)))
+        );
+    }
+}
+
+#[test]
+fn test_quote() {
+    {
+        let mut result = Gene::new(Value::Symbol("#QUOTE".into()));
+        result.data.push(Box::new(Value::Symbol("ab".into())));
+        assert_eq!(
+            Parser::new("`ab").read(),
+            Some(Ok(Value::Gene(result)))
+        );
+    }
+    {
+        let mut result = Gene::new(Value::Symbol("#QUOTE".into()));
+        result.data.push(Box::new(Value::Boolean(true)));
+        assert_eq!(
+            Parser::new("`true").read(),
+            Some(Ok(Value::Gene(result)))
+        );
+    }
+    {
+        let mut result = Gene::new(Value::Symbol("#QUOTE".into()));
+        result.data.push(Box::new(Value::Array(Vec::new())));
+        assert_eq!(
+            Parser::new("`[]").read(),
             Some(Ok(Value::Gene(result)))
         );
     }

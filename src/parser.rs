@@ -145,6 +145,12 @@ impl<'a> Parser<'a> {
         } else if ch.is_digit(10) {
             return self.read_number();
 
+        } else if ch == '`' {
+            self.next();
+            let mut gene = Gene::new(Value::Symbol("#QUOTE".into()));
+            gene.data.push(Box::new(self.read().unwrap().unwrap()));
+            return Some(Ok(Value::Gene(gene)));
+
         } else if is_symbol_head(ch) {
             return self.read_keyword_or_symbol();
 
