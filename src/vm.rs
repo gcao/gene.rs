@@ -15,8 +15,8 @@ impl VirtualMachine {
         };
     }
 
-    pub fn process(&mut self, module: Module) -> Value {
-        return Value::Void;
+    pub fn process(&mut self, module: Module) -> Box<Any> {
+        return Box::new(0);
     }
 }
 
