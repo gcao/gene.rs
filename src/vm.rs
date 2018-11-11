@@ -2,20 +2,29 @@ use std::any::Any;
 use std::collections::{BTreeMap};
 
 use super::types::Value;
-use super::compiler::Module;
+use super::compiler::{Module, Block};
 
 pub struct VirtualMachine {
     registers_mgr: RegistersManager,
+    pos: i32,
+    block: Option<Block>,
 }
 
 impl VirtualMachine {
     pub fn new() -> VirtualMachine {
         return VirtualMachine {
             registers_mgr: RegistersManager::new(),
+            pos: 0,
+            block: None,
         };
     }
 
-    pub fn process(&mut self, module: Module) -> Box<Any> {
+    pub fn load_module(&mut self, mut module: Module) -> Box<Any> {
+        let block = module.get_default_block();
+        return self.process(block);
+    }
+
+    pub fn process(&mut self, block: Block) -> Box<Any> {
         return Box::new(0);
     }
 }
@@ -35,4 +44,10 @@ impl RegistersManager {
             store: BTreeMap::new(),
         };
     }
+}
+
+pub struct Application {
+}
+
+impl Application {
 }

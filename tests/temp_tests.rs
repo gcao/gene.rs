@@ -22,7 +22,7 @@ fn test_this() {
         let mut parser = Parser::new("1");
         let parsed = parser.parse();
         let module = compiler.compile(parsed.unwrap());
-        let result = *(&vm.process(module)).downcast_ref::<i32>().unwrap();
+        let result = *(&vm.load_module(module)).downcast_ref::<i32>().unwrap();
         assert_eq!(result, 1);
     }
 }

@@ -24,7 +24,7 @@ impl Compiler {
 
         println!("Block: {}", block);
 
-        self.module.blocks.insert(block_id, block);
+        self.module.set_default_block(block);
         return self.module.clone();
     }
 
@@ -44,6 +44,7 @@ impl Compiler {
 pub struct Module {
     pub id: String,
     pub blocks: BTreeMap<String, Block>,
+    default_block_id: String,
 }
 
 impl Module {
@@ -51,7 +52,17 @@ impl Module {
         return Module {
             id: new_uuidv4(),
             blocks: BTreeMap::new(),
+            default_block_id: "".into(),
         }
+    }
+
+    pub fn set_default_block(&mut self, block: Block) {
+        self.default_block_id = block.id.clone();
+        self.blocks.insert(block.id.clone(), block);
+    }
+
+    pub fn get_default_block(&mut self) -> Block {
+        return self.blocks[&self.default_block_id].clone();
     }
 }
 
