@@ -1,6 +1,7 @@
 extern crate ordered_float;
 
 use ordered_float::OrderedFloat;
+use std::fmt;
 use std::collections::{BTreeMap};
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -18,6 +19,35 @@ pub enum Value {
     Stream(Vec<Value>),
 }
 
+impl fmt::Display for Value {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        match &self {
+            Value::Void => {
+                fmt.write_str("()")?;
+            }
+            Value::Null => {
+                fmt.write_str("null")?;
+            }
+            Value::Boolean(true) => {
+                fmt.write_str("true")?;
+            }
+            Value::Boolean(false) => {
+                fmt.write_str("false")?;
+            }
+            Value::Integer(v) => {
+                fmt.write_str(&v.to_string())?;
+            }
+            Value::Gene(v) => {
+                fmt.write_str(&v.to_string())?;
+            }
+            _ => {
+                fmt.write_str("(fmt to be implemented)")?;
+            }
+        }
+        Ok(())
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Gene {
     pub Type: Box<Value>,
@@ -32,6 +62,15 @@ impl Gene {
             props: BTreeMap::new(),
             data: vec![],
         }
+    }
+}
+
+impl fmt::Display for Gene {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        fmt.write_str("(")?;
+        fmt.write_str(&self.Type.to_string())?;
+        fmt.write_str(" ...)")?;
+        Ok(())
     }
 }
 
