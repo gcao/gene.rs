@@ -4,6 +4,7 @@ use std::fmt;
 use super::types::Value;
 use super::utils::new_uuidv4;
 
+#[derive(Debug)]
 pub struct Compiler {
     module: Module,
 }
@@ -40,7 +41,7 @@ impl Compiler {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Module {
     pub id: String,
     pub blocks: BTreeMap<String, Block>,
@@ -66,7 +67,7 @@ impl Module {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Block {
     pub id: String,
     pub name: String,
@@ -102,7 +103,7 @@ impl fmt::Display for Block {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Instruction {
     /// Not supported code should compile to TODO instruction with a message
     TODO(String),

@@ -1,3 +1,5 @@
+mod types;
+
 use std::any::Any;
 use std::collections::{BTreeMap};
 
@@ -44,10 +46,4 @@ impl RegistersManager {
             store: BTreeMap::new(),
         };
     }
-}
-
-pub struct Application {
-}
-
-impl Application {
 }
