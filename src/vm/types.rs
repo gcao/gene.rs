@@ -30,7 +30,7 @@ pub struct Scope {
 }
 
 impl Scope {
-    pub fn new(parent: Option<Scope>) -> Scope {
+    pub fn new(parent: Option<Scope>) -> Self {
         let parent =
             if parent.is_none() {
                 None
@@ -54,7 +54,7 @@ pub struct Function {
 }
 
 impl<'a> Function {
-    pub fn new(name: String, body: Block, inherit_scope: bool, namespace: Namespace, scope: Scope) -> Function {
+    pub fn new(name: String, body: Block, inherit_scope: bool, namespace: Namespace, scope: Scope) -> Self {
         return Function {
             name: name,
             body: body,

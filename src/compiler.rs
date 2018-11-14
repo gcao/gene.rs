@@ -10,7 +10,7 @@ pub struct Compiler {
 }
 
 impl Compiler {
-    pub fn new() -> Compiler {
+    pub fn new() -> Self {
         return Compiler {
             module: Module::new(),
         };
@@ -32,7 +32,7 @@ impl Compiler {
     fn compile_(&mut self, block: &mut Block, ast: Value) {
         match ast {
             Value::Integer(v) => {
-                (*block).add_instr(Instruction::TODO(ast.to_string()));
+                (*block).add_instr(Instruction::Default(ast));
             },
             _ => {
                 (*block).add_instr(Instruction::TODO(ast.to_string()));
@@ -49,7 +49,7 @@ pub struct Module {
 }
 
 impl Module {
-    pub fn new() -> Module {
+    pub fn new() -> Self {
         return Module {
             id: new_uuidv4(),
             blocks: BTreeMap::new(),
@@ -75,7 +75,7 @@ pub struct Block {
 }
 
 impl Block {
-    pub fn new(name: String) -> Block {
+    pub fn new(name: String) -> Self {
         let instructions = vec![];
         return Block {
             id: new_uuidv4(),
@@ -117,6 +117,16 @@ impl fmt::Display for Instruction {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         fmt.write_str("(")?;
         match &self {
+            Instruction::Init => {
+                fmt.write_str("Init")?;
+            }
+            Instruction::Default(v) => {
+                fmt.write_str("Default ")?;
+                fmt.write_str(&v.to_string())?;
+            }
+            Instruction::CallEnd => {
+                fmt.write_str("CallEnd")?;
+            }
             Instruction::TODO(_) => {
                 fmt.write_str("TODO")?;
             }

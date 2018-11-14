@@ -20,7 +20,7 @@ pub struct Error<'a> {
 }
 
 impl<'a> Error<'a> {
-    pub fn new(s: &'a str) -> Error<'a> {
+    pub fn new(s: &'a str) -> Self {
         Error {
             message: s,
         }
@@ -28,7 +28,7 @@ impl<'a> Error<'a> {
 }
 
 impl<'a> Parser<'a> {
-    pub fn new(str: &'a str) -> Parser<'a> {
+    pub fn new(str: &'a str) -> Self {
         Parser {
             str: str,
             chars: str.char_indices(),

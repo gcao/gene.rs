@@ -36,12 +36,19 @@ impl VirtualMachine {
             let instr = &block.instructions[self.pos];
             match instr {
                 Instruction::Default(v) => {
+                    self.pos += 1;
                     let mut registers = self.registers_store.get_mut(&self.registers_id).unwrap();
                     registers.insert("default".into(), Box::new(1));
                 }
 
-                _ => {
+                Instruction::CallEnd => {
+                    self.pos += 1;
                     break
+                }
+
+                _ => {
+                    self.pos += 1;
+                    println!("Unimplemented instruction: {}", instr)
                 }
             }
         }

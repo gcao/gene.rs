@@ -80,7 +80,7 @@ pub struct Pair {
 }
 
 impl Pair {
-    pub fn new(key: String, val: Value) -> Pair {
+    pub fn new(key: String, val: Value) -> Self {
         return Pair {
             key: key,
             val: val,
