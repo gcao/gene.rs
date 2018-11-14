@@ -4,18 +4,21 @@ use std::any::Any;
 use std::collections::{BTreeMap};
 
 use super::types::Value;
-use super::compiler::{Module, Block};
+use super::utils::new_uuidv4;
+use super::compiler::{Module, Block, Instruction};
 
 pub struct VirtualMachine {
-    registers_mgr: RegistersManager,
-    pos: i32,
+    registers_store: BTreeMap<String, Registers>,
+    registers_id: String,
+    pos: usize,
     block: Option<Block>,
 }
 
 impl VirtualMachine {
     pub fn new() -> VirtualMachine {
         return VirtualMachine {
-            registers_mgr: RegistersManager::new(),
+            registers_store: BTreeMap::new(),
+            registers_id: "".into(),
             pos: 0,
             block: None,
         };
@@ -27,23 +30,53 @@ impl VirtualMachine {
     }
 
     pub fn process(&mut self, block: Block) -> Box<Any> {
-        return Box::new(0);
+        self.create_registers();
+
+        while self.pos < block.instructions.len() {
+            let instr = &block.instructions[self.pos];
+            match instr {
+                Instruction::Default(v) => {
+                    let mut registers = self.registers_store.get(&self.registers_id).unwrap();
+                    registers.insert("default".into(), Box::new(1));
+                }
+
+                _ => {
+                    break
+                }
+            }
+        }
+
+        let registers = self.registers_store.get(&self.registers_id).unwrap();
+        let result = registers.data.get("default".into());
+        return match result {
+            // Some(v) => v,
+            _ => Box::new(1)
+        }
+    }
+
+    pub fn create_registers(&mut self) {
+        let registers = Registers::new();
+        let id = registers.id.clone();
+        self.registers_id = id.clone();
+        self.registers_store.insert(id, registers);
     }
 }
 
 pub struct Registers {
-    id: String,
-    data: BTreeMap<String, Box<Any>>,
+    pub id: String,
+    pub data: BTreeMap<String, Box<Any>>,
 }
 
-pub struct RegistersManager {
-    store: BTreeMap<String, Registers>,
-}
+impl<'a> Registers {
+    pub fn new() -> Registers {
+        let data: BTreeMap<String, Box<Any>> =  BTreeMap::new();
+        return Registers {
+            id: new_uuidv4(),
+            data: data,
+        }
+    }
 
-impl RegistersManager {
-    pub fn new() -> RegistersManager {
-        return RegistersManager {
-            store: BTreeMap::new(),
-        };
+    pub fn insert(&mut self, key: String, val: Box<Any>) {
+        self.data.insert(key, val);
     }
 }
