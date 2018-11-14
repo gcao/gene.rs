@@ -15,7 +15,7 @@ pub struct VirtualMachine {
 }
 
 impl VirtualMachine {
-    pub fn new() -> VirtualMachine {
+    pub fn new() -> Self {
         return VirtualMachine {
             registers_store: BTreeMap::new(),
             registers_id: "".into(),
@@ -24,19 +24,19 @@ impl VirtualMachine {
         };
     }
 
-    pub fn load_module(&mut self, mut module: Module) -> Box<Any> {
+    pub fn load_module(&mut self, mut module: Module) -> &Box<Any> {
         let block = module.get_default_block();
         return self.process(block);
     }
 
-    pub fn process(&mut self, block: Block) -> Box<Any> {
+    pub fn process(&mut self, block: Block) -> &Box<Any> {
         self.create_registers();
 
         while self.pos < block.instructions.len() {
             let instr = &block.instructions[self.pos];
             match instr {
                 Instruction::Default(v) => {
-                    let mut registers = self.registers_store.get(&self.registers_id).unwrap();
+                    let mut registers = self.registers_store.get_mut(&self.registers_id).unwrap();
                     registers.insert("default".into(), Box::new(1));
                 }
 
@@ -47,11 +47,7 @@ impl VirtualMachine {
         }
 
         let registers = self.registers_store.get(&self.registers_id).unwrap();
-        let result = registers.data.get("default".into());
-        return match result {
-            // Some(v) => v,
-            _ => Box::new(1)
-        }
+        registers.data.get("default".into()).unwrap()
     }
 
     pub fn create_registers(&mut self) {
@@ -67,8 +63,8 @@ pub struct Registers {
     pub data: BTreeMap<String, Box<Any>>,
 }
 
-impl<'a> Registers {
-    pub fn new() -> Registers {
+impl Registers {
+    pub fn new() -> Self {
         let data: BTreeMap<String, Box<Any>> =  BTreeMap::new();
         return Registers {
             id: new_uuidv4(),
