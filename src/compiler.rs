@@ -31,8 +31,11 @@ impl Compiler {
 
     fn compile_(&mut self, block: &mut Block, ast: Value) {
         match ast {
-            Value::Integer(v) => {
+            Value::Integer(_) => {
                 (*block).add_instr(Instruction::Default(ast));
+            },
+            Value::String(v) => {
+                (*block).add_instr(Instruction::Default(Value::String(v)));
             },
             _ => {
                 (*block).add_instr(Instruction::TODO(ast.to_string()));

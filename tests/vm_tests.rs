@@ -16,4 +16,18 @@ fn test_basic_stmts() {
         let result = *(&vm.load_module(module)).downcast_ref::<i32>().unwrap();
         assert_eq!(result, 1);
     }
+    {
+        let mut parser = Parser::new("\"ab\"");
+        let parsed = parser.parse();
+        let module = compiler.compile(parsed.unwrap());
+        let result = *(&vm.load_module(module)).downcast_ref::<&str>().unwrap();
+        assert_eq!(result, "ab");
+    }
+    {
+        let mut parser = Parser::new("true");
+        let parsed = parser.parse();
+        let module = compiler.compile(parsed.unwrap());
+        let result = *(&vm.load_module(module)).downcast_ref::<bool>().unwrap();
+        assert_eq!(result, true);
+    }
 }

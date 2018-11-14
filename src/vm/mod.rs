@@ -37,13 +37,13 @@ impl VirtualMachine {
             match instr {
                 Instruction::Default(v) => {
                     self.pos += 1;
-                    let mut registers = self.registers_store.get_mut(&self.registers_id).unwrap();
+                    let registers = self.registers_store.get_mut(&self.registers_id).unwrap();
                     registers.insert("default".into(), Box::new(1));
                 }
 
                 Instruction::CallEnd => {
                     self.pos += 1;
-                    break
+                    // TODO: return to caller
                 }
 
                 _ => {

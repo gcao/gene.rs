@@ -193,7 +193,12 @@ fn test_quote() {
 }
 
 #[test]
-fn test_parse() {
+fn test_parse_one_string() {
+    assert_eq!(Parser::new("\"ab\"").parse(), Ok(Value::String("ab".into())));
+}
+
+#[test]
+fn test_parse_stream() {
     {
         let result = Value::Stream(
             vec![Value::Symbol("ab".into()), Value::Symbol("cd".into())]

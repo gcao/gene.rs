@@ -209,6 +209,7 @@ impl<'a> Parser<'a> {
                     escaped = false;
                     result.push(ch);
                 } else if ch == '"' {
+                    self.next();
                     break;
                 } else {
                     result.push(ch);
