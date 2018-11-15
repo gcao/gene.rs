@@ -37,6 +37,9 @@ impl fmt::Display for Value {
             Value::Integer(v) => {
                 fmt.write_str(&v.to_string())?;
             }
+            Value::String(v) => {
+                fmt.write_str(&v)?;
+            }
             Value::Gene(v) => {
                 fmt.write_str(&v.to_string())?;
             }

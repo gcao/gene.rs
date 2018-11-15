@@ -37,6 +37,9 @@ impl Compiler {
             Value::String(v) => {
                 (*block).add_instr(Instruction::Default(Value::String(v)));
             },
+            Value::Boolean(v) => {
+                (*block).add_instr(Instruction::Default(Value::Boolean(v)));
+            },
             _ => {
                 (*block).add_instr(Instruction::TODO(ast.to_string()));
             }

@@ -38,7 +38,8 @@ impl VirtualMachine {
                 Instruction::Default(v) => {
                     self.pos += 1;
                     let registers = self.registers_store.get_mut(&self.registers_id).unwrap();
-                    registers.insert("default".into(), Box::new(1));
+                    // println!("Value: {}", v);
+                    registers.insert("default".into(), Box::new(v.clone()));
                 }
 
                 Instruction::CallEnd => {
@@ -54,7 +55,9 @@ impl VirtualMachine {
         }
 
         let registers = self.registers_store.get(&self.registers_id).unwrap();
-        registers.data.get("default".into()).unwrap()
+        let result = registers.data.get("default".into()).unwrap();
+        println!("Result: {}", (*result).downcast_ref::<Value>().unwrap());
+        result
     }
 
     pub fn create_registers(&mut self) {
