@@ -31,17 +31,22 @@ impl Compiler {
 
     fn compile_(&mut self, block: &mut Block, ast: Value) {
         match ast {
-            Value::Integer(_) => {
+            Value::Symbol(s) => {
+                // TODO: compile into variable
+            },
+            Value::Array(v) => {
+                // TODO: compile individual elements
+                (*block).add_instr(Instruction::Default(Value::Array(v)));
+            },
+            Value::Map(_) => {
+                // TODO: compile individual values
                 (*block).add_instr(Instruction::Default(ast));
             },
-            Value::String(v) => {
-                (*block).add_instr(Instruction::Default(Value::String(v)));
-            },
-            Value::Boolean(v) => {
-                (*block).add_instr(Instruction::Default(Value::Boolean(v)));
+            Value::Gene(_) => {
+                // TODO: compile into function call
             },
             _ => {
-                (*block).add_instr(Instruction::TODO(ast.to_string()));
+                (*block).add_instr(Instruction::Default(ast));
             }
         }
     }

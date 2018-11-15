@@ -7,6 +7,8 @@ use super::types::Value;
 use super::utils::new_uuidv4;
 use super::compiler::{Module, Block, Instruction};
 
+static DEFAULT_REG: &str = "default";
+
 pub struct VirtualMachine {
     registers_store: BTreeMap<String, Registers>,
     registers_id: String,
@@ -32,6 +34,7 @@ impl VirtualMachine {
     pub fn process(&mut self, block: Block) -> &Box<Any> {
         self.create_registers();
 
+        self.pos = 0;
         while self.pos < block.instructions.len() {
             let instr = &block.instructions[self.pos];
             match instr {
@@ -39,7 +42,7 @@ impl VirtualMachine {
                     self.pos += 1;
                     let registers = self.registers_store.get_mut(&self.registers_id).unwrap();
                     // println!("Value: {}", v);
-                    registers.insert("default".into(), Box::new(v.clone()));
+                    registers.insert(DEFAULT_REG.into(), Box::new(v.clone()));
                 }
 
                 Instruction::CallEnd => {
@@ -55,7 +58,7 @@ impl VirtualMachine {
         }
 
         let registers = self.registers_store.get(&self.registers_id).unwrap();
-        let result = registers.data.get("default".into()).unwrap();
+        let result = registers.data.get(DEFAULT_REG.into()).unwrap();
         println!("Result: {}", (*result).downcast_ref::<Value>().unwrap());
         result
     }
