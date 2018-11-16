@@ -1,4 +1,4 @@
-extern crate gene;
+#[macro_use] extern crate gene;
 
 use ordered_float::OrderedFloat;
 use std::collections::{BTreeMap};
@@ -84,36 +84,35 @@ fn test_read_array() {
 fn test_read_map() {
     assert_eq!(Parser::new("{}").read(), Some(Ok(Value::Map(BTreeMap::new()))));
     {
-        let mut map = BTreeMap::new();
-        map.insert("key".into(), Value::Integer(123));
         assert_eq!(
             Parser::new("{^key 123}").read(),
-            Some(Ok(Value::Map(map)))
+            Some(Ok(Value::Map(map!{
+                "key" => Value::Integer(123),
+            })))
         );
     }
     {
-        let mut map = BTreeMap::new();
-        map.insert("key".into(), Value::Boolean(true));
         assert_eq!(
             Parser::new("{^^key}").read(),
-            Some(Ok(Value::Map(map)))
+            Some(Ok(Value::Map(map!{
+                "key" => Value::Boolean(true),
+            })))
         );
     }
     {
-        let mut map = BTreeMap::new();
-        map.insert("key".into(), Value::Boolean(false));
         assert_eq!(
             Parser::new("{^!key}").read(),
-            Some(Ok(Value::Map(map)))
+            Some(Ok(Value::Map(map!{
+                "key" => Value::Boolean(false),
+            })))
         );
     }
     {
-        let mut map = BTreeMap::new();
-        let arr = Value::Array(vec![Value::Integer(123)]);
-        map.insert("key".into(), arr);
         assert_eq!(
             Parser::new("{^key [123]}").read(),
-            Some(Ok(Value::Map(map)))
+            Some(Ok(Value::Map(map!{
+                "key" => Value::Array(vec![Value::Integer(123)]),
+            })))
         );
     }
 }

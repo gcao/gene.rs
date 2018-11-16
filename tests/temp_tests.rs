@@ -3,7 +3,7 @@
 // cargo test --no-run --message-format=json temp_tests
 
 extern crate ordered_float;
-extern crate gene;
+#[macro_use] extern crate gene;
 
 use ordered_float::OrderedFloat;
 use std::collections::{BTreeMap};

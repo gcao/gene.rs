@@ -1,4 +1,4 @@
-extern crate gene;
+#[macro_use] extern crate gene;
 
 use std::collections::{BTreeMap};
 
@@ -74,8 +74,8 @@ fn test_basic_stmts() {
         let parsed = parser.parse();
         let module = compiler.compile(parsed.unwrap());
         let result = (*vm.load_module(module)).downcast_ref::<Value>().unwrap();
-        let mut map = BTreeMap::new();
-        map.insert("key".into(), Value::Integer(1));
-        assert_eq!(*result, Value::Map(map));
+        assert_eq!(*result, Value::Map(map!{
+            "key" => Value::Integer(1),
+        }));
     }
 }
