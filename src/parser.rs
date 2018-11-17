@@ -71,7 +71,7 @@ impl<'a> Parser<'a> {
         if ch == '(' {
             self.next();
             let mut type_is_set = false;
-            let mut Type = Value::Null;
+            let mut _type = Value::Null;
             let mut props = BTreeMap::<String, Box<Value>>::new();
             let mut data = Vec::<Box<Value>>::new();
             loop {
@@ -94,13 +94,13 @@ impl<'a> Parser<'a> {
                             data.push(Box::new(val));
                         } else {
                             type_is_set = true;
-                            Type = val;
+                            _type = val;
                         }
                     }
                 }
             }
             return Some(Ok(Value::Gene(Gene {
-                Type: Box::new(Type),
+                _type: Box::new(_type),
                 props: props,
                 data: data,
             })));

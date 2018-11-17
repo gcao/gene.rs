@@ -6,14 +6,17 @@ use std::collections::{BTreeMap};
 use super::types::Value;
 use super::utils::new_uuidv4;
 use super::compiler::{Module, Block, Instruction};
+use self::types::*;
 
-static DEFAULT_REG: &str = "default";
+const DEFAULT_REG: &str = "default";
+const CONTEXT_REG: &str = "context";
 
 pub struct VirtualMachine {
     registers_store: BTreeMap<String, Registers>,
     registers_id: String,
     pos: usize,
     block: Option<Block>,
+    app: Application,
 }
 
 impl VirtualMachine {
@@ -23,6 +26,7 @@ impl VirtualMachine {
             registers_id: "".into(),
             pos: 0,
             block: None,
+            app: Application::new(),
         };
     }
 
@@ -34,6 +38,12 @@ impl VirtualMachine {
     pub fn process(&mut self, block: Block) -> &Box<Any> {
         self.create_registers();
 
+        {
+            let root_context = Context::root();
+            let registers = self.registers_store.get_mut(&self.registers_id).unwrap();
+            registers.data.insert(CONTEXT_REG.into(), Box::new(root_context));
+        }
+
         self.pos = 0;
         while self.pos < block.instructions.len() {
             let instr = &block.instructions[self.pos];
@@ -43,6 +53,19 @@ impl VirtualMachine {
                     let registers = self.registers_store.get_mut(&self.registers_id).unwrap();
                     // println!("Value: {}", v);
                     registers.insert(DEFAULT_REG.into(), Box::new(v.clone()));
+                }
+
+                Instruction::Define(name, reg) => {
+                    self.pos += 1;
+                    let registers = self.registers_store.get_mut(&self.registers_id).unwrap();
+                    let value;
+                    {
+                        value = registers.data.remove(reg.into()).unwrap();
+                    }
+                    {
+                        let context = registers.data.get_mut(CONTEXT_REG).unwrap().downcast_mut::<Context>().unwrap();
+                        context.def_member(name.clone(), Box::new(value), VarType::SCOPE);
+                    }
                 }
 
                 Instruction::CallEnd => {

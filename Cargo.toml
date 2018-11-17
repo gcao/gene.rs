@@ -13,3 +13,4 @@ categories = ["parser-implementations"]
 [dependencies]
 ordered-float = "1.0.1"
 uuid = { version = "0.7", features = ["serde", "v4"] }
+rand = "0.6.0"

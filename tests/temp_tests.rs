@@ -18,4 +18,11 @@ use gene::vm::VirtualMachine;
 fn test_this() {
     let mut compiler = Compiler::new();
     let mut vm = VirtualMachine::new();
+    {
+        let mut parser = Parser::new("(var a 1)");
+        let parsed = parser.parse();
+        let module = compiler.compile(parsed.unwrap());
+        let result = (*vm.load_module(module)).downcast_ref::<Value>().unwrap();
+        assert_eq!(*result, Value::Integer(1));
+    }
 }

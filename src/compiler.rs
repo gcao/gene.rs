@@ -1,7 +1,12 @@
+extern crate rand;
+
 use std::collections::{BTreeMap};
 use std::fmt;
 
+use rand::prelude::random;
+
 use super::types::Value;
+use super::types::Gene;
 use super::utils::new_uuidv4;
 
 #[derive(Debug)]
@@ -42,11 +47,29 @@ impl Compiler {
                 // TODO: compile individual values
                 (*block).add_instr(Instruction::Default(ast));
             },
-            Value::Gene(_) => {
-                // TODO: compile into function call
+            Value::Gene(v) => {
+                self.compile_gene(block, v);
             },
             _ => {
                 (*block).add_instr(Instruction::Default(ast));
+            }
+        }
+    }
+
+    fn compile_gene(&mut self, block: &mut Block, gene: Gene) {
+        let Gene {_type, mut data, ..} = gene;
+
+        if *_type == Value::Symbol("var".into()) {
+            match data.get(0).unwrap() {
+                box Value::Symbol(name) => {
+                    match data.get(1).unwrap() {
+                        box value => {
+                            self.compile_(block, value.clone());
+                            (*block).add_instr(Instruction::Define(name.clone(), "default".into()));
+                        }
+                    }
+                },
+                _ => unimplemented!()
             }
         }
     }
@@ -121,6 +144,7 @@ pub enum Instruction {
     Init,
     /// Save Value to default register
     Default(Value),
+    Define(String, String),
     CallEnd,
 }
 
@@ -135,6 +159,12 @@ impl fmt::Display for Instruction {
                 fmt.write_str("Default ")?;
                 fmt.write_str(&v.to_string())?;
             }
+            Instruction::Define(name, reg) => {
+                fmt.write_str("Define ")?;
+                fmt.write_str(&name.to_string())?;
+                fmt.write_str(" ")?;
+                fmt.write_str(&reg.to_string())?;
+            }
             Instruction::CallEnd => {
                 fmt.write_str("CallEnd")?;
             }
@@ -148,4 +178,8 @@ impl fmt::Display for Instruction {
         fmt.write_str(")")?;
         Ok(())
     }
+}
+
+fn new_reg() -> String {
+    format!("{}", random::<u32>())
 }

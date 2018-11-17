@@ -8,39 +8,120 @@ pub struct Application {
 }
 
 impl Application {
+    pub fn new() -> Self {
+        Self {
+        }
+    }
 }
 
 #[derive(Debug)]
 pub struct Context {
-    namespace: Namespace
+    pub parent: Option<Box<Context>>,
+    pub namespace: Namespace,
+    pub scope: Scope,
+    pub _self: Option<Box<Any>>,
+}
+
+pub enum VarType {
+    SCOPE,
+    NAMESPACE,
 }
 
 impl Context {
+    pub fn new(parent: Context) -> Self {
+        Self {
+            parent: Some(Box::new(parent)),
+            namespace: Namespace::root(),
+            scope: Scope::root(),
+            _self: None,
+        }
+    }
+
+    pub fn root() -> Self {
+        Self {
+            parent: None,
+            namespace: Namespace::root(),
+            scope: Scope::root(),
+            _self: None,
+        }
+    }
+
+    pub fn def_member(&mut self, name: String, value: Box<Any>, var_type: VarType) {
+        match var_type {
+            VarType::SCOPE => {
+                self.scope.def_member(name, value);
+            },
+            VarType::NAMESPACE => {
+                self.scope.def_member(name, value);
+            }
+        }
+    }
+
+    pub fn get_member(&self, name: String) -> Option<&Box<Any>> {
+        let result = self.scope.get_member(name.clone());
+        if result.is_none() {
+            self.namespace.get_member(name)
+        } else {
+            result
+        }
+    }
 }
 
 #[derive(Debug)]
 pub struct Namespace {
+    parent: Option<Box<Namespace>>,
     members: BTreeMap<String, Box<Any>>,
+}
+
+impl Namespace {
+    pub fn new(parent: Self) -> Self {
+        return Self {
+            parent: Some(Box::new(parent)),
+            members: BTreeMap::new(),
+        };
+    }
+
+    pub fn root() -> Self {
+        Self {
+            parent: None,
+            members: BTreeMap::new(),
+        }
+    }
+
+    pub fn def_member(&mut self, name: String, value: Box<Any>) {
+    }
+
+    pub fn get_member(&self, name: String) -> Option<&Box<Any>> {
+        self.members.get(&name)
+    }
 }
 
 #[derive(Debug)]
 pub struct Scope {
     pub parent: Option<Box<Scope>>,
-    pub variables: BTreeMap<String, Box<Any>>,
+    pub members: BTreeMap<String, Box<Any>>,
 }
 
 impl Scope {
-    pub fn new(parent: Option<Scope>) -> Self {
-        let parent =
-            if parent.is_none() {
-                None
-            } else {
-                Some(Box::new(parent.unwrap()))
-            };
-        return Scope {
-            parent: parent,
-            variables: BTreeMap::new(),
-        };
+    pub fn new(parent: Self) -> Self {
+        Self {
+            parent: Some(Box::new(parent)),
+            members: BTreeMap::new(),
+        }
+    }
+
+    pub fn root() -> Self {
+        Self {
+            parent: None,
+            members: BTreeMap::new(),
+        }
+    }
+
+    pub fn def_member(&mut self, name: String, value: Box<Any>) {
+    }
+
+    pub fn get_member(&self, name: String) -> Option<&Box<Any>> {
+        self.members.get(&name)
     }
 }
 
@@ -55,7 +136,7 @@ pub struct Function {
 
 impl<'a> Function {
     pub fn new(name: String, body: Block, inherit_scope: bool, namespace: Namespace, scope: Scope) -> Self {
-        return Function {
+        Function {
             name: name,
             body: body,
             inherit_scope: inherit_scope,
