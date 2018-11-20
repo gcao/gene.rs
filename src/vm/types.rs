@@ -1,5 +1,7 @@
 use std::any::Any;
 use std::collections::{BTreeMap};
+use std::rc::Rc;
+use std::cell::RefCell;
 
 use super::super::compiler::Block;
 
@@ -57,7 +59,7 @@ impl Context {
         }
     }
 
-    pub fn get_member(&self, name: String) -> Option<&Box<Any>> {
+    pub fn get_member(&self, name: String) -> Option<Rc<RefCell<Any>>> {
         let result = self.scope.get_member(name.clone());
         if result.is_none() {
             self.namespace.get_member(name)
@@ -70,7 +72,7 @@ impl Context {
 #[derive(Debug)]
 pub struct Namespace {
     parent: Option<Box<Namespace>>,
-    members: BTreeMap<String, Box<Any>>,
+    members: BTreeMap<String, Rc<RefCell<Any>>>,
 }
 
 impl Namespace {
@@ -91,15 +93,15 @@ impl Namespace {
     pub fn def_member(&mut self, name: String, value: Box<Any>) {
     }
 
-    pub fn get_member(&self, name: String) -> Option<&Box<Any>> {
-        self.members.get(&name)
+    pub fn get_member(&self, name: String) -> Option<Rc<RefCell<Any>>> {
+        self.members.get(&name).map(|val| Rc::clone(val))
     }
 }
 
 #[derive(Debug)]
 pub struct Scope {
     pub parent: Option<Box<Scope>>,
-    pub members: BTreeMap<String, Box<Any>>,
+    pub members: BTreeMap<String, Rc<RefCell<Any>>>,
 }
 
 impl Scope {
@@ -120,8 +122,8 @@ impl Scope {
     pub fn def_member(&mut self, name: String, value: Box<Any>) {
     }
 
-    pub fn get_member(&self, name: String) -> Option<&Box<Any>> {
-        self.members.get(&name)
+    pub fn get_member(&self, name: String) -> Option<Rc<RefCell<Any>>> {
+        self.members.get(&name).map(|val| Rc::clone(val))
     }
 }
 

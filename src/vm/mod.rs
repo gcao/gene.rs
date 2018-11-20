@@ -2,6 +2,8 @@ mod types;
 
 use std::any::Any;
 use std::collections::{BTreeMap};
+use std::rc::Rc;
+use std::cell::{RefCell, RefMut};
 
 use super::types::Value;
 use super::utils::new_uuidv4;
@@ -30,18 +32,18 @@ impl VirtualMachine {
         };
     }
 
-    pub fn load_module(&mut self, mut module: Module) -> &Box<Any> {
+    pub fn load_module(&mut self, mut module: Module) -> &Rc<RefCell<Any>> {
         let block = module.get_default_block();
         return self.process(block);
     }
 
-    pub fn process(&mut self, block: Block) -> &Box<Any> {
+    pub fn process(&mut self, block: Block) -> &Rc<RefCell<Any>> {
         self.create_registers();
 
         {
             let root_context = Context::root();
             let registers = self.registers_store.get_mut(&self.registers_id).unwrap();
-            registers.data.insert(CONTEXT_REG.into(), Box::new(root_context));
+            registers.data.insert(CONTEXT_REG.into(), Rc::new(RefCell::new(root_context)));
         }
 
         self.pos = 0;
@@ -52,7 +54,7 @@ impl VirtualMachine {
                     self.pos += 1;
                     let registers = self.registers_store.get_mut(&self.registers_id).unwrap();
                     // println!("Value: {}", v);
-                    registers.insert(DEFAULT_REG.into(), Box::new(v.clone()));
+                    registers.insert(DEFAULT_REG.into(), Rc::new(RefCell::new(v.clone())));
                 }
 
                 Instruction::Define(name, reg) => {
@@ -63,8 +65,24 @@ impl VirtualMachine {
                         value = registers.data.remove(reg.into()).unwrap();
                     }
                     {
-                        let context = registers.data.get_mut(CONTEXT_REG).unwrap().downcast_mut::<Context>().unwrap();
+                        let mut borrowed = registers.data.get_mut(CONTEXT_REG).unwrap().borrow_mut();
+                        let context = borrowed.downcast_mut::<Context>().unwrap();
                         context.def_member(name.clone(), Box::new(value), VarType::SCOPE);
+                    }
+                }
+
+                Instruction::GetMember(name) => {
+                    self.pos += 1;
+                    let value;
+                    {
+                        let registers = self.registers_store.get_mut(&self.registers_id).unwrap();
+                        let mut borrowed = registers.data.get_mut(CONTEXT_REG).unwrap().borrow_mut();
+                        let context = borrowed.downcast_mut::<Context>().unwrap();
+                        value = context.get_member(name.clone()).unwrap().clone();
+                    }
+                    {
+                        let registers = self.registers_store.get_mut(&self.registers_id).unwrap();
+                        registers.insert(DEFAULT_REG.into(), value);
                     }
                 }
 
@@ -82,7 +100,7 @@ impl VirtualMachine {
 
         let registers = self.registers_store.get(&self.registers_id).unwrap();
         let result = registers.data.get(DEFAULT_REG.into()).unwrap();
-        println!("Result: {}", (*result).downcast_ref::<Value>().unwrap());
+        println!("Result: {}", result.borrow().downcast_ref::<Value>().unwrap());
         result
     }
 
@@ -92,23 +110,30 @@ impl VirtualMachine {
         self.registers_id = id.clone();
         self.registers_store.insert(id, registers);
     }
+
+    fn get_member(&mut self, name: String) -> Option<Rc<RefCell<Any>>> {
+        let mut registers = self.registers_store.get_mut(&self.registers_id).unwrap();
+        let mut borrowed = registers.data.get_mut(CONTEXT_REG).unwrap().borrow_mut();
+        let context = borrowed.downcast_mut::<Context>().unwrap();
+        context.get_member(name).map(|val| Rc::clone(&val))
+    }
 }
 
 pub struct Registers {
     pub id: String,
-    pub data: BTreeMap<String, Box<Any>>,
+    pub data: BTreeMap<String, Rc<RefCell<Any>>>,
 }
 
 impl Registers {
     pub fn new() -> Self {
-        let data: BTreeMap<String, Box<Any>> =  BTreeMap::new();
+        let data =  BTreeMap::new();
         return Registers {
             id: new_uuidv4(),
             data: data,
         }
     }
 
-    pub fn insert(&mut self, key: String, val: Box<Any>) {
+    pub fn insert(&mut self, key: String, val: Rc<RefCell<Any>>) {
         self.data.insert(key, val);
     }
 }

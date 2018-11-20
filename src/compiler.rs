@@ -50,6 +50,11 @@ impl Compiler {
             Value::Gene(v) => {
                 self.compile_gene(block, v);
             },
+            Value::Stream(stmts) => {
+                for stmt in stmts {
+                    self.compile_(block, stmt);
+                }
+            },
             _ => {
                 (*block).add_instr(Instruction::Default(ast));
             }
@@ -145,6 +150,7 @@ pub enum Instruction {
     /// Save Value to default register
     Default(Value),
     Define(String, String),
+    GetMember(String),
     CallEnd,
 }
 
@@ -164,6 +170,10 @@ impl fmt::Display for Instruction {
                 fmt.write_str(&name.to_string())?;
                 fmt.write_str(" ")?;
                 fmt.write_str(&reg.to_string())?;
+            }
+            Instruction::GetMember(name) => {
+                fmt.write_str("GetMember ")?;
+                fmt.write_str(&name.to_string())?;
             }
             Instruction::CallEnd => {
                 fmt.write_str("CallEnd")?;
