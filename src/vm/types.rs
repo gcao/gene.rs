@@ -48,7 +48,7 @@ impl Context {
         }
     }
 
-    pub fn def_member(&mut self, name: String, value: Box<Any>, var_type: VarType) {
+    pub fn def_member(&mut self, name: String, value: Rc<RefCell<Any>>, var_type: VarType) {
         match var_type {
             VarType::SCOPE => {
                 self.scope.def_member(name, value);
@@ -90,7 +90,8 @@ impl Namespace {
         }
     }
 
-    pub fn def_member(&mut self, name: String, value: Box<Any>) {
+    pub fn def_member(&mut self, name: String, value: Rc<RefCell<Any>>) {
+        self.members.insert(name, value);
     }
 
     pub fn get_member(&self, name: String) -> Option<Rc<RefCell<Any>>> {
@@ -119,7 +120,8 @@ impl Scope {
         }
     }
 
-    pub fn def_member(&mut self, name: String, value: Box<Any>) {
+    pub fn def_member(&mut self, name: String, value: Rc<RefCell<Any>>) {
+        self.members.insert(name, value);
     }
 
     pub fn get_member(&self, name: String) -> Option<Rc<RefCell<Any>>> {

@@ -62,12 +62,12 @@ impl VirtualMachine {
                     let registers = self.registers_store.get_mut(&self.registers_id).unwrap();
                     let value;
                     {
-                        value = registers.data.remove(reg.into()).unwrap();
+                        value = Rc::clone(registers.data.get(reg.into()).unwrap());
                     }
                     {
                         let mut borrowed = registers.data.get_mut(CONTEXT_REG).unwrap().borrow_mut();
                         let context = borrowed.downcast_mut::<Context>().unwrap();
-                        context.def_member(name.clone(), Box::new(value), VarType::SCOPE);
+                        context.def_member(name.clone(), value, VarType::SCOPE);
                     }
                 }
 
@@ -78,7 +78,7 @@ impl VirtualMachine {
                         let registers = self.registers_store.get_mut(&self.registers_id).unwrap();
                         let mut borrowed = registers.data.get_mut(CONTEXT_REG).unwrap().borrow_mut();
                         let context = borrowed.downcast_mut::<Context>().unwrap();
-                        value = context.get_member(name.clone()).unwrap().clone();
+                        value = Rc::clone(&context.get_member(name.clone()).unwrap());
                     }
                     {
                         let registers = self.registers_store.get_mut(&self.registers_id).unwrap();

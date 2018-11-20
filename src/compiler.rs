@@ -37,7 +37,7 @@ impl Compiler {
     fn compile_(&mut self, block: &mut Block, ast: Value) {
         match ast {
             Value::Symbol(s) => {
-                // TODO: compile into variable
+                (*block).add_instr(Instruction::GetMember(s));
             },
             Value::Array(v) => {
                 // TODO: compile individual elements
