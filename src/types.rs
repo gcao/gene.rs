@@ -1,8 +1,11 @@
 extern crate ordered_float;
 
-use ordered_float::OrderedFloat;
 use std::fmt;
 use std::collections::{BTreeMap};
+use std::rc::Rc;
+use std::cell::{RefCell, RefMut};
+
+use ordered_float::OrderedFloat;
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Value {
@@ -53,15 +56,15 @@ impl fmt::Display for Value {
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Gene {
-    pub _type: Box<Value>,
-    pub props: BTreeMap<String, Box<Value>>,
-    pub data: Vec<Box<Value>>,
+    pub _type: Rc<RefCell<Value>>,
+    pub props: BTreeMap<String, Rc<RefCell<Value>>>,
+    pub data: Vec<Rc<RefCell<Value>>>,
 }
 
 impl Gene {
-    pub fn new(_type: Value) -> Gene {
-        return Gene {
-            _type: Box::new(_type),
+    pub fn new(_type: Value) -> Self {
+        Gene {
+            _type: Rc::new(RefCell::new(_type)),
             props: BTreeMap::new(),
             data: vec![],
         }
@@ -71,7 +74,7 @@ impl Gene {
 impl fmt::Display for Gene {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         fmt.write_str("(")?;
-        fmt.write_str(&self._type.to_string())?;
+        fmt.write_str(&self._type.borrow().to_string())?;
         fmt.write_str(" ...)")?;
         Ok(())
     }
@@ -84,9 +87,9 @@ pub struct Pair {
 
 impl Pair {
     pub fn new(key: String, val: Value) -> Self {
-        return Pair {
+        Pair {
             key: key,
             val: val,
-        };
+        }
     }
 }

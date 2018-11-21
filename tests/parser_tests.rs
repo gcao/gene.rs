@@ -1,7 +1,10 @@
 #[macro_use] extern crate gene;
 
-use ordered_float::OrderedFloat;
+use std::rc::Rc;
+use std::cell::{RefCell};
 use std::collections::{BTreeMap};
+
+use ordered_float::OrderedFloat;
 
 use gene::parser::Parser;
 use gene::types::Value;
@@ -27,10 +30,10 @@ fn test_read_number() {
 // If it has to be tested, parser.next() should be called first.
 // #[test]
 // fn test_read_word() {
-//     assert_eq!(Parser::new("ab").read_word(), Some(Ok("ab".into())));
-//     assert_eq!(Parser::new("ab cd").read_word(), Some(Ok("ab".into())));
-//     assert_eq!(Parser::new("ab,cd").read_word(), Some(Ok("ab".into())));
-//     assert_eq!(Parser::new("你好").read_word(), Some(Ok("你好".into())));
+//     assert_eq!(Parser::new("ab").read_word(), Some(Ok("ab".to_string())));
+//     assert_eq!(Parser::new("ab cd").read_word(), Some(Ok("ab".to_string())));
+//     assert_eq!(Parser::new("ab,cd").read_word(), Some(Ok("ab".to_string())));
+//     assert_eq!(Parser::new("你好").read_word(), Some(Ok("你好".to_string())));
 // }
 
 #[test]
@@ -39,30 +42,30 @@ fn test_read_keywords() {
     assert_eq!(Parser::new(" true ").read(), Some(Ok(Value::Boolean(true))));
     assert_eq!(Parser::new("false").read(), Some(Ok(Value::Boolean(false))));
     assert_eq!(Parser::new("null").read(), Some(Ok(Value::Null)));
-    assert_eq!(Parser::new("\\true").read(), Some(Ok(Value::Symbol("true".into()))));
+    assert_eq!(Parser::new("\\true").read(), Some(Ok(Value::Symbol("true".to_string()))));
 }
 
 #[test]
 fn test_read_string() {
-    assert_eq!(Parser::new("\"ab\"").read(), Some(Ok(Value::String("ab".into()))));
-    assert_eq!(Parser::new("\"a\nb\"").read(), Some(Ok(Value::String("a\nb".into()))));
-    assert_eq!(Parser::new("\"ab \\\"cd\\\"\"").read(), Some(Ok(Value::String("ab \"cd\"".into()))));
-    assert_eq!(Parser::new("\"你好\"").read(), Some(Ok(Value::String("你好".into()))));
+    assert_eq!(Parser::new("\"ab\"").read(), Some(Ok(Value::String("ab".to_string()))));
+    assert_eq!(Parser::new("\"a\nb\"").read(), Some(Ok(Value::String("a\nb".to_string()))));
+    assert_eq!(Parser::new("\"ab \\\"cd\\\"\"").read(), Some(Ok(Value::String("ab \"cd\"".to_string()))));
+    assert_eq!(Parser::new("\"你好\"").read(), Some(Ok(Value::String("你好".to_string()))));
 }
 
 #[test]
 fn test_skip_comment() {
-    assert_eq!(Parser::new("#\nab").read(), Some(Ok(Value::Symbol("ab".into()))));
-    assert_eq!(Parser::new("#!test\nab").read(), Some(Ok(Value::Symbol("ab".into()))));
+    assert_eq!(Parser::new("#\nab").read(), Some(Ok(Value::Symbol("ab".to_string()))));
+    assert_eq!(Parser::new("#!test\nab").read(), Some(Ok(Value::Symbol("ab".to_string()))));
 }
 
 #[test]
 fn test_read_symbols() {
-    assert_eq!(Parser::new("ab").read(), Some(Ok(Value::Symbol("ab".into()))));
-    assert_eq!(Parser::new("你好").read(), Some(Ok(Value::Symbol("你好".into()))));
+    assert_eq!(Parser::new("ab").read(), Some(Ok(Value::Symbol("ab".to_string()))));
+    assert_eq!(Parser::new("你好").read(), Some(Ok(Value::Symbol("你好".to_string()))));
     {
         let mut parser = Parser::new("ab");
-        assert_eq!(parser.read(), Some(Ok(Value::Symbol("ab".into()))));
+        assert_eq!(parser.read(), Some(Ok(Value::Symbol("ab".to_string()))));
         assert_eq!(parser.read(), None);
     }
 }
@@ -129,7 +132,7 @@ fn test_read_gene() {
     }
     {
         let mut result = Gene::new(Value::Integer(1));
-        result.data.push(Box::new(Value::Integer(2)));
+        result.data.push(Rc::new(RefCell::new(Value::Integer(2))));
         assert_eq!(
             Parser::new("(1 2)").read(),
             Some(Ok(Value::Gene(result)))
@@ -137,8 +140,8 @@ fn test_read_gene() {
     }
     {
         let mut result = Gene::new(Value::Integer(1));
-        result.props.insert("key".into(), Box::new(Value::Integer(2)));
-        result.data.push(Box::new(Value::Integer(3)));
+        result.props.insert("key".to_string(), Rc::new(RefCell::new(Value::Integer(2))));
+        result.data.push(Rc::new(RefCell::new(Value::Integer(3))));
         assert_eq!(
             Parser::new("(1 ^key 2 3)").read(),
             Some(Ok(Value::Gene(result)))
@@ -146,7 +149,7 @@ fn test_read_gene() {
     }
     {
         let mut result = Gene::new(Value::Integer(1));
-        result.data.push(Box::new(Value::Array(Vec::new())));
+        result.data.push(Rc::new(RefCell::new(Value::Array(Vec::new()))));
         assert_eq!(
             Parser::new("(1 [])").read(),
             Some(Ok(Value::Gene(result)))
@@ -154,8 +157,8 @@ fn test_read_gene() {
     }
     {
         let mut result = Gene::new(Value::Integer(1));
-        result.props.insert("key".into(), Box::new(Value::Integer(123)));
-        result.data.push(Box::new(Value::Array(Vec::new())));
+        result.props.insert("key".to_string(), Rc::new(RefCell::new(Value::Integer(123))));
+        result.data.push(Rc::new(RefCell::new(Value::Array(Vec::new()))));
         assert_eq!(
             Parser::new("(1 ^key 123 [])").read(),
             Some(Ok(Value::Gene(result)))
@@ -166,24 +169,24 @@ fn test_read_gene() {
 #[test]
 fn test_quote() {
     {
-        let mut result = Gene::new(Value::Symbol("#QUOTE".into()));
-        result.data.push(Box::new(Value::Symbol("ab".into())));
+        let mut result = Gene::new(Value::Symbol("#QUOTE".to_string()));
+        result.data.push(Rc::new(RefCell::new(Value::Symbol("ab".to_string()))));
         assert_eq!(
             Parser::new("`ab").read(),
             Some(Ok(Value::Gene(result)))
         );
     }
     {
-        let mut result = Gene::new(Value::Symbol("#QUOTE".into()));
-        result.data.push(Box::new(Value::Boolean(true)));
+        let mut result = Gene::new(Value::Symbol("#QUOTE".to_string()));
+        result.data.push(Rc::new(RefCell::new(Value::Boolean(true))));
         assert_eq!(
             Parser::new("`true").read(),
             Some(Ok(Value::Gene(result)))
         );
     }
     {
-        let mut result = Gene::new(Value::Symbol("#QUOTE".into()));
-        result.data.push(Box::new(Value::Array(Vec::new())));
+        let mut result = Gene::new(Value::Symbol("#QUOTE".to_string()));
+        result.data.push(Rc::new(RefCell::new(Value::Array(Vec::new()))));
         assert_eq!(
             Parser::new("`[]").read(),
             Some(Ok(Value::Gene(result)))
@@ -193,14 +196,14 @@ fn test_quote() {
 
 #[test]
 fn test_parse_one_string() {
-    assert_eq!(Parser::new("\"ab\"").parse(), Ok(Value::String("ab".into())));
+    assert_eq!(Parser::new("\"ab\"").parse(), Ok(Value::String("ab".to_string())));
 }
 
 #[test]
 fn test_parse_stream() {
     {
         let result = Value::Stream(
-            vec![Value::Symbol("ab".into()), Value::Symbol("cd".into())]
+            vec![Value::Symbol("ab".to_string()), Value::Symbol("cd".to_string())]
         );
         assert_eq!(
             Parser::new("ab cd").parse(),

@@ -1,7 +1,10 @@
 use std::str::CharIndices;
 
-use ordered_float::OrderedFloat;
 use std::collections::{BTreeMap};
+use std::rc::Rc;
+use std::cell::{RefCell, RefMut};
+
+use ordered_float::OrderedFloat;
 
 use super::types::Value;
 use super::types::Gene;
@@ -51,9 +54,9 @@ impl<'a> Parser<'a> {
 
         if result.len() == 1 {
             let first = result[0].clone();
-            return Ok(first);
+            Ok(first)
         } else {
-            return Ok(Value::Stream(result));
+            Ok(Value::Stream(result))
         }
     }
 
@@ -72,8 +75,8 @@ impl<'a> Parser<'a> {
             self.next();
             let mut type_is_set = false;
             let mut _type = Value::Null;
-            let mut props = BTreeMap::<String, Box<Value>>::new();
-            let mut data = Vec::<Box<Value>>::new();
+            let mut props = BTreeMap::<String, Rc<RefCell<Value>>>::new();
+            let mut data = Vec::<Rc<RefCell<Value>>>::new();
             loop {
                 self.skip_whitespaces();
 
@@ -84,14 +87,14 @@ impl<'a> Parser<'a> {
                     let result = self.read_pair();
                     if !result.is_none() {
                         let pair = result.unwrap().unwrap();
-                        props.insert(pair.key, Box::new(pair.val));
+                        props.insert(pair.key, Rc::new(RefCell::new(pair.val)));
                     }
                 } else {
                     let result = self.read();
                     if !result.is_none() {
                         let val = result.unwrap().unwrap();
                         if type_is_set {
-                            data.push(Box::new(val));
+                            data.push(Rc::new(RefCell::new(val)));
                         } else {
                             type_is_set = true;
                             _type = val;
@@ -100,7 +103,7 @@ impl<'a> Parser<'a> {
                 }
             }
             return Some(Ok(Value::Gene(Gene {
-                _type: Box::new(_type),
+                _type: Rc::new(RefCell::new(_type)),
                 props: props,
                 data: data,
             })));
@@ -169,8 +172,8 @@ impl<'a> Parser<'a> {
 
         } else if ch == '`' {
             self.next();
-            let mut gene = Gene::new(Value::Symbol("#QUOTE".into()));
-            gene.data.push(Box::new(self.read().unwrap().unwrap()));
+            let mut gene = Gene::new(Value::Symbol("#QUOTE".to_string()));
+            gene.data.push(Rc::new(RefCell::new(self.read().unwrap().unwrap())));
             return Some(Ok(Value::Gene(gene)));
 
         } else if is_symbol_head(ch) {
@@ -222,7 +225,7 @@ impl<'a> Parser<'a> {
             }
         }
 
-        return Some(Ok(Value::String(result.into())));
+        Some(Ok(Value::String(result.to_string())))
     }
 
 
@@ -274,7 +277,7 @@ impl<'a> Parser<'a> {
             }
         }
 
-        return Some(Ok(result.into()));
+        Some(Ok(result.to_string()))
     }
 
     fn read_pair(&mut self) -> Option<Result<Pair, Error>> {
@@ -314,7 +317,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn start(&mut self) {
+    fn start(&mut self) -> () {
         if self.pos.is_none() {
             self.next();
         }
@@ -325,12 +328,12 @@ impl<'a> Parser<'a> {
             Some((pos, ch)) => {
                 self.pos = Some(pos);
                 self.chr = Some(ch);
-                return Some((pos, ch));
+                Some((pos, ch))
             }
             None => {
                 self.pos = Some(self.str.len());
                 self.chr = None;
-                return None;
+                None
             }
         }
     }
@@ -339,18 +342,17 @@ impl<'a> Parser<'a> {
         self.chars.clone().next().map(|(_, ch)| ch)
     }
 
-    fn skip_whitespaces(&mut self) {
+    fn skip_whitespaces(&mut self) -> () {
         self.advance_while(is_whitespace);
     }
 
     // fn reached_end(&mut self) -> bool {
-    //     return self.str.len() == 0 ||
-    //       (!self.pos.is_none() && self.pos.unwrap() == self.str.len() - 1);
+    //     self.str.len() == 0 || (!self.pos.is_none() && self.pos.unwrap() == self.str.len() - 1)
     // }
 }
 
 pub fn is_whitespace(ch: char) -> bool {
-    return ch.is_whitespace() || ch == ',';
+    ch.is_whitespace() || ch == ','
 }
 
 pub fn is_sep(ch: char) -> bool {

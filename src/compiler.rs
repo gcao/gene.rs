@@ -1,5 +1,7 @@
 extern crate rand;
 
+use std::rc::Rc;
+use std::cell::{RefCell, RefMut};
 use std::collections::{BTreeMap};
 use std::fmt;
 
@@ -16,13 +18,13 @@ pub struct Compiler {
 
 impl Compiler {
     pub fn new() -> Self {
-        return Compiler {
+        Compiler {
             module: Module::new(),
-        };
+        }
     }
 
     pub fn compile(&mut self, ast: Value) -> Module {
-        let mut block = Block::new("__default__".into());
+        let mut block = Block::new("__default__".to_string());
         let block_id = block.id.clone();
         block.add_instr(Instruction::Init);
         self.compile_(&mut block, ast);
@@ -31,52 +33,56 @@ impl Compiler {
         println!("Block: {}", block);
 
         self.module.set_default_block(block);
-        return self.module.clone();
+        self.module.clone()
     }
 
-    fn compile_(&mut self, block: &mut Block, ast: Value) {
+    fn compile_(&mut self, block: &mut Block, ast: Value) -> () {
         match ast {
             Value::Symbol(s) => {
                 (*block).add_instr(Instruction::GetMember(s));
-            },
+            }
             Value::Array(v) => {
                 // TODO: compile individual elements
                 (*block).add_instr(Instruction::Default(Value::Array(v)));
-            },
+            }
             Value::Map(_) => {
                 // TODO: compile individual values
                 (*block).add_instr(Instruction::Default(ast));
-            },
+            }
             Value::Gene(v) => {
                 self.compile_gene(block, v);
-            },
+            }
             Value::Stream(stmts) => {
                 for stmt in stmts {
                     self.compile_(block, stmt);
                 }
-            },
+            }
             _ => {
                 (*block).add_instr(Instruction::Default(ast));
             }
-        }
+        };
     }
 
-    fn compile_gene(&mut self, block: &mut Block, gene: Gene) {
+    fn compile_gene(&mut self, block: &mut Block, gene: Gene) -> () {
         let Gene {_type, mut data, ..} = gene;
 
-        if *_type == Value::Symbol("var".into()) {
-            match data.get(0).unwrap() {
-                box Value::Symbol(name) => {
-                    match data.get(1).unwrap() {
-                        box value => {
-                            self.compile_(block, value.clone());
-                            (*block).add_instr(Instruction::Define(name.clone(), "default".into()));
-                        }
-                    }
-                },
-                _ => unimplemented!()
+        if *_type.borrow() == Value::Symbol("var".to_string()) {
+            let first;
+            {
+                first = Rc::clone(data.get_mut(0).unwrap());
             }
-        }
+            let second;
+            {
+                second = data.get(1).unwrap().borrow().clone();
+            }
+            match *first.borrow_mut() {
+                Value::Symbol(ref name) => {
+                    self.compile_(block, second.clone());
+                    (*block).add_instr(Instruction::Define(name.clone(), "default".to_string()));
+                }
+                _ => unimplemented!()
+            };
+        };
     }
 }
 
@@ -89,20 +95,20 @@ pub struct Module {
 
 impl Module {
     pub fn new() -> Self {
-        return Module {
+        Module {
             id: new_uuidv4(),
             blocks: BTreeMap::new(),
-            default_block_id: "".into(),
+            default_block_id: "".to_string(),
         }
     }
 
-    pub fn set_default_block(&mut self, block: Block) {
+    pub fn set_default_block(&mut self, block: Block) -> () {
         self.default_block_id = block.id.clone();
         self.blocks.insert(block.id.clone(), block);
     }
 
     pub fn get_default_block(&mut self) -> Block {
-        return self.blocks[&self.default_block_id].clone();
+        self.blocks[&self.default_block_id].clone()
     }
 }
 
@@ -116,14 +122,14 @@ pub struct Block {
 impl Block {
     pub fn new(name: String) -> Self {
         let instructions = vec![];
-        return Block {
+        Block {
             id: new_uuidv4(),
             name: name,
             instructions: instructions,
         }
     }
 
-    pub fn add_instr(&mut self, instr: Instruction) {
+    pub fn add_instr(&mut self, instr: Instruction) -> () {
         self.instructions.push(instr);
     }
 }
@@ -193,3 +199,14 @@ impl fmt::Display for Instruction {
 fn new_reg() -> String {
     format!("{}", random::<u32>())
 }
+
+// TODO
+// fn normalize(gene: Gene) -> Gene {
+//     let mut first = *gene.data[0];
+//     match first {
+//         Value::Symbol(s) if s == "+".to_string() => {
+//             gene
+//         }
+//         _ => gene
+//     }
+// }

@@ -48,11 +48,11 @@ impl Context {
         }
     }
 
-    pub fn def_member(&mut self, name: String, value: Rc<RefCell<Any>>, var_type: VarType) {
+    pub fn def_member(&mut self, name: String, value: Rc<RefCell<Any>>, var_type: VarType) -> () {
         match var_type {
             VarType::SCOPE => {
                 self.scope.def_member(name, value);
-            },
+            }
             VarType::NAMESPACE => {
                 self.scope.def_member(name, value);
             }
@@ -77,10 +77,10 @@ pub struct Namespace {
 
 impl Namespace {
     pub fn new(parent: Self) -> Self {
-        return Self {
+        Self {
             parent: Some(Box::new(parent)),
             members: BTreeMap::new(),
-        };
+        }
     }
 
     pub fn root() -> Self {
@@ -90,7 +90,7 @@ impl Namespace {
         }
     }
 
-    pub fn def_member(&mut self, name: String, value: Rc<RefCell<Any>>) {
+    pub fn def_member(&mut self, name: String, value: Rc<RefCell<Any>>) -> () {
         self.members.insert(name, value);
     }
 
@@ -107,20 +107,20 @@ pub struct Scope {
 
 impl Scope {
     pub fn new(parent: Self) -> Self {
-        Self {
+        Scope {
             parent: Some(Box::new(parent)),
             members: BTreeMap::new(),
         }
     }
 
     pub fn root() -> Self {
-        Self {
+        Scope {
             parent: None,
             members: BTreeMap::new(),
         }
     }
 
-    pub fn def_member(&mut self, name: String, value: Rc<RefCell<Any>>) {
+    pub fn def_member(&mut self, name: String, value: Rc<RefCell<Any>>) -> () {
         self.members.insert(name, value);
     }
 

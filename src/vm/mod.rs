@@ -23,18 +23,18 @@ pub struct VirtualMachine {
 
 impl VirtualMachine {
     pub fn new() -> Self {
-        return VirtualMachine {
+        VirtualMachine {
             registers_store: BTreeMap::new(),
             registers_id: "".into(),
             pos: 0,
             block: None,
             app: Application::new(),
-        };
+        }
     }
 
     pub fn load_module(&mut self, mut module: Module) -> &Rc<RefCell<Any>> {
         let block = module.get_default_block();
-        return self.process(block);
+        self.process(block)
     }
 
     pub fn process(&mut self, block: Block) -> &Rc<RefCell<Any>> {
@@ -104,7 +104,7 @@ impl VirtualMachine {
         result
     }
 
-    pub fn create_registers(&mut self) {
+    pub fn create_registers(&mut self) -> () {
         let registers = Registers::new();
         let id = registers.id.clone();
         self.registers_id = id.clone();
@@ -112,7 +112,7 @@ impl VirtualMachine {
     }
 
     fn get_member(&mut self, name: String) -> Option<Rc<RefCell<Any>>> {
-        let mut registers = self.registers_store.get_mut(&self.registers_id).unwrap();
+        let registers = self.registers_store.get_mut(&self.registers_id).unwrap();
         let mut borrowed = registers.data.get_mut(CONTEXT_REG).unwrap().borrow_mut();
         let context = borrowed.downcast_mut::<Context>().unwrap();
         context.get_member(name).map(|val| Rc::clone(&val))
@@ -127,13 +127,13 @@ pub struct Registers {
 impl Registers {
     pub fn new() -> Self {
         let data =  BTreeMap::new();
-        return Registers {
+        Registers {
             id: new_uuidv4(),
             data: data,
         }
     }
 
-    pub fn insert(&mut self, key: String, val: Rc<RefCell<Any>>) {
+    pub fn insert(&mut self, key: String, val: Rc<RefCell<Any>>) -> () {
         self.data.insert(key, val);
     }
 }
