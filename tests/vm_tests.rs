@@ -35,7 +35,7 @@ fn test_basic_stmts() {
         let module = compiler.compile(parsed.unwrap());
         let borrowed = (*vm.load_module(module)).borrow();
         let result = borrowed.downcast_ref::<Value>().unwrap();
-        assert_eq!(*result, Value::String("ab".into()));
+        assert_eq!(*result, Value::String("ab".to_string()));
     }
     {
         let mut parser = Parser::new("null");

@@ -95,7 +95,7 @@ impl Namespace {
     }
 
     pub fn get_member(&self, name: String) -> Option<Rc<RefCell<Any>>> {
-        self.members.get(&name).map(|val| Rc::clone(val))
+        self.members.get(&name).map(|val| val.clone())
     }
 }
 
@@ -125,7 +125,7 @@ impl Scope {
     }
 
     pub fn get_member(&self, name: String) -> Option<Rc<RefCell<Any>>> {
-        self.members.get(&name).map(|val| Rc::clone(val))
+        self.members.get(&name).map(|val| val.clone())
     }
 }
 

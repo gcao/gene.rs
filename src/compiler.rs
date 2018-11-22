@@ -50,7 +50,7 @@ impl Compiler {
                 (*block).add_instr(Instruction::Default(ast));
             }
             Value::Gene(v) => {
-                self.compile_gene(block, v);
+                self.compile_gene(block, normalize(v));
             }
             Value::Stream(stmts) => {
                 for stmt in stmts {
@@ -69,7 +69,7 @@ impl Compiler {
         if *_type.borrow() == Value::Symbol("var".to_string()) {
             let first;
             {
-                first = Rc::clone(data.get_mut(0).unwrap());
+                first = data.get_mut(0).unwrap().clone();
             }
             let second;
             {
@@ -82,6 +82,17 @@ impl Compiler {
                 }
                 _ => unimplemented!()
             };
+        } else if *_type.borrow() == Value::Symbol("+".to_string()) {
+            let first = data.get(0).unwrap().borrow().clone();
+            self.compile_(block, first);
+
+            let first_reg = new_reg();
+            (*block).add_instr(Instruction::Copy("default".to_string(), first_reg.clone()));
+
+            let second = data.get(1).unwrap().borrow().clone();
+            self.compile_(block, second);
+
+            (*block).add_instr(Instruction::BinaryOp("+".to_string(), first_reg, "default".to_string()));
         };
     }
 }
@@ -150,13 +161,18 @@ impl fmt::Display for Block {
 
 #[derive(Clone, Debug)]
 pub enum Instruction {
-    /// Not supported code should compile to TODO instruction with a message
-    TODO(String),
     Init,
+
     /// Save Value to default register
     Default(Value),
+    /// Copy from one register to another
+    Copy(String, String),
+
     Define(String, String),
     GetMember(String),
+
+    BinaryOp(String, String, String),
+
     CallEnd,
 }
 
@@ -171,21 +187,31 @@ impl fmt::Display for Instruction {
                 fmt.write_str("Default ")?;
                 fmt.write_str(&v.to_string())?;
             }
+            Instruction::Copy(first, second) => {
+                fmt.write_str("Copy ")?;
+                fmt.write_str(&first)?;
+                fmt.write_str(" ")?;
+                fmt.write_str(&second)?;
+            }
             Instruction::Define(name, reg) => {
                 fmt.write_str("Define ")?;
-                fmt.write_str(&name.to_string())?;
+                fmt.write_str(&name)?;
                 fmt.write_str(" ")?;
-                fmt.write_str(&reg.to_string())?;
+                fmt.write_str(&reg)?;
             }
             Instruction::GetMember(name) => {
                 fmt.write_str("GetMember ")?;
-                fmt.write_str(&name.to_string())?;
+                fmt.write_str(&name)?;
+            }
+            Instruction::BinaryOp(op, first, second) => {
+                fmt.write_str(&first)?;
+                fmt.write_str(" ")?;
+                fmt.write_str(&op)?;
+                fmt.write_str(" ")?;
+                fmt.write_str(&second)?;
             }
             Instruction::CallEnd => {
                 fmt.write_str("CallEnd")?;
-            }
-            Instruction::TODO(_) => {
-                fmt.write_str("TODO")?;
             }
             _ => {
                 fmt.write_str("???")?;
@@ -200,13 +226,20 @@ fn new_reg() -> String {
     format!("{}", random::<u32>())
 }
 
-// TODO
-// fn normalize(gene: Gene) -> Gene {
-//     let mut first = *gene.data[0];
-//     match first {
-//         Value::Symbol(s) if s == "+".to_string() => {
-//             gene
-//         }
-//         _ => gene
-//     }
-// }
+fn normalize(gene: Gene) -> Gene {
+    let borrowed = gene.data[0].clone();
+    let first = borrowed.borrow_mut();
+    match *first {
+        Value::Symbol(ref s) if s == "+" => {
+            let Gene {_type, mut data, props} = gene;
+            let new_type = data.remove(0);
+            data.insert(0, _type);
+            Gene {
+                _type: new_type,
+                props: props,
+                data: data,
+            }
+        }
+        _ => gene
+    }
+}
