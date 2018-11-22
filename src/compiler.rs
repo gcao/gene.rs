@@ -227,19 +227,23 @@ fn new_reg() -> String {
 }
 
 fn normalize(gene: Gene) -> Gene {
-    let borrowed = gene.data[0].clone();
-    let first = borrowed.borrow_mut();
-    match *first {
-        Value::Symbol(ref s) if s == "+" => {
-            let Gene {_type, mut data, props} = gene;
-            let new_type = data.remove(0);
-            data.insert(0, _type);
-            Gene {
-                _type: new_type,
-                props: props,
-                data: data,
+    if gene.data.len() == 0 {
+        gene
+    } else {
+        let borrowed = gene.data[0].clone();
+        let first = borrowed.borrow_mut();
+        match *first {
+            Value::Symbol(ref s) if s == "+" => {
+                let Gene {_type, mut data, props} = gene;
+                let new_type = data.remove(0);
+                data.insert(0, _type);
+                Gene {
+                    _type: new_type,
+                    props: props,
+                    data: data,
+                }
             }
+            _ => gene
         }
-        _ => gene
     }
 }

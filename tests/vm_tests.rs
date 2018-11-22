@@ -108,19 +108,27 @@ fn test_variables() {
     }
 }
 
-// #[test]
-// fn test_functions() {
-//     let mut compiler = Compiler::new();
-//     let mut vm = VirtualMachine::new();
-//     {
-//         let mut parser = Parser::new("
-//             (fn f _ 1)
-//             (f)
-//         ");
-//         let parsed = parser.parse();
-//         let module = compiler.compile(parsed.unwrap());
-//         let borrowed = (*vm.load_module(module)).borrow();
-//         let result = borrowed.downcast_ref::<Value>().unwrap();
-//         assert_eq!(*result, Value::Integer(1));
-//     }
-// }
+#[test]
+fn test_binary_operations() {
+    let mut compiler = Compiler::new();
+    let mut vm = VirtualMachine::new();
+    {
+        let mut parser = Parser::new("
+          (1 + 2)
+        ");
+        let parsed = parser.parse();
+        let module = compiler.compile(parsed.unwrap());
+        let borrowed = (*vm.load_module(module)).borrow();
+        let result = borrowed.downcast_ref::<Value>().unwrap();
+        assert_eq!(*result, Value::Integer(3));
+    }
+}
+
+#[test]
+fn test_functions() {
+    let mut compiler = Compiler::new();
+    let mut vm = VirtualMachine::new();
+    {
+        // TODO
+    }
+}
