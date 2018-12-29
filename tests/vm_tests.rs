@@ -1,12 +1,13 @@
-#[macro_use] extern crate gene;
+#[macro_use]
+extern crate gene;
 
-use std::collections::{BTreeMap};
+use std::collections::BTreeMap;
 
 use ordered_float::OrderedFloat;
 
-use gene::types::Value;
-use gene::parser::Parser;
 use gene::compiler::Compiler;
+use gene::parser::Parser;
+use gene::types::Value;
 use gene::vm::VirtualMachine;
 
 #[test]
@@ -83,9 +84,12 @@ fn test_basic_stmts() {
         let module = compiler.compile(parsed.unwrap());
         let borrowed = (*vm.load_module(module)).borrow();
         let result = borrowed.downcast_ref::<Value>().unwrap();
-        assert_eq!(*result, Value::Map(map!{
-            "key" => Value::Integer(1),
-        }));
+        assert_eq!(
+            *result,
+            Value::Map(map! {
+                "key" => Value::Integer(1),
+            })
+        );
     }
 }
 
@@ -94,12 +98,14 @@ fn test_variables() {
     let mut compiler = Compiler::new();
     let mut vm = VirtualMachine::new();
     {
-        let mut parser = Parser::new("
+        let mut parser = Parser::new(
+            "
             # Define variable <a>
             (var a 1)
             # Return <a>'s value
             a
-        ");
+        ",
+        );
         let parsed = parser.parse();
         let module = compiler.compile(parsed.unwrap());
         let borrowed = (*vm.load_module(module)).borrow();
@@ -113,9 +119,11 @@ fn test_binary_operations() {
     let mut compiler = Compiler::new();
     let mut vm = VirtualMachine::new();
     {
-        let mut parser = Parser::new("
+        let mut parser = Parser::new(
+            "
           (1 + 2)
-        ");
+        ",
+        );
         let parsed = parser.parse();
         let module = compiler.compile(parsed.unwrap());
         let borrowed = (*vm.load_module(module)).borrow();

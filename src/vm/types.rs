@@ -1,18 +1,16 @@
 use std::any::Any;
-use std::collections::{BTreeMap};
-use std::rc::Rc;
 use std::cell::RefCell;
+use std::collections::BTreeMap;
+use std::rc::Rc;
 
 use super::super::compiler::Block;
 
 #[derive(Debug)]
-pub struct Application {
-}
+pub struct Application {}
 
 impl Application {
     pub fn new() -> Self {
-        Self {
-        }
+        Self {}
     }
 }
 
@@ -48,7 +46,7 @@ impl Context {
         }
     }
 
-    pub fn def_member(&mut self, name: String, value: Rc<RefCell<Any>>, var_type: VarType) -> () {
+    pub fn def_member(&mut self, name: String, value: Rc<RefCell<Any>>, var_type: VarType) {
         match var_type {
             VarType::SCOPE => {
                 self.scope.def_member(name, value);
@@ -90,12 +88,12 @@ impl Namespace {
         }
     }
 
-    pub fn def_member(&mut self, name: String, value: Rc<RefCell<Any>>) -> () {
+    pub fn def_member(&mut self, name: String, value: Rc<RefCell<Any>>) {
         self.members.insert(name, value);
     }
 
     pub fn get_member(&self, name: String) -> Option<Rc<RefCell<Any>>> {
-        self.members.get(&name).map(|val| val.clone())
+        self.members.get(&name).cloned()
     }
 }
 
@@ -120,12 +118,12 @@ impl Scope {
         }
     }
 
-    pub fn def_member(&mut self, name: String, value: Rc<RefCell<Any>>) -> () {
+    pub fn def_member(&mut self, name: String, value: Rc<RefCell<Any>>) {
         self.members.insert(name, value);
     }
 
     pub fn get_member(&self, name: String) -> Option<Rc<RefCell<Any>>> {
-        self.members.get(&name).map(|val| val.clone())
+        self.members.get(&name).cloned()
     }
 }
 
@@ -139,13 +137,19 @@ pub struct Function {
 }
 
 impl<'a> Function {
-    pub fn new(name: String, body: Block, inherit_scope: bool, namespace: Namespace, scope: Scope) -> Self {
+    pub fn new(
+        name: String,
+        body: Block,
+        inherit_scope: bool,
+        namespace: Namespace,
+        scope: Scope,
+    ) -> Self {
         Function {
-            name: name,
-            body: body,
-            inherit_scope: inherit_scope,
-            namespace: namespace,
-            scope: scope,
+            name,
+            body,
+            inherit_scope,
+            namespace,
+            scope,
         }
     }
 }

@@ -1,14 +1,14 @@
 mod types;
 
 use std::any::Any;
-use std::collections::{BTreeMap};
-use std::rc::Rc;
 use std::cell::{RefCell, RefMut};
+use std::collections::BTreeMap;
+use std::rc::Rc;
 
+use self::types::*;
+use super::compiler::{Block, Instruction, Module};
 use super::types::Value;
 use super::utils::new_uuidv4;
-use super::compiler::{Module, Block, Instruction};
-use self::types::*;
 
 const DEFAULT_REG: &str = "default";
 const CONTEXT_REG: &str = "context";
@@ -43,7 +43,9 @@ impl VirtualMachine {
         {
             let root_context = Context::root();
             let registers = self.registers_store.get_mut(&self.registers_id).unwrap();
-            registers.data.insert(CONTEXT_REG.into(), Rc::new(RefCell::new(root_context)));
+            registers
+                .data
+                .insert(CONTEXT_REG.into(), Rc::new(RefCell::new(root_context)));
         }
 
         self.pos = 0;
@@ -59,7 +61,7 @@ impl VirtualMachine {
                 Instruction::Copy(from, to) => {
                     self.pos += 1;
                     let registers = self.registers_store.get_mut(&self.registers_id).unwrap();
-                    let from_value = registers.data.get(from.into()).unwrap().clone();
+                    let from_value = registers.data[from].clone();
                     registers.insert(to.clone(), from_value);
                 }
 
@@ -68,10 +70,11 @@ impl VirtualMachine {
                     let registers = self.registers_store.get_mut(&self.registers_id).unwrap();
                     let value;
                     {
-                        value = registers.data.get(reg.into()).unwrap().clone();
+                        value = registers.data[reg].clone();
                     }
                     {
-                        let mut borrowed = registers.data.get_mut(CONTEXT_REG).unwrap().borrow_mut();
+                        let mut borrowed =
+                            registers.data.get_mut(CONTEXT_REG).unwrap().borrow_mut();
                         let context = borrowed.downcast_mut::<Context>().unwrap();
                         context.def_member(name.clone(), value, VarType::SCOPE);
                     }
@@ -87,8 +90,8 @@ impl VirtualMachine {
                 Instruction::BinaryOp(op, first, second) => {
                     self.pos += 1;
                     let registers = self.registers_store.get_mut(&self.registers_id).unwrap();
-                    let first = registers.data.get(first.into()).unwrap().clone();
-                    let second = registers.data.get(second.into()).unwrap().clone();
+                    let first = registers.data[first].clone();
+                    let second = registers.data[second].clone();
                     let result = binary_op(op, first, second);
                     registers.data.insert(DEFAULT_REG.into(), result);
                 }
@@ -105,13 +108,16 @@ impl VirtualMachine {
             }
         }
 
-        let registers = self.registers_store.get(&self.registers_id).unwrap();
-        let result = registers.data.get(DEFAULT_REG.into()).unwrap();
-        println!("Result: {}", result.borrow().downcast_ref::<Value>().unwrap());
+        let registers = &self.registers_store[&self.registers_id];
+        let result = &registers.data[DEFAULT_REG];
+        println!(
+            "Result: {}",
+            result.borrow().downcast_ref::<Value>().unwrap()
+        );
         result
     }
 
-    pub fn create_registers(&mut self) -> () {
+    pub fn create_registers(&mut self) {
         let registers = Registers::new();
         let id = registers.id.clone();
         self.registers_id = id.clone();
@@ -133,27 +139,29 @@ pub struct Registers {
 
 impl Registers {
     pub fn new() -> Self {
-        let data =  BTreeMap::new();
+        let data = BTreeMap::new();
         Registers {
             id: new_uuidv4(),
-            data: data,
+            data,
         }
     }
 
-    pub fn insert(&mut self, key: String, val: Rc<RefCell<Any>>) -> () {
+    pub fn insert(&mut self, key: String, val: Rc<RefCell<Any>>) {
         self.data.insert(key, val);
     }
 }
 
-fn binary_op<'a>(op: &'a str, first: Rc<RefCell<Any>>, second: Rc<RefCell<Any>>) -> Rc<RefCell<Any>> {
+fn binary_op<'a>(
+    op: &'a str,
+    first: Rc<RefCell<Any>>,
+    second: Rc<RefCell<Any>>,
+) -> Rc<RefCell<Any>> {
     let borrowed1 = first.borrow();
     let borrowed2 = second.borrow();
     let value1 = borrowed1.downcast_ref::<Value>().unwrap();
     let value2 = borrowed2.downcast_ref::<Value>().unwrap();
     match (value1, value2) {
-        (Value::Integer(a), Value::Integer(b)) => {
-            Rc::new(RefCell::new(Value::Integer(a + b)))
-        }
-        _ => unimplemented!()
+        (Value::Integer(a), Value::Integer(b)) => Rc::new(RefCell::new(Value::Integer(a + b))),
+        _ => unimplemented!(),
     }
 }

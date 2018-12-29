@@ -1,9 +1,9 @@
 extern crate ordered_float;
 
-use std::fmt;
-use std::collections::{BTreeMap};
-use std::rc::Rc;
 use std::cell::{RefCell, RefMut};
+use std::collections::BTreeMap;
+use std::fmt;
+use std::rc::Rc;
 
 use ordered_float::OrderedFloat;
 
@@ -87,9 +87,6 @@ pub struct Pair {
 
 impl Pair {
     pub fn new(key: String, val: Value) -> Self {
-        Pair {
-            key: key,
-            val: val,
-        }
+        Pair { key, val }
     }
 }

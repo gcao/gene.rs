@@ -1,4 +1,3 @@
 extern crate gene;
 
-fn main() {
-}
+fn main() {}

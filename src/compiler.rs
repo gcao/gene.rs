@@ -1,14 +1,14 @@
 extern crate rand;
 
-use std::rc::Rc;
 use std::cell::{RefCell, RefMut};
-use std::collections::{BTreeMap};
+use std::collections::BTreeMap;
 use std::fmt;
+use std::rc::Rc;
 
 use rand::prelude::random;
 
-use super::types::Value;
 use super::types::Gene;
+use super::types::Value;
 use super::utils::new_uuidv4;
 
 #[derive(Debug)]
@@ -36,7 +36,7 @@ impl Compiler {
         self.module.clone()
     }
 
-    fn compile_(&mut self, block: &mut Block, ast: Value) -> () {
+    fn compile_(&mut self, block: &mut Block, ast: Value) {
         match ast {
             Value::Symbol(s) => {
                 (*block).add_instr(Instruction::GetMember(s));
@@ -63,36 +63,47 @@ impl Compiler {
         };
     }
 
-    fn compile_gene(&mut self, block: &mut Block, gene: Gene) -> () {
-        let Gene {_type, mut data, ..} = gene;
+    fn compile_gene(&mut self, block: &mut Block, gene: Gene) {
+        let Gene {
+            _type, data, ..
+        } = gene;
 
         if *_type.borrow() == Value::Symbol("var".to_string()) {
             let first;
             {
-                first = data.get_mut(0).unwrap().clone();
+                first = data[0].clone();
             }
             let second;
             {
-                second = data.get(1).unwrap().borrow().clone();
+                second = data[1].borrow().clone();
             }
             match *first.borrow_mut() {
                 Value::Symbol(ref name) => {
                     self.compile_(block, second.clone());
                     (*block).add_instr(Instruction::Define(name.clone(), "default".to_string()));
                 }
-                _ => unimplemented!()
+                _ => unimplemented!(),
             };
+        } else if *_type.borrow() == Value::Symbol("fn".to_string()) {
+            let name = data[0].borrow().to_string();
+            // let args = data.get(1).unwrap().borrow().clone();
+
+            (*block).add_instr(Instruction::Function(name));
         } else if *_type.borrow() == Value::Symbol("+".to_string()) {
-            let first = data.get(0).unwrap().borrow().clone();
+            let first = data[0].borrow().clone();
             self.compile_(block, first);
 
             let first_reg = new_reg();
             (*block).add_instr(Instruction::Copy("default".to_string(), first_reg.clone()));
 
-            let second = data.get(1).unwrap().borrow().clone();
+            let second = data[1].borrow().clone();
             self.compile_(block, second);
 
-            (*block).add_instr(Instruction::BinaryOp("+".to_string(), first_reg, "default".to_string()));
+            (*block).add_instr(Instruction::BinaryOp(
+                "+".to_string(),
+                first_reg,
+                "default".to_string(),
+            ));
         };
     }
 }
@@ -113,7 +124,7 @@ impl Module {
         }
     }
 
-    pub fn set_default_block(&mut self, block: Block) -> () {
+    pub fn set_default_block(&mut self, block: Block) {
         self.default_block_id = block.id.clone();
         self.blocks.insert(block.id.clone(), block);
     }
@@ -135,12 +146,12 @@ impl Block {
         let instructions = vec![];
         Block {
             id: new_uuidv4(),
-            name: name,
-            instructions: instructions,
+            name,
+            instructions,
         }
     }
 
-    pub fn add_instr(&mut self, instr: Instruction) -> () {
+    pub fn add_instr(&mut self, instr: Instruction) {
         self.instructions.push(instr);
     }
 }
@@ -172,6 +183,8 @@ pub enum Instruction {
     GetMember(String),
 
     BinaryOp(String, String, String),
+
+    Function(String),
 
     CallEnd,
 }
@@ -227,23 +240,27 @@ fn new_reg() -> String {
 }
 
 fn normalize(gene: Gene) -> Gene {
-    if gene.data.len() == 0 {
+    if gene.data.is_empty() {
         gene
     } else {
         let borrowed = gene.data[0].clone();
         let first = borrowed.borrow_mut();
         match *first {
             Value::Symbol(ref s) if s == "+" => {
-                let Gene {_type, mut data, props} = gene;
+                let Gene {
+                    _type,
+                    mut data,
+                    props,
+                } = gene;
                 let new_type = data.remove(0);
                 data.insert(0, _type);
                 Gene {
                     _type: new_type,
-                    props: props,
-                    data: data,
+                    props,
+                    data,
                 }
             }
-            _ => gene
+            _ => gene,
         }
     }
 }

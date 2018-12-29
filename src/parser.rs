@@ -1,14 +1,14 @@
 use std::str::CharIndices;
 
-use std::collections::{BTreeMap};
-use std::rc::Rc;
 use std::cell::{RefCell, RefMut};
+use std::collections::BTreeMap;
+use std::rc::Rc;
 
 use ordered_float::OrderedFloat;
 
-use super::types::Value;
 use super::types::Gene;
 use super::types::Pair;
+use super::types::Value;
 
 pub struct Parser<'a> {
     str: &'a str,
@@ -24,16 +24,14 @@ pub struct Error<'a> {
 
 impl<'a> Error<'a> {
     pub fn new(s: &'a str) -> Self {
-        Error {
-            message: s,
-        }
+        Error { message: s }
     }
 }
 
 impl<'a> Parser<'a> {
     pub fn new(str: &'a str) -> Self {
         Parser {
-            str: str,
+            str,
             chars: str.char_indices(),
             pos: None,
             chr: None,
@@ -85,13 +83,13 @@ impl<'a> Parser<'a> {
                     break;
                 } else if self.chr.unwrap() == '^' {
                     let result = self.read_pair();
-                    if !result.is_none() {
+                    if result.is_some() {
                         let pair = result.unwrap().unwrap();
                         props.insert(pair.key, Rc::new(RefCell::new(pair.val)));
                     }
                 } else {
                     let result = self.read();
-                    if !result.is_none() {
+                    if result.is_some() {
                         let val = result.unwrap().unwrap();
                         if type_is_set {
                             data.push(Rc::new(RefCell::new(val)));
@@ -104,10 +102,9 @@ impl<'a> Parser<'a> {
             }
             return Some(Ok(Value::Gene(Gene {
                 _type: Rc::new(RefCell::new(_type)),
-                props: props,
-                data: data,
+                props,
+                data,
             })));
-
         } else if ch == '[' {
             self.next();
             let mut arr: Vec<Value> = vec![];
@@ -119,13 +116,12 @@ impl<'a> Parser<'a> {
                     break;
                 } else {
                     let val = self.read();
-                    if !val.is_none() {
+                    if val.is_some() {
                         arr.push(val.unwrap().unwrap());
                     }
                 }
             }
             return Some(Ok(Value::Array(arr)));
-
         } else if ch == '{' {
             self.next();
             let mut map = BTreeMap::new();
@@ -137,18 +133,16 @@ impl<'a> Parser<'a> {
                     break;
                 } else {
                     let result = self.read_pair();
-                    if !result.is_none() {
+                    if result.is_some() {
                         let pair = result.unwrap().unwrap();
                         map.insert(pair.key, pair.val);
                     }
                 }
             }
             return Some(Ok(Value::Map(map)));
-
         } else if ch == '"' {
             self.next();
             return self.read_string();
-
         } else if ch == '#' {
             let next_ch = self.peek().unwrap();
             if is_whitespace(next_ch) || next_ch == '!' {
@@ -158,27 +152,23 @@ impl<'a> Parser<'a> {
             } else {
                 return Some(Ok(Value::Symbol(self.read_word().unwrap().unwrap())));
             }
-
         } else if ch == '+' || ch == '-' {
             let next = self.peek();
-            if !next.is_none() && next.unwrap().is_digit(10) {
+            if next.is_some() && next.unwrap().is_digit(10) {
                 return self.read_number();
             } else {
                 return self.read_keyword_or_symbol();
             }
-
         } else if ch.is_digit(10) {
             return self.read_number();
-
         } else if ch == '`' {
             self.next();
             let mut gene = Gene::new(Value::Symbol("#QUOTE".to_string()));
-            gene.data.push(Rc::new(RefCell::new(self.read().unwrap().unwrap())));
+            gene.data
+                .push(Rc::new(RefCell::new(self.read().unwrap().unwrap())));
             return Some(Ok(Value::Gene(gene)));
-
         } else if is_symbol_head(ch) {
             return self.read_keyword_or_symbol();
-
         } else {
             return None;
         }
@@ -207,16 +197,14 @@ impl<'a> Parser<'a> {
             if ch == '\\' {
                 // Do not treat whitespace, ()[]{} etc as special char
                 escaped = true;
+            } else if escaped {
+                escaped = false;
+                result.push(ch);
+            } else if ch == '"' {
+                self.next();
+                break;
             } else {
-                if escaped {
-                    escaped = false;
-                    result.push(ch);
-                } else if ch == '"' {
-                    self.next();
-                    break;
-                } else {
-                    result.push(ch);
-                }
+                result.push(ch);
             }
 
             // Move forward
@@ -228,13 +216,12 @@ impl<'a> Parser<'a> {
         Some(Ok(Value::String(result.to_string())))
     }
 
-
     fn read_keyword_or_symbol(&mut self) -> Option<Result<Value, Error>> {
         let is_escape = self.chr.unwrap() == '\\';
 
         let mut s = String::from("");
         let word = self.read_word();
-        if !word.is_none() {
+        if word.is_some() {
             s.push_str(&word.unwrap().unwrap());
         }
 
@@ -243,10 +230,10 @@ impl<'a> Parser<'a> {
         }
 
         match s.as_str() {
-            "null"  => Some(Ok(Value::Null)),
-            "true"  => Some(Ok(Value::Boolean(true))),
+            "null" => Some(Ok(Value::Null)),
+            "true" => Some(Ok(Value::Boolean(true))),
             "false" => Some(Ok(Value::Boolean(false))),
-            _       => Some(Ok(Value::Symbol(s)))
+            _ => Some(Ok(Value::Symbol(s))),
         }
     }
 
@@ -260,15 +247,13 @@ impl<'a> Parser<'a> {
             if ch == '\\' {
                 // Do not treat whitespace, ()[]{} etc as special char
                 escaped = true;
+            } else if escaped {
+                escaped = false;
+                result.push(ch);
+            } else if is_whitespace(ch) || is_sep(ch) {
+                break;
             } else {
-                if escaped {
-                    escaped = false;
-                    result.push(ch);
-                } else if is_whitespace(ch) || is_sep(ch) {
-                    break;
-                } else {
-                    result.push(ch);
-                }
+                result.push(ch);
             }
 
             // Move forward
@@ -317,7 +302,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn start(&mut self) -> () {
+    fn start(&mut self) {
         if self.pos.is_none() {
             self.next();
         }
@@ -342,12 +327,12 @@ impl<'a> Parser<'a> {
         self.chars.clone().next().map(|(_, ch)| ch)
     }
 
-    fn skip_whitespaces(&mut self) -> () {
+    fn skip_whitespaces(&mut self) {
         self.advance_while(is_whitespace);
     }
 
     // fn reached_end(&mut self) -> bool {
-    //     self.str.len() == 0 || (!self.pos.is_none() && self.pos.unwrap() == self.str.len() - 1)
+    //     self.str.len() == 0 || (self.pos.is_some() && self.pos.unwrap() == self.str.len() - 1)
     // }
 }
 
@@ -357,13 +342,8 @@ pub fn is_whitespace(ch: char) -> bool {
 
 pub fn is_sep(ch: char) -> bool {
     match ch {
-        '(' |
-        ')' |
-        '[' |
-        ']' |
-        '{' |
-        '}' => true,
-        _   => false,
+        '(' | ')' | '[' | ']' | '{' | '}' => true,
+        _ => false,
     }
 }
 
@@ -377,15 +357,7 @@ pub fn is_symbol_head(ch: char) -> bool {
     }
 
     match ch {
-        '^' |
-        '"' |
-        '\'' |
-        '(' |
-        ')' |
-        '[' |
-        ']' |
-        '{' |
-        '}' => false,
-        _   => true,
+        '^' | '"' | '\'' | '(' | ')' | '[' | ']' | '{' | '}' => false,
+        _ => true,
     }
 }
