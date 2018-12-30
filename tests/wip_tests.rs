@@ -14,17 +14,16 @@ use gene::types::Gene;
 use gene::types::Value;
 use gene::vm::VirtualMachine;
 
+#[cfg(feature = "wip_tests")]
 #[test]
-fn test_this() {
+fn test_wip() {
     let mut compiler = Compiler::new();
     let mut vm = VirtualMachine::new();
     {
-        let mut parser = Parser::new(
-            "
+        let mut parser = Parser::new("
             (fn f _ 1)
             (f)
-        ",
-        );
+        ");
         let parsed = parser.parse();
         let module = compiler.compile(parsed.unwrap());
         let borrowed = (*vm.load_module(module)).borrow();

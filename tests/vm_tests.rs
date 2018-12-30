@@ -98,14 +98,12 @@ fn test_variables() {
     let mut compiler = Compiler::new();
     let mut vm = VirtualMachine::new();
     {
-        let mut parser = Parser::new(
-            "
+        let mut parser = Parser::new("
             # Define variable <a>
             (var a 1)
             # Return <a>'s value
             a
-        ",
-        );
+        ");
         let parsed = parser.parse();
         let module = compiler.compile(parsed.unwrap());
         let borrowed = (*vm.load_module(module)).borrow();
@@ -119,11 +117,9 @@ fn test_binary_operations() {
     let mut compiler = Compiler::new();
     let mut vm = VirtualMachine::new();
     {
-        let mut parser = Parser::new(
-            "
+        let mut parser = Parser::new("
           (1 + 2)
-        ",
-        );
+        ");
         let parsed = parser.parse();
         let module = compiler.compile(parsed.unwrap());
         let borrowed = (*vm.load_module(module)).borrow();

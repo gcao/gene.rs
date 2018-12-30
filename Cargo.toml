@@ -11,6 +11,12 @@ repository = "https://github.com/gcao/gene-rs"
 categories = ["parser-implementations"]
 
 [dependencies]
+clippy = { version = "*", optional = true }
 ordered-float = "1.0.1"
 uuid = { version = "0.7", features = ["serde", "v4"] }
 rand = "0.6.0"
+
+[features]
+default = []
+dev = ["clippy"]
+wip_tests = []
