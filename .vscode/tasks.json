@@ -16,7 +16,7 @@
         {
           // ls -1t   shows one file per line, sort by time
           // cp -r target/debug/deps target/debug   get line number displayed in stacktrace
-          "value": "$(cargo test --no-run; cp -r target/debug/deps target/debug; ls -1t target/debug/temp_tests* | grep -v '\\.d' | head -n1)",
+          "value": "$(cargo test --no-run; cp -r target/debug/deps target/debug; ls -1t target/debug/wip_tests* | grep -v '\\.d' | head -n1)",
           "quoting": "weak"
         },
         "${workspaceRoot}/target/debug/gene",
