@@ -3,7 +3,6 @@
 // cargo test --no-run --message-format=json temp_tests
 
 extern crate ordered_float;
-#[macro_use]
 extern crate gene;
 
 use ordered_float::OrderedFloat;
