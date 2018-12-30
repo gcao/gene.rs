@@ -1,4 +1,4 @@
-# gene-rs
+# gene-rs [![Build Status](https://travis-ci.com/gcao/gene.rs.svg?branch=master)](https://travis-ci.com/gcao/gene.rs)
 
 ## License
 
