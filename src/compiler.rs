@@ -1,5 +1,6 @@
 extern crate rand;
 
+use std::any::Any;
 use std::cell::{RefCell, RefMut};
 use std::collections::BTreeMap;
 use std::fmt;
@@ -13,17 +14,18 @@ use super::utils::new_uuidv4;
 
 #[derive(Debug)]
 pub struct Compiler {
-    module: Module,
+    module: Rc<RefCell<Module>>,
 }
 
 impl Compiler {
     pub fn new() -> Self {
+        let module = Module::new();
         Compiler {
-            module: Module::new(),
+            module: Rc::new(RefCell::new(module)),
         }
     }
 
-    pub fn compile(&mut self, ast: Value) -> Module {
+    pub fn compile(&mut self, ast: Value) -> Rc<RefCell<Module>> {
         let mut block = Block::new("__default__".to_string());
         let block_id = block.id.clone();
         block.add_instr(Instruction::Init);
@@ -32,7 +34,8 @@ impl Compiler {
 
         println!("Block: {}", block);
 
-        self.module.set_default_block(block);
+        let mut module = self.module.borrow_mut();
+        module.set_default_block(Rc::new(RefCell::new(block)));
         self.module.clone()
     }
 
@@ -86,9 +89,10 @@ impl Compiler {
             };
         } else if *_type.borrow() == Value::Symbol("fn".to_string()) {
             let name = data[0].borrow().to_string();
+            let body = "".to_string();
             // let args = data.get(1).unwrap().borrow().clone();
 
-            (*block).add_instr(Instruction::Function(name));
+            (*block).add_instr(Instruction::Function(name, body));
         } else if *_type.borrow() == Value::Symbol("+".to_string()) {
             let first = data[0].borrow().clone();
             self.compile_(block, first);
@@ -104,14 +108,20 @@ impl Compiler {
                 first_reg,
                 "default".to_string(),
             ));
+        } else {
+            // Invocation
+            let borrowed_type = _type.borrow().clone();
+            self.compile_(block, borrowed_type);
+            let options = BTreeMap::<String, Box<Any>>::new();
+            (*block).add_instr(Instruction::Call(options));
         };
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct Module {
     pub id: String,
-    pub blocks: BTreeMap<String, Block>,
+    pub blocks: BTreeMap<String, Rc<RefCell<Block>>>,
     default_block_id: String,
 }
 
@@ -124,17 +134,19 @@ impl Module {
         }
     }
 
-    pub fn set_default_block(&mut self, block: Block) {
-        self.default_block_id = block.id.clone();
-        self.blocks.insert(block.id.clone(), block);
+    pub fn set_default_block(&mut self, block: Rc<RefCell<Block>>) {
+        let borrowed = block.borrow();
+        self.default_block_id = borrowed.id.clone();
+        self.blocks.insert(borrowed.id.clone(), block.clone());
     }
 
-    pub fn get_default_block(&mut self) -> Block {
-        self.blocks[&self.default_block_id].clone()
+    pub fn get_default_block(&self) -> Rc<RefCell<Block>> {
+        let block = &self.blocks[&self.default_block_id];
+        block.clone()
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct Block {
     pub id: String,
     pub name: String,
@@ -170,7 +182,7 @@ impl fmt::Display for Block {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub enum Instruction {
     Init,
 
@@ -184,8 +196,9 @@ pub enum Instruction {
 
     BinaryOp(String, String, String),
 
-    Function(String),
+    Function(String, String),
 
+    Call(BTreeMap<String, Box<Any>>),
     CallEnd,
 }
 

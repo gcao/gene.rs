@@ -67,7 +67,7 @@ impl Context {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Namespace {
     parent: Option<Box<Namespace>>,
     members: BTreeMap<String, Rc<RefCell<Any>>>,
@@ -97,14 +97,14 @@ impl Namespace {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Scope {
     pub parent: Option<Box<Scope>>,
     pub members: BTreeMap<String, Rc<RefCell<Any>>>,
 }
 
 impl Scope {
-    pub fn new(parent: Self) -> Self {
+    pub fn new(parent: Scope) -> Self {
         Scope {
             parent: Some(Box::new(parent)),
             members: BTreeMap::new(),
@@ -130,7 +130,7 @@ impl Scope {
 #[derive(Debug)]
 pub struct Function {
     pub name: String,
-    pub body: Block,
+    pub body: String,
     pub inherit_scope: bool,
     pub namespace: Namespace,
     pub scope: Scope,
@@ -139,7 +139,7 @@ pub struct Function {
 impl<'a> Function {
     pub fn new(
         name: String,
-        body: Block,
+        body: String,
         inherit_scope: bool,
         namespace: Namespace,
         scope: Scope,

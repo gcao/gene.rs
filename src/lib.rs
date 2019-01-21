@@ -6,8 +6,10 @@
 #![feature(range_contains)]
 #![feature(box_patterns)]
 
+#[macro_use]
+pub mod utils;
+
 pub mod compiler;
 pub mod parser;
 pub mod types;
-pub mod utils;
 pub mod vm;

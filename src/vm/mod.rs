@@ -32,12 +32,13 @@ impl VirtualMachine {
         }
     }
 
-    pub fn load_module(&mut self, mut module: Module) -> &Rc<RefCell<Any>> {
+    pub fn load_module(&mut self, module: &Module) -> &Rc<RefCell<Any>> {
         let block = module.get_default_block();
-        self.process(block)
+        self.process(block.clone())
     }
 
-    pub fn process(&mut self, block: Block) -> &Rc<RefCell<Any>> {
+    pub fn process(&mut self, block_: Rc<RefCell<Block>>) -> &Rc<RefCell<Any>> {
+        let block = block_.borrow();
         self.create_registers();
 
         {
@@ -96,9 +97,34 @@ impl VirtualMachine {
                     registers.data.insert(DEFAULT_REG.into(), result);
                 }
 
+                Instruction::Init => {
+                    self.pos += 1;
+                    let registers = self.registers_store.get_mut(&self.registers_id).unwrap();
+                    registers.data.insert(CONTEXT_REG.into(), Rc::new(RefCell::new(Context::root())));
+                }
+
                 Instruction::CallEnd => {
                     self.pos += 1;
                     // TODO: return to caller
+                }
+
+                Instruction::Function(name, body) => {
+                    self.pos += 1;
+                    let registers = self.registers_store.get_mut(&self.registers_id).unwrap();
+                    let c = registers.data[CONTEXT_REG].clone();
+                    let b = c.borrow();
+                    let context = b.downcast_ref::<Context>().unwrap();
+                    let f = Function::new(name.to_string(), body.to_string(), false, context.namespace.clone(), context.scope.clone());
+                    registers.data.insert(DEFAULT_REG.into(), Rc::new(RefCell::new(f)));
+                }
+
+                Instruction::CallEnd => {
+                    self.pos += 1;
+                    // TODO: return to caller
+                }
+
+                Instruction::Function(name, body) => {
+                    self.pos += 1;
                 }
 
                 _ => {

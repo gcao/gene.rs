@@ -25,7 +25,8 @@ fn test_wip() {
             (f)
         ");
         let parsed = parser.parse();
-        let module = compiler.compile(parsed.unwrap());
+        let module_temp = compiler.compile(parsed.unwrap());
+        let module = &module_temp.borrow();
         let borrowed = (*vm.load_module(module)).borrow();
         let result = borrowed.downcast_ref::<Value>().unwrap();
         assert_eq!(*result, Value::Integer(1));
