@@ -103,6 +103,25 @@ impl VirtualMachine {
                     registers.data.insert(CONTEXT_REG.into(), Rc::new(RefCell::new(Context::root())));
                 }
 
+                Instruction::Function(name, body_id) => {
+                    self.pos += 1;
+                    let registers = self.registers_store.get_mut(&self.registers_id).unwrap();
+                    let mut borrowed = registers.data.get_mut(CONTEXT_REG).unwrap().borrow_mut();
+                    let context = borrowed.downcast_mut::<Context>().unwrap();
+                    let function = Function::new(name.clone(), body_id.clone(), true, context.namespace.clone(), context.scope.clone());
+                    context.def_member(name.clone(), Rc::new(RefCell::new(function)), VarType::NAMESPACE);
+                }
+
+                Instruction::Call(options) => {
+                    self.pos += 1;
+                    let registers = self.registers_store.get_mut(&self.registers_id).unwrap();
+                    let borrowed = registers.data[DEFAULT_REG].borrow();
+                    let function = borrowed.downcast_ref::<Function>().unwrap();
+                    let ret_addr = Address::new(block.id.clone(), self.pos);
+                    let mut borrowed_ctx = registers.data[CONTEXT_REG].borrow_mut();
+                    let caller_context = borrowed_ctx.downcast_mut::<Context>().unwrap();
+                }
+
                 Instruction::CallEnd => {
                     self.pos += 1;
                     // TODO: return to caller

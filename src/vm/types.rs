@@ -17,8 +17,8 @@ impl Application {
 #[derive(Debug)]
 pub struct Context {
     pub parent: Option<Box<Context>>,
-    pub namespace: Namespace,
-    pub scope: Scope,
+    pub namespace: Rc<RefCell<Namespace>>,
+    pub scope: Rc<RefCell<Scope>>,
     pub _self: Option<Box<Any>>,
 }
 
@@ -31,8 +31,8 @@ impl Context {
     pub fn new(parent: Context) -> Self {
         Self {
             parent: Some(Box::new(parent)),
-            namespace: Namespace::root(),
-            scope: Scope::root(),
+            namespace: Rc::new(RefCell::new(Namespace::root())),
+            scope: Rc::new(RefCell::new(Scope::root())),
             _self: None,
         }
     }
@@ -40,8 +40,8 @@ impl Context {
     pub fn root() -> Self {
         Self {
             parent: None,
-            namespace: Namespace::root(),
-            scope: Scope::root(),
+            namespace: Rc::new(RefCell::new(Namespace::root())),
+            scope: Rc::new(RefCell::new(Scope::root())),
             _self: None,
         }
     }
@@ -49,18 +49,18 @@ impl Context {
     pub fn def_member(&mut self, name: String, value: Rc<RefCell<Any>>, var_type: VarType) {
         match var_type {
             VarType::SCOPE => {
-                self.scope.def_member(name, value);
+                self.scope.borrow_mut().def_member(name, value);
             }
             VarType::NAMESPACE => {
-                self.scope.def_member(name, value);
+                self.scope.borrow_mut().def_member(name, value);
             }
         }
     }
 
     pub fn get_member(&self, name: String) -> Option<Rc<RefCell<Any>>> {
-        let result = self.scope.get_member(name.clone());
+        let result = self.scope.borrow().get_member(name.clone());
         if result.is_none() {
-            self.namespace.get_member(name)
+            self.namespace.borrow().get_member(name)
         } else {
             result
         }
@@ -132,8 +132,8 @@ pub struct Function {
     pub name: String,
     pub body: String,
     pub inherit_scope: bool,
-    pub namespace: Namespace,
-    pub scope: Scope,
+    pub namespace: Rc<RefCell<Namespace>>,
+    pub scope: Rc<RefCell<Scope>>,
 }
 
 impl<'a> Function {
@@ -141,8 +141,8 @@ impl<'a> Function {
         name: String,
         body: String,
         inherit_scope: bool,
-        namespace: Namespace,
-        scope: Scope,
+        namespace: Rc<RefCell<Namespace>>,
+        scope: Rc<RefCell<Scope>>,
     ) -> Self {
         Function {
             name,
@@ -158,4 +158,22 @@ impl<'a> Function {
 pub struct Module {
     name: String,
     methods: BTreeMap<String, Function>,
+}
+
+#[derive(Debug)]
+pub struct Address {
+    block_id: String,
+    position: usize,
+}
+
+impl Address {
+    pub fn new(
+        block_id: String,
+        position: usize,
+    ) -> Self {
+        Address {
+            block_id,
+            position,
+        }
+    }
 }

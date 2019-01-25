@@ -254,6 +254,15 @@ impl fmt::Display for Instruction {
                 fmt.write_str(" ")?;
                 fmt.write_str(&second)?;
             }
+            Instruction::Function(name, body_id) => {
+                fmt.write_str("Function ")?;
+                fmt.write_str(&name)?;
+                fmt.write_str(" ")?;
+                fmt.write_str(&body_id)?;
+            }
+            Instruction::Call(options) => {
+                fmt.write_str("Call")?;
+            }
             Instruction::CallEnd => {
                 fmt.write_str("CallEnd")?;
             }
