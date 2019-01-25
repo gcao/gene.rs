@@ -89,10 +89,15 @@ impl Compiler {
             };
         } else if *_type.borrow() == Value::Symbol("fn".to_string()) {
             let name = data[0].borrow().to_string();
-            let body = "".to_string();
-            // let args = data.get(1).unwrap().borrow().clone();
 
-            (*block).add_instr(Instruction::Function(name, body));
+            let mut body = Block::new(name.clone());
+            let body_id = body.id.clone();
+            self.compile_statements(&mut body, &data[2..]);
+            let mut module = self.module.borrow_mut();
+            module.add_block(body_id.clone(), body);
+
+            (*block).add_instr(Instruction::Function(name, body_id));
+
         } else if *_type.borrow() == Value::Symbol("+".to_string()) {
             let first = data[0].borrow().clone();
             self.compile_(block, first);
@@ -116,7 +121,16 @@ impl Compiler {
             (*block).add_instr(Instruction::Call(options));
         };
     }
+
+    fn compile_statements(&mut self, block: &mut Block, stmts: &[Rc<RefCell<Value>>]) {
+        for item in stmts.iter().cloned() {
+            let borrowed = item.borrow().clone();
+            self.compile_(block, borrowed);
+        }
+    }
 }
+
+pub struct Statements(Vec<Value>);
 
 #[derive(Debug)]
 pub struct Module {
@@ -143,6 +157,10 @@ impl Module {
     pub fn get_default_block(&self) -> Rc<RefCell<Block>> {
         let block = &self.blocks[&self.default_block_id];
         block.clone()
+    }
+
+    pub fn add_block(&mut self, id: String, block: Block) {
+        self.blocks.insert(id, Rc::new(RefCell::new(block)));
     }
 }
 

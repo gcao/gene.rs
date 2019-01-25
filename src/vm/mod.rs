@@ -118,15 +118,6 @@ impl VirtualMachine {
                     registers.data.insert(DEFAULT_REG.into(), Rc::new(RefCell::new(f)));
                 }
 
-                Instruction::CallEnd => {
-                    self.pos += 1;
-                    // TODO: return to caller
-                }
-
-                Instruction::Function(name, body) => {
-                    self.pos += 1;
-                }
-
                 _ => {
                     self.pos += 1;
                     println!("Unimplemented instruction: {}", instr)
