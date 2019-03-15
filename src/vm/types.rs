@@ -99,14 +99,14 @@ impl Namespace {
 
 #[derive(Clone, Debug)]
 pub struct Scope {
-    pub parent: Option<Box<Scope>>,
+    pub parent: Option<Rc<RefCell<Scope>>>,
     pub members: BTreeMap<String, Rc<RefCell<Any>>>,
 }
 
 impl Scope {
-    pub fn new(parent: Scope) -> Self {
+    pub fn new(parent: Rc<RefCell<Scope>>) -> Self {
         Scope {
-            parent: Some(Box::new(parent)),
+            parent: Some(parent),
             members: BTreeMap::new(),
         }
     }
@@ -174,6 +174,24 @@ impl Address {
         Address {
             block_id,
             position,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct RegAddress {
+    registers_id: String,
+    register: String,
+}
+
+impl RegAddress {
+    pub fn new(
+        registers_id: String,
+        register: String,
+    ) -> Self {
+        RegAddress {
+            registers_id,
+            register
         }
     }
 }

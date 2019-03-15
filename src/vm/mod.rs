@@ -14,7 +14,7 @@ const DEFAULT_REG: &str = "default";
 const CONTEXT_REG: &str = "context";
 
 pub struct VirtualMachine {
-    registers_store: BTreeMap<String, Registers>,
+    registers_store: BTreeMap<String, Rc<RefCell<Registers>>>,
     registers_id: String,
     pos: usize,
     block: Option<Block>,
@@ -32,21 +32,19 @@ impl VirtualMachine {
         }
     }
 
-    pub fn load_module(&mut self, module: &Module) -> &Rc<RefCell<Any>> {
+    pub fn load_module(&mut self, module: &Module) -> Rc<RefCell<Any>> {
         let block = module.get_default_block();
         self.process(block.clone())
     }
 
-    pub fn process(&mut self, block_: Rc<RefCell<Block>>) -> &Rc<RefCell<Any>> {
+    pub fn process(&mut self, block_: Rc<RefCell<Block>>) -> Rc<RefCell<Any>> {
         let block = block_.borrow();
         self.create_registers();
 
         {
             let root_context = Context::root();
-            let registers = self.registers_store.get_mut(&self.registers_id).unwrap();
-            registers
-                .data
-                .insert(CONTEXT_REG.into(), Rc::new(RefCell::new(root_context)));
+            let mut registers = self.registers_store.get_mut(&self.registers_id).unwrap().borrow_mut();
+            registers.insert(CONTEXT_REG.into(), Rc::new(RefCell::new(root_context)));
         }
 
         self.pos = 0;
@@ -55,20 +53,20 @@ impl VirtualMachine {
             match instr {
                 Instruction::Default(v) => {
                     self.pos += 1;
-                    let registers = self.registers_store.get_mut(&self.registers_id).unwrap();
+                    let mut registers = self.registers_store.get_mut(&self.registers_id).unwrap().borrow_mut();
                     registers.insert(DEFAULT_REG.into(), Rc::new(RefCell::new(v.clone())));
                 }
 
                 Instruction::Copy(from, to) => {
                     self.pos += 1;
-                    let registers = self.registers_store.get_mut(&self.registers_id).unwrap();
+                    let mut registers = self.registers_store.get_mut(&self.registers_id).unwrap().borrow_mut();
                     let from_value = registers.data[from].clone();
                     registers.insert(to.clone(), from_value);
                 }
 
                 Instruction::Define(name, reg) => {
                     self.pos += 1;
-                    let registers = self.registers_store.get_mut(&self.registers_id).unwrap();
+                    let mut registers = self.registers_store.get_mut(&self.registers_id).unwrap().borrow_mut();
                     let value;
                     {
                         value = registers.data[reg].clone();
@@ -84,13 +82,13 @@ impl VirtualMachine {
                 Instruction::GetMember(name) => {
                     self.pos += 1;
                     let value = self.get_member(name.clone()).unwrap();
-                    let registers = self.registers_store.get_mut(&self.registers_id).unwrap();
+                    let mut registers = self.registers_store.get_mut(&self.registers_id).unwrap().borrow_mut();
                     registers.insert(DEFAULT_REG.into(), value);
                 }
 
                 Instruction::BinaryOp(op, first, second) => {
                     self.pos += 1;
-                    let registers = self.registers_store.get_mut(&self.registers_id).unwrap();
+                    let mut registers = self.registers_store.get_mut(&self.registers_id).unwrap().borrow_mut();
                     let first = registers.data[first].clone();
                     let second = registers.data[second].clone();
                     let result = binary_op(op, first, second);
@@ -99,13 +97,13 @@ impl VirtualMachine {
 
                 Instruction::Init => {
                     self.pos += 1;
-                    let registers = self.registers_store.get_mut(&self.registers_id).unwrap();
+                    let mut registers = self.registers_store.get_mut(&self.registers_id).unwrap().borrow_mut();
                     registers.data.insert(CONTEXT_REG.into(), Rc::new(RefCell::new(Context::root())));
                 }
 
                 Instruction::Function(name, body_id) => {
                     self.pos += 1;
-                    let registers = self.registers_store.get_mut(&self.registers_id).unwrap();
+                    let mut registers = self.registers_store.get_mut(&self.registers_id).unwrap().borrow_mut();
                     let mut borrowed = registers.data.get_mut(CONTEXT_REG).unwrap().borrow_mut();
                     let context = borrowed.downcast_mut::<Context>().unwrap();
                     let function = Function::new(name.clone(), body_id.clone(), true, context.namespace.clone(), context.scope.clone());
@@ -114,12 +112,28 @@ impl VirtualMachine {
 
                 Instruction::Call(options) => {
                     self.pos += 1;
-                    let registers = self.registers_store.get_mut(&self.registers_id).unwrap();
+                    let target;
+                    let ret_addr;
+                    let caller_context;
+                    let caller_scope;
+                    let caller_namespace;
+
+                    let registers_temp = self.registers_store[&self.registers_id].clone();
+                    let registers = registers_temp.borrow();
                     let borrowed = registers.data[DEFAULT_REG].borrow();
-                    let function = borrowed.downcast_ref::<Function>().unwrap();
-                    let ret_addr = Address::new(block.id.clone(), self.pos);
+                    target = borrowed.downcast_ref::<Function>().unwrap();
+                    ret_addr = Address::new(block.id.clone(), self.pos);
                     let mut borrowed_ctx = registers.data[CONTEXT_REG].borrow_mut();
-                    let caller_context = borrowed_ctx.downcast_mut::<Context>().unwrap();
+
+                    caller_context = borrowed_ctx.downcast_mut::<Context>().unwrap();
+                    caller_scope = caller_context.scope.clone();
+                    caller_namespace = caller_context.namespace.clone();
+
+                    let new_registers = Registers::new();
+                    self.registers_store.insert(new_registers.id.clone(), Rc::new(RefCell::new(new_registers)));
+
+                    let new_scope = Scope::new(caller_scope);
+                    let new_namespace = target.namespace.clone();
                 }
 
                 Instruction::CallEnd => {
@@ -129,12 +143,15 @@ impl VirtualMachine {
 
                 Instruction::Function(name, body) => {
                     self.pos += 1;
-                    let registers = self.registers_store.get_mut(&self.registers_id).unwrap();
-                    let c = registers.data[CONTEXT_REG].clone();
-                    let b = c.borrow();
-                    let context = b.downcast_ref::<Context>().unwrap();
+                    let registers_temp = self.registers_store[&self.registers_id].clone();
+                    let registers = registers_temp.borrow();
+                    let _context = registers.data[CONTEXT_REG].borrow();
+                    let context = _context.downcast_ref::<Context>().unwrap();
                     let f = Function::new(name.to_string(), body.to_string(), false, context.namespace.clone(), context.scope.clone());
-                    registers.data.insert(DEFAULT_REG.into(), Rc::new(RefCell::new(f)));
+
+                    let registers_mut_temp = self.registers_store[&self.registers_id].clone();
+                    let mut registers_mut = registers_mut_temp.borrow_mut();
+                    registers_mut.data.insert(DEFAULT_REG.into(), Rc::new(RefCell::new(f)));
                 }
 
                 _ => {
@@ -144,12 +161,9 @@ impl VirtualMachine {
             }
         }
 
-        let registers = &self.registers_store[&self.registers_id];
-        let result = &registers.data[DEFAULT_REG];
-        println!(
-            "Result: {}",
-            result.borrow().downcast_ref::<Value>().unwrap()
-        );
+        let registers = self.registers_store[&self.registers_id].borrow();
+        let result = registers.data[DEFAULT_REG].clone();
+        dbg!(result.borrow().downcast_ref::<Value>().unwrap());
         result
     }
 
@@ -157,11 +171,11 @@ impl VirtualMachine {
         let registers = Registers::new();
         let id = registers.id.clone();
         self.registers_id = id.clone();
-        self.registers_store.insert(id, registers);
+        self.registers_store.insert(id, Rc::new(RefCell::new(registers)));
     }
 
     fn get_member(&mut self, name: String) -> Option<Rc<RefCell<Any>>> {
-        let registers = self.registers_store.get_mut(&self.registers_id).unwrap();
+        let mut registers = self.registers_store.get_mut(&self.registers_id).unwrap().borrow_mut();
         let mut borrowed = registers.data.get_mut(CONTEXT_REG).unwrap().borrow_mut();
         let context = borrowed.downcast_mut::<Context>().unwrap();
         context.get_member(name).map(|val| val.clone())
