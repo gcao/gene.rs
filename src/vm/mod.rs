@@ -215,3 +215,17 @@ fn binary_op<'a>(
         _ => unimplemented!(),
     }
 }
+
+pub struct Address {
+    pub block_id: String,
+    pub pos: usize,
+}
+
+impl Address {
+    pub fn new(block_id: String, pos: usize) -> Self {
+        Address {
+            block_id,
+            pos,
+        }
+    }
+}
