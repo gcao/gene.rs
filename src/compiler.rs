@@ -186,6 +186,12 @@ impl Block {
     }
 }
 
+impl<T> std::convert::AsRef<T> for Block {
+    fn as_ref(&self) -> &Block {
+        self
+    }
+}
+
 impl fmt::Display for Block {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         fmt.write_str("(Block ")?;

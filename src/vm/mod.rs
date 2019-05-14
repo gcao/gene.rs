@@ -1,7 +1,8 @@
 mod types;
 
+use std::ptr;
 use std::any::Any;
-use std::cell::{RefCell, RefMut};
+use std::cell::{Ref, RefCell, RefMut};
 use std::collections::BTreeMap;
 use std::rc::Rc;
 
@@ -17,8 +18,9 @@ pub struct VirtualMachine {
     registers_store: BTreeMap<String, Rc<RefCell<Registers>>>,
     registers_id: String,
     pos: usize,
-    block: Option<Block>,
+    block: Option<Rc<RefCell<Block>>>,
     app: Application,
+    code_manager: CodeManager,
 }
 
 impl VirtualMachine {
@@ -29,11 +31,19 @@ impl VirtualMachine {
             pos: 0,
             block: None,
             app: Application::new(),
+            code_manager: CodeManager::new(),
         }
     }
 
     pub fn load_module(&mut self, module: &Module) -> Rc<RefCell<Any>> {
         let block = module.get_default_block();
+
+        module.blocks.values().for_each(|block_temp| {
+            let block = block_temp.borrow();
+            let id = block.id.clone();
+            self.code_manager.set_block(id, block_temp.clone());
+        });
+
         self.process(block.clone())
     }
 
@@ -50,6 +60,7 @@ impl VirtualMachine {
         self.pos = 0;
         while self.pos < block.instructions.len() {
             let instr = &block.instructions[self.pos];
+            dbg!(instr);
             match instr {
                 Instruction::Default(v) => {
                     self.pos += 1;
@@ -129,11 +140,20 @@ impl VirtualMachine {
                     caller_scope = caller_context.scope.clone();
                     caller_namespace = caller_context.namespace.clone();
 
-                    let new_registers = Registers::new();
-                    self.registers_store.insert(new_registers.id.clone(), Rc::new(RefCell::new(new_registers)));
+                    let mut new_registers = Registers::new();
 
                     let new_scope = Scope::new(caller_scope);
                     let new_namespace = target.namespace.clone();
+
+                    let new_context = Context::new(new_namespace, Rc::new(RefCell::new(new_scope)), None);
+                    new_registers.insert("context".to_string(), Rc::new(RefCell::new(new_context)));
+
+                    self.registers_store.insert(new_registers.id.clone(), Rc::new(RefCell::new(new_registers)));
+
+                    let block_temp = self.code_manager.get_block(target.body.to_string()).clone();
+                    // TODO: how to convert Block to Ref<'_, Block> ?
+                    block = Rc::try_unwrap(block_temp).ok().unwrap().into_inner();
+                    self.pos = 0;
                 }
 
                 Instruction::CallEnd => {
@@ -227,5 +247,25 @@ impl Address {
             block_id,
             pos,
         }
+    }
+}
+
+pub struct CodeManager {
+    pub blocks: BTreeMap<String, Rc<RefCell<Block>>>,
+}
+
+impl CodeManager {
+    pub fn new() -> Self {
+        CodeManager {
+            blocks: BTreeMap::new(),
+        }
+    }
+
+    pub fn get_block(&self, id: String) -> Rc<RefCell<Block>> {
+        self.blocks[&id].clone()
+    }
+
+    pub fn set_block(&mut self, id: String, block: Rc<RefCell<Block>>) {
+        self.blocks.insert(id, block);
     }
 }

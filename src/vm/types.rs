@@ -16,10 +16,9 @@ impl Application {
 
 #[derive(Debug)]
 pub struct Context {
-    pub parent: Option<Box<Context>>,
     pub namespace: Rc<RefCell<Namespace>>,
     pub scope: Rc<RefCell<Scope>>,
-    pub _self: Option<Box<Any>>,
+    pub _self: Option<Rc<RefCell<Any>>>,
 }
 
 pub enum VarType {
@@ -28,18 +27,16 @@ pub enum VarType {
 }
 
 impl Context {
-    pub fn new(parent: Context) -> Self {
+    pub fn new(namespace: Rc<RefCell<Namespace>>, scope: Rc<RefCell<Scope>>, _self: Option<Rc<RefCell<Any>>>) -> Self {
         Self {
-            parent: Some(Box::new(parent)),
-            namespace: Rc::new(RefCell::new(Namespace::root())),
-            scope: Rc::new(RefCell::new(Scope::root())),
-            _self: None,
+            namespace,
+            scope,
+            _self,
         }
     }
 
     pub fn root() -> Self {
         Self {
-            parent: None,
             namespace: Rc::new(RefCell::new(Namespace::root())),
             scope: Rc::new(RefCell::new(Scope::root())),
             _self: None,
