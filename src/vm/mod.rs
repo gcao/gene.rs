@@ -18,7 +18,7 @@ pub struct VirtualMachine {
     registers_store: BTreeMap<String, Rc<RefCell<Registers>>>,
     registers_id: String,
     pos: usize,
-    block: Option<Rc<RefCell<Block>>>,
+    block: Option<Rc<Block>>,
     app: Application,
     code_manager: CodeManager,
 }
@@ -38,17 +38,15 @@ impl VirtualMachine {
     pub fn load_module(&mut self, module: &Module) -> Rc<RefCell<Any>> {
         let block = module.get_default_block();
 
-        module.blocks.values().for_each(|block_temp| {
-            let block = block_temp.borrow();
+        module.blocks.values().for_each(|block| {
             let id = block.id.clone();
-            self.code_manager.set_block(id, block_temp.clone());
+            self.code_manager.set_block(id, block.clone());
         });
 
         self.process(block.clone())
     }
 
-    pub fn process(&mut self, block_: Rc<RefCell<Block>>) -> Rc<RefCell<Any>> {
-        let block = block_.borrow();
+    pub fn process(&mut self, mut block: Rc<Block>) -> Rc<RefCell<Any>> {
         self.create_registers();
 
         {
@@ -150,9 +148,7 @@ impl VirtualMachine {
 
                     self.registers_store.insert(new_registers.id.clone(), Rc::new(RefCell::new(new_registers)));
 
-                    let block_temp = self.code_manager.get_block(target.body.to_string()).clone();
-                    // TODO: how to convert Block to Ref<'_, Block> ?
-                    block = Rc::try_unwrap(block_temp).ok().unwrap().into_inner();
+                    block = self.code_manager.get_block(target.body.to_string()).clone();
                     self.pos = 0;
                 }
 
@@ -251,7 +247,7 @@ impl Address {
 }
 
 pub struct CodeManager {
-    pub blocks: BTreeMap<String, Rc<RefCell<Block>>>,
+    pub blocks: BTreeMap<String, Rc<Block>>,
 }
 
 impl CodeManager {
@@ -261,11 +257,11 @@ impl CodeManager {
         }
     }
 
-    pub fn get_block(&self, id: String) -> Rc<RefCell<Block>> {
+    pub fn get_block(&self, id: String) -> Rc<Block> {
         self.blocks[&id].clone()
     }
 
-    pub fn set_block(&mut self, id: String, block: Rc<RefCell<Block>>) {
+    pub fn set_block(&mut self, id: String, block: Rc<Block>) {
         self.blocks.insert(id, block);
     }
 }

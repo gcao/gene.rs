@@ -35,7 +35,7 @@ impl Compiler {
         println!("Block: {}", block);
 
         let mut module = self.module.borrow_mut();
-        module.set_default_block(Rc::new(RefCell::new(block)));
+        module.set_default_block(Rc::new(block));
         self.module.clone()
     }
 
@@ -135,7 +135,7 @@ pub struct Statements(Vec<Value>);
 #[derive(Debug)]
 pub struct Module {
     pub id: String,
-    pub blocks: BTreeMap<String, Rc<RefCell<Block>>>,
+    pub blocks: BTreeMap<String, Rc<Block>>,
     default_block_id: String,
 }
 
@@ -148,19 +148,18 @@ impl Module {
         }
     }
 
-    pub fn set_default_block(&mut self, block: Rc<RefCell<Block>>) {
-        let borrowed = block.borrow();
-        self.default_block_id = borrowed.id.clone();
-        self.blocks.insert(borrowed.id.clone(), block.clone());
+    pub fn set_default_block(&mut self, block: Rc<Block>) {
+        self.default_block_id = block.id.clone();
+        self.blocks.insert(block.id.clone(), block.clone());
     }
 
-    pub fn get_default_block(&self) -> Rc<RefCell<Block>> {
+    pub fn get_default_block(&self) -> Rc<Block> {
         let block = &self.blocks[&self.default_block_id];
         block.clone()
     }
 
     pub fn add_block(&mut self, id: String, block: Block) {
-        self.blocks.insert(id, Rc::new(RefCell::new(block)));
+        self.blocks.insert(id, Rc::new(block));
     }
 }
 
@@ -183,12 +182,6 @@ impl Block {
 
     pub fn add_instr(&mut self, instr: Instruction) {
         self.instructions.push(instr);
-    }
-}
-
-impl<T> std::convert::AsRef<T> for Block {
-    fn as_ref(&self) -> &Block {
-        self
     }
 }
 
