@@ -21,8 +21,8 @@ fn test_wip() {
     let mut vm = VirtualMachine::new();
     {
         let mut parser = Parser::new("
-            (fn f _ 1)
-            (f)
+            (fn f a a)
+            (f 1)
         ");
         let parsed = parser.parse();
         let module_temp = compiler.compile(parsed.unwrap());

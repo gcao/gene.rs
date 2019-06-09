@@ -27,7 +27,7 @@ impl Compiler {
 
     pub fn compile(&mut self, ast: Value) -> Rc<RefCell<Module>> {
         let mut block = Block::new("__default__".to_string());
-        let block_id = block.id.clone();
+        // let block_id = block.id.clone();
         block.add_instr(Instruction::Init);
         self.compile_(&mut block, ast);
         block.add_instr(Instruction::CallEnd);
@@ -83,7 +83,7 @@ impl Compiler {
             match *first.borrow_mut() {
                 Value::Symbol(ref name) => {
                     self.compile_(block, second.clone());
-                    (*block).add_instr(Instruction::Define(name.clone(), "default".to_string()));
+                    (*block).add_instr(Instruction::DefMember(name.clone(), "default".to_string()));
                 }
                 _ => unimplemented!(),
             };
@@ -92,6 +92,9 @@ impl Compiler {
 
             let mut body = Block::new(name.clone());
             let body_id = body.id.clone();
+
+            self.compile_args(&mut body, data[1].clone());
+
             self.compile_statements(&mut body, &data[2..]);
             let mut module = self.module.borrow_mut();
             module.add_block(body_id.clone(), body);
@@ -117,15 +120,71 @@ impl Compiler {
             // Invocation
             let borrowed_type = _type.borrow().clone();
             self.compile_(block, borrowed_type);
-            let options = BTreeMap::<String, Box<Any>>::new();
+
+            let mut options = BTreeMap::<String, Box<Any>>::new();
+
+            let args_reg = new_reg();
+            (*block).add_instr(Instruction::CreateArguments(args_reg.clone()));
+            for (i, item) in data.iter().enumerate() {
+                let borrowed = item.borrow();
+                self.compile_(block, (*borrowed).clone());
+                (*block).add_instr(Instruction::SetItem(args_reg.clone(), i, "default".to_string()));
+            }
+
+            options.insert("args".to_string(), Box::new(args_reg.clone()));
+
             (*block).add_instr(Instruction::Call(options));
         };
+    }
+
+    fn compile_args(&mut self, block: &mut Block, args: Rc<RefCell<Value>>) {
+        let borrowed = args.borrow();
     }
 
     fn compile_statements(&mut self, block: &mut Block, stmts: &[Rc<RefCell<Value>>]) {
         for item in stmts.iter().cloned() {
             let borrowed = item.borrow().clone();
             self.compile_(block, borrowed);
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct DataMatcher {
+    pub name: String,
+    pub index: i16,
+}
+
+impl DataMatcher {
+    pub fn new(name: String, index: i16) -> Self {
+        DataMatcher {
+            name,
+            index,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct Matcher {
+    pub data_matchers: Vec<DataMatcher>,
+}
+
+impl Matcher {
+    pub fn new(data_matchers: Vec<DataMatcher>) -> Self {
+        Matcher {
+            data_matchers,
+        }
+    }
+}
+
+impl From<&Value> for Matcher {
+    fn from(v: &Value) -> Matcher {
+        match v {
+            Value::Symbol(name) => {
+                let first = DataMatcher::new(name.to_string(), 0);
+                Matcher::new(vec![first])
+            }
+            _ => unimplemented!()
         }
     }
 }
@@ -208,12 +267,41 @@ pub enum Instruction {
     /// Copy from one register to another
     Copy(String, String),
 
-    Define(String, String),
+    /// DefMember(name, value reg)
+    DefMember(String, String),
+    /// GetMember(name)
     GetMember(String),
 
+    // Literal types: number, string, boolean, array of literals, map of literals, gene with literals only
+    // TODO: Is it better to use individual instruction like CreateInt etc?
+    CreateLiteral(String, Box<Any>),
+
+    /// GetItem(target reg, index)
+    GetItem(String, usize),
+    /// GetItemDynamic(target reg, index reg)
+    GetItemDynamic(String, String),
+    /// SetItem(target reg, index, value reg)
+    SetItem(String, usize, String),
+    /// SetItemDynamic(target reg, index reg, value reg)
+    SetItemDynamic(String, String, String),
+
+    /// GetProp(target reg, name)
+    GetProp(String, String),
+    /// GetPropDynamic(target reg, name reg)
+    GetPropDynamic(String, String),
+    /// SetProp(target reg, name, value reg)
+    SetProp(String, String, String),
+    /// SetPropDynamic(target reg, name reg, value reg)
+    SetPropDynamic(String, String, String),
+
+    /// BinaryOp(op, first reg, second reg)
+    /// Result is stored in default reg
     BinaryOp(String, String, String),
 
+    /// Function(name, block id)
     Function(String, String),
+    /// Create an argument object and store in a register
+    CreateArguments(String),
 
     Call(BTreeMap<String, Box<Any>>),
     CallEnd,
@@ -236,7 +324,7 @@ impl fmt::Display for Instruction {
                 fmt.write_str(" ")?;
                 fmt.write_str(&second)?;
             }
-            Instruction::Define(name, reg) => {
+            Instruction::DefMember(name, reg) => {
                 fmt.write_str("Define ")?;
                 fmt.write_str(&name)?;
                 fmt.write_str(" ")?;
@@ -245,6 +333,12 @@ impl fmt::Display for Instruction {
             Instruction::GetMember(name) => {
                 fmt.write_str("GetMember ")?;
                 fmt.write_str(&name)?;
+            }
+            Instruction::GetItem(name, index) => {
+                fmt.write_str("Get ")?;
+                fmt.write_str(&name)?;
+                fmt.write_str(" ")?;
+                fmt.write_str(&index.to_string())?;
             }
             Instruction::BinaryOp(op, first, second) => {
                 fmt.write_str(&first)?;
@@ -260,7 +354,7 @@ impl fmt::Display for Instruction {
                 fmt.write_str(&body_id)?;
             }
             Instruction::Call(options) => {
-                fmt.write_str("Call")?;
+                fmt.write_str("Call ")?;
             }
             Instruction::CallEnd => {
                 fmt.write_str("CallEnd")?;

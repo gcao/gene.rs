@@ -152,6 +152,24 @@ impl<'a> Function {
 }
 
 #[derive(Debug)]
+pub struct Arguments {
+    pub props: BTreeMap<String, Rc<RefCell<Any>>>,
+    pub data: Vec<Rc<RefCell<Any>>>,
+}
+
+impl Arguments {
+    pub fn new(
+        props: BTreeMap<String, Rc<RefCell<Any>>>,
+        data: Vec<Rc<RefCell<Any>>>,
+    ) -> Self {
+        Arguments {
+            props,
+            data,
+        }
+    }
+}
+
+#[derive(Debug)]
 pub struct Module {
     name: String,
     methods: BTreeMap<String, Function>,

@@ -73,7 +73,7 @@ impl VirtualMachine {
                     registers.insert(to.clone(), from_value);
                 }
 
-                Instruction::Define(name, reg) => {
+                Instruction::DefMember(name, reg) => {
                     self.pos += 1;
                     let mut registers = self.registers_store.get_mut(&self.registers_id).unwrap().borrow_mut();
                     let value;
@@ -112,11 +112,19 @@ impl VirtualMachine {
 
                 Instruction::Function(name, body_id) => {
                     self.pos += 1;
-                    let mut registers = self.registers_store.get_mut(&self.registers_id).unwrap().borrow_mut();
-                    let mut borrowed = registers.data.get_mut(CONTEXT_REG).unwrap().borrow_mut();
-                    let context = borrowed.downcast_mut::<Context>().unwrap();
-                    let function = Function::new(name.clone(), body_id.clone(), true, context.namespace.clone(), context.scope.clone());
-                    context.def_member(name.clone(), Rc::new(RefCell::new(function)), VarType::NAMESPACE);
+                    let function_temp;
+                    {
+                        let mut registers = self.registers_store.get_mut(&self.registers_id).unwrap().borrow_mut();
+                        let mut borrowed = registers.data.get_mut(CONTEXT_REG).unwrap().borrow_mut();
+                        let context = borrowed.downcast_mut::<Context>().unwrap();
+                        let function = Function::new(name.clone(), body_id.clone(), true, context.namespace.clone(), context.scope.clone());
+                        function_temp = Rc::new(RefCell::new(function));
+                        context.def_member(name.clone(), function_temp.clone(), VarType::NAMESPACE);
+                    }
+                    {
+                        let mut registers = self.registers_store.get_mut(&self.registers_id).unwrap().borrow_mut();
+                        registers.data.insert(DEFAULT_REG.into(), function_temp.clone());
+                    }
                 }
 
                 Instruction::Call(options) => {
@@ -198,6 +206,7 @@ impl VirtualMachine {
     }
 }
 
+#[derive(Debug)]
 pub struct Registers {
     pub id: String,
     pub data: BTreeMap<String, Rc<RefCell<Any>>>,
