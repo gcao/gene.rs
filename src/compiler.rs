@@ -10,6 +10,7 @@ use rand::prelude::random;
 
 use super::types::Gene;
 use super::types::Value;
+use super::vm::types::{Function, Matcher};
 use super::utils::new_uuidv4;
 
 #[derive(Debug)]
@@ -93,13 +94,13 @@ impl Compiler {
             let mut body = Block::new(name.clone());
             let body_id = body.id.clone();
 
-            self.compile_args(&mut body, data[1].clone());
+            let matcher = self.compile_args(&mut body, data[1].clone());
 
             self.compile_statements(&mut body, &data[2..]);
             let mut module = self.module.borrow_mut();
             module.add_block(body_id.clone(), body);
 
-            (*block).add_instr(Instruction::Function(name, body_id));
+            (*block).add_instr(Instruction::Function(name, matcher, body_id));
 
         } else if *_type.borrow() == Value::Symbol("+".to_string()) {
             let first = data[0].borrow().clone();
@@ -121,7 +122,7 @@ impl Compiler {
             let borrowed_type = _type.borrow().clone();
             self.compile_(block, borrowed_type);
 
-            let mut options = BTreeMap::<String, Box<Any>>::new();
+            let mut options = BTreeMap::<String, Rc<Any>>::new();
 
             let args_reg = new_reg();
             (*block).add_instr(Instruction::CreateArguments(args_reg.clone()));
@@ -131,60 +132,21 @@ impl Compiler {
                 (*block).add_instr(Instruction::SetItem(args_reg.clone(), i, "default".to_string()));
             }
 
-            options.insert("args".to_string(), Box::new(args_reg.clone()));
+            options.insert("args".to_string(), Rc::new(args_reg.clone()));
 
             (*block).add_instr(Instruction::Call(options));
         };
     }
 
-    fn compile_args(&mut self, block: &mut Block, args: Rc<RefCell<Value>>) {
+    fn compile_args(&mut self, block: &mut Block, args: Rc<RefCell<Value>>) -> Matcher {
         let borrowed = args.borrow();
+        return Matcher::from(&*borrowed);
     }
 
     fn compile_statements(&mut self, block: &mut Block, stmts: &[Rc<RefCell<Value>>]) {
         for item in stmts.iter().cloned() {
             let borrowed = item.borrow().clone();
             self.compile_(block, borrowed);
-        }
-    }
-}
-
-#[derive(Debug)]
-pub struct DataMatcher {
-    pub name: String,
-    pub index: i16,
-}
-
-impl DataMatcher {
-    pub fn new(name: String, index: i16) -> Self {
-        DataMatcher {
-            name,
-            index,
-        }
-    }
-}
-
-#[derive(Debug)]
-pub struct Matcher {
-    pub data_matchers: Vec<DataMatcher>,
-}
-
-impl Matcher {
-    pub fn new(data_matchers: Vec<DataMatcher>) -> Self {
-        Matcher {
-            data_matchers,
-        }
-    }
-}
-
-impl From<&Value> for Matcher {
-    fn from(v: &Value) -> Matcher {
-        match v {
-            Value::Symbol(name) => {
-                let first = DataMatcher::new(name.to_string(), 0);
-                Matcher::new(vec![first])
-            }
-            _ => unimplemented!()
         }
     }
 }
@@ -298,12 +260,13 @@ pub enum Instruction {
     /// Result is stored in default reg
     BinaryOp(String, String, String),
 
-    /// Function(name, block id)
-    Function(String, String),
+    /// Function(name, args reg, block id)
+    Function(String, Matcher, String),
     /// Create an argument object and store in a register
     CreateArguments(String),
 
-    Call(BTreeMap<String, Box<Any>>),
+    /// Call(options)
+    Call(BTreeMap<String, Rc<Any>>),
     CallEnd,
 }
 
@@ -347,10 +310,13 @@ impl fmt::Display for Instruction {
                 fmt.write_str(" ")?;
                 fmt.write_str(&second)?;
             }
-            Instruction::Function(name, body_id) => {
+            Instruction::Function(name, matcher, body_id) => {
                 fmt.write_str("Function ")?;
                 fmt.write_str(&name)?;
                 fmt.write_str(" ")?;
+                // TODO: matcher to string
+                // fmt.write_str(&matcher)?;
+                // fmt.write_str(" ")?;
                 fmt.write_str(&body_id)?;
             }
             Instruction::Call(options) => {

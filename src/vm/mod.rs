@@ -1,4 +1,4 @@
-mod types;
+pub mod types;
 
 use std::ptr;
 use std::any::Any;
@@ -110,14 +110,14 @@ impl VirtualMachine {
                     registers.data.insert(CONTEXT_REG.into(), Rc::new(RefCell::new(Context::root())));
                 }
 
-                Instruction::Function(name, body_id) => {
+                Instruction::Function(name, args, body_id) => {
                     self.pos += 1;
                     let function_temp;
                     {
                         let mut registers = self.registers_store.get_mut(&self.registers_id).unwrap().borrow_mut();
                         let mut borrowed = registers.data.get_mut(CONTEXT_REG).unwrap().borrow_mut();
                         let context = borrowed.downcast_mut::<Context>().unwrap();
-                        let function = Function::new(name.clone(), body_id.clone(), true, context.namespace.clone(), context.scope.clone());
+                        let function = Function::new(name.clone(), (*args).clone(), body_id.clone(), true, context.namespace.clone(), context.scope.clone());
                         function_temp = Rc::new(RefCell::new(function));
                         context.def_member(name.clone(), function_temp.clone(), VarType::NAMESPACE);
                     }
@@ -129,22 +129,21 @@ impl VirtualMachine {
 
                 Instruction::Call(options) => {
                     self.pos += 1;
-                    let target;
-                    let ret_addr;
-                    let caller_context;
-                    let caller_scope;
-                    let caller_namespace;
 
                     let registers_temp = self.registers_store[&self.registers_id].clone();
                     let registers = registers_temp.borrow();
                     let borrowed = registers.data[DEFAULT_REG].borrow();
-                    target = borrowed.downcast_ref::<Function>().unwrap();
-                    ret_addr = Address::new(block.id.clone(), self.pos);
+                    let target = borrowed.downcast_ref::<Function>().unwrap();
+
+                    let args_reg = options["args"].clone();
+                    let args = registers.data.get(args_reg.downcast_ref::<String>().unwrap());
+
+                    let ret_addr = Address::new(block.id.clone(), self.pos);
                     let mut borrowed_ctx = registers.data[CONTEXT_REG].borrow_mut();
 
-                    caller_context = borrowed_ctx.downcast_mut::<Context>().unwrap();
-                    caller_scope = caller_context.scope.clone();
-                    caller_namespace = caller_context.namespace.clone();
+                    let caller_context = borrowed_ctx.downcast_mut::<Context>().unwrap();
+                    let caller_scope = caller_context.scope.clone();
+                    let caller_namespace = caller_context.namespace.clone();
 
                     let mut new_registers = Registers::new();
 
@@ -165,13 +164,13 @@ impl VirtualMachine {
                     // TODO: return to caller
                 }
 
-                Instruction::Function(name, body) => {
+                Instruction::Function(name, args, body) => {
                     self.pos += 1;
                     let registers_temp = self.registers_store[&self.registers_id].clone();
                     let registers = registers_temp.borrow();
                     let _context = registers.data[CONTEXT_REG].borrow();
                     let context = _context.downcast_ref::<Context>().unwrap();
-                    let f = Function::new(name.to_string(), body.to_string(), false, context.namespace.clone(), context.scope.clone());
+                    let f = Function::new(name.to_string(), (*args).clone(), body.to_string(), false, context.namespace.clone(), context.scope.clone());
 
                     let registers_mut_temp = self.registers_store[&self.registers_id].clone();
                     let mut registers_mut = registers_mut_temp.borrow_mut();

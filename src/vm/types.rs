@@ -3,6 +3,7 @@ use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::rc::Rc;
 
+use super::super::types::Value;
 use super::super::compiler::Block;
 
 #[derive(Debug)]
@@ -124,9 +125,50 @@ impl Scope {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct DataMatcher {
+    pub name: String,
+    pub index: usize,
+}
+
+impl DataMatcher {
+    pub fn new(name: String, index: usize) -> Self {
+        DataMatcher {
+            name,
+            index,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Matcher {
+    pub data_matchers: Vec<DataMatcher>,
+}
+
+impl Matcher {
+    pub fn new(data_matchers: Vec<DataMatcher>) -> Self {
+        Matcher {
+            data_matchers,
+        }
+    }
+}
+
+impl From<&Value> for Matcher {
+    fn from(v: &Value) -> Matcher {
+        match v {
+            Value::Symbol(name) => {
+                let first = DataMatcher::new(name.to_string(), 0);
+                Matcher::new(vec![first])
+            }
+            _ => unimplemented!()
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct Function {
     pub name: String,
+    pub args: Matcher,
     pub body: String,
     pub inherit_scope: bool,
     pub namespace: Rc<RefCell<Namespace>>,
@@ -136,6 +178,7 @@ pub struct Function {
 impl<'a> Function {
     pub fn new(
         name: String,
+        args: Matcher,
         body: String,
         inherit_scope: bool,
         namespace: Rc<RefCell<Namespace>>,
@@ -143,6 +186,7 @@ impl<'a> Function {
     ) -> Self {
         Function {
             name,
+            args,
             body,
             inherit_scope,
             namespace,
