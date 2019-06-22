@@ -121,6 +121,8 @@ impl Compiler {
             // Invocation
             let borrowed_type = _type.borrow().clone();
             self.compile_(block, borrowed_type);
+            let target_reg = new_reg();
+            (*block).add_instr(Instruction::Copy("default".to_string(), target_reg.clone()));
 
             let mut options = BTreeMap::<String, Rc<Any>>::new();
 
@@ -134,7 +136,7 @@ impl Compiler {
 
             options.insert("args".to_string(), Rc::new(args_reg.clone()));
 
-            (*block).add_instr(Instruction::Call(options));
+            (*block).add_instr(Instruction::Call(target_reg.clone(), options));
         };
     }
 
@@ -266,7 +268,7 @@ pub enum Instruction {
     CreateArguments(String),
 
     /// Call(options)
-    Call(BTreeMap<String, Rc<Any>>),
+    Call(String, BTreeMap<String, Rc<Any>>),
     CallEnd,
 }
 
@@ -298,10 +300,18 @@ impl fmt::Display for Instruction {
                 fmt.write_str(&name)?;
             }
             Instruction::GetItem(name, index) => {
+                fmt.write_str("GetItem ")?;
+                fmt.write_str(&name)?;
+                fmt.write_str(" ")?;
+                fmt.write_str(&index.to_string())?;
+            }
+            Instruction::SetItem(name, index, value) => {
                 fmt.write_str("Get ")?;
                 fmt.write_str(&name)?;
                 fmt.write_str(" ")?;
                 fmt.write_str(&index.to_string())?;
+                fmt.write_str(" ")?;
+                fmt.write_str(&value)?;
             }
             Instruction::BinaryOp(op, first, second) => {
                 fmt.write_str(&first)?;
@@ -319,11 +329,16 @@ impl fmt::Display for Instruction {
                 // fmt.write_str(" ")?;
                 fmt.write_str(&body_id)?;
             }
-            Instruction::Call(options) => {
+            Instruction::Call(target, options) => {
                 fmt.write_str("Call ")?;
+                fmt.write_str(&target)?;
             }
             Instruction::CallEnd => {
                 fmt.write_str("CallEnd")?;
+            }
+            Instruction::CreateArguments(reg) => {
+                fmt.write_str("CreateArguments ")?;
+                fmt.write_str(&reg)?;
             }
             _ => {
                 fmt.write_str("???")?;

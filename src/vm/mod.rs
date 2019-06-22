@@ -127,16 +127,16 @@ impl VirtualMachine {
                     }
                 }
 
-                Instruction::Call(options) => {
+                Instruction::Call(target_reg, options) => {
                     self.pos += 1;
 
                     let registers_temp = self.registers_store[&self.registers_id].clone();
                     let registers = registers_temp.borrow();
-                    let borrowed = registers.data[DEFAULT_REG].borrow();
+                    let borrowed = registers.data[target_reg].borrow();
                     let target = borrowed.downcast_ref::<Function>().unwrap();
 
                     let args_reg = options["args"].clone();
-                    let args = registers.data.get(args_reg.downcast_ref::<String>().unwrap());
+                    let args = registers.data.get(args_reg.downcast_ref::<String>().unwrap()).unwrap();
 
                     let ret_addr = Address::new(block.id.clone(), self.pos);
                     let mut borrowed_ctx = registers.data[CONTEXT_REG].borrow_mut();
@@ -147,15 +147,26 @@ impl VirtualMachine {
 
                     let mut new_registers = Registers::new();
 
-                    let new_scope = Scope::new(caller_scope);
+                    let mut new_scope = Scope::new(caller_scope);
                     let new_namespace = target.namespace.clone();
+
+                    {
+                        for matcher in target.args.data_matchers.iter() {
+                            dbg!(matcher);
+                            // TODO: define members for arguments
+                            let arg_value = Rc::new(RefCell::new(Value::Integer(1)));
+                            new_scope.def_member(matcher.name.clone(), arg_value);
+                        }
+                    }
 
                     let new_context = Context::new(new_namespace, Rc::new(RefCell::new(new_scope)), None);
                     new_registers.insert("context".to_string(), Rc::new(RefCell::new(new_context)));
+                    self.registers_id = new_registers.id.clone();
 
                     self.registers_store.insert(new_registers.id.clone(), Rc::new(RefCell::new(new_registers)));
 
                     block = self.code_manager.get_block(target.body.to_string()).clone();
+                    dbg!(block.clone());
                     self.pos = 0;
                 }
 
@@ -177,10 +188,41 @@ impl VirtualMachine {
                     registers_mut.data.insert(DEFAULT_REG.into(), Rc::new(RefCell::new(f)));
                 }
 
-                _ => {
+                Instruction::CreateArguments(reg) => {
                     self.pos += 1;
-                    println!("Unimplemented instruction: {}", instr)
+                    let mut registers_ = self.registers_store[&self.registers_id].clone();
+                    let mut registers = registers_.borrow_mut();
+                    let data = Vec::<Rc<RefCell<Any>>>::new();
+                    registers.insert(reg.clone(), Rc::new(RefCell::new(data)));
                 }
+
+                Instruction::SetItem(target_reg, index, value_reg) => {
+                    self.pos += 1;
+
+                    let value;
+
+                    let registers_ = self.registers_store[&self.registers_id].clone();
+                    {
+                        let registers = registers_.borrow();
+                        let value_ = registers.data[value_reg].borrow();
+                        value = value_.downcast_ref::<Value>().unwrap().clone();
+                    }
+                    let registers = registers_.borrow();
+                    let mut target_ = registers.data[target_reg].borrow_mut();
+                    if let Some(arr) = target_.downcast_mut::<Vec<Value>>() {
+                        arr[index.clone()] = value;
+                    } else if let Some(args) = target_.downcast_mut::<Vec<Rc<RefCell<Any>>>>() {
+                        while *index >= args.len() {
+                            args.push(Rc::new(RefCell::new(Value::Void)));
+                        }
+
+                        args[index.clone()] = Rc::new(RefCell::new(value));
+                    } else {
+                        unimplemented!();
+                    }
+                }
+
+                _ => unimplemented!()
             }
         }
 

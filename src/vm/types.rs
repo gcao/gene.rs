@@ -197,17 +197,17 @@ impl<'a> Function {
 
 #[derive(Debug)]
 pub struct Arguments {
-    pub props: BTreeMap<String, Rc<RefCell<Any>>>,
+    // pub props: BTreeMap<String, Rc<RefCell<Any>>>,
     pub data: Vec<Rc<RefCell<Any>>>,
 }
 
 impl Arguments {
     pub fn new(
-        props: BTreeMap<String, Rc<RefCell<Any>>>,
+        // props: BTreeMap<String, Rc<RefCell<Any>>>,
         data: Vec<Rc<RefCell<Any>>>,
     ) -> Self {
         Arguments {
-            props,
+            // props,
             data,
         }
     }
