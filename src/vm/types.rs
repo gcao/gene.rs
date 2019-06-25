@@ -157,8 +157,12 @@ impl From<&Value> for Matcher {
     fn from(v: &Value) -> Matcher {
         match v {
             Value::Symbol(name) => {
-                let first = DataMatcher::new(name.to_string(), 0);
-                Matcher::new(vec![first])
+                if name.to_string() == "_" {
+                    Matcher::new(Vec::<DataMatcher>::new())
+                } else {
+                    let first = DataMatcher::new(name.to_string(), 0);
+                    Matcher::new(vec![first])
+                }
             }
             _ => unimplemented!()
         }
