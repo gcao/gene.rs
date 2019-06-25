@@ -136,7 +136,7 @@ impl VirtualMachine {
                     let target = borrowed.downcast_ref::<Function>().unwrap();
 
                     let args_reg = options["args"].clone();
-                    let args = registers.data.get(args_reg.downcast_ref::<String>().unwrap()).unwrap();
+                    let args_ = registers.data.get(args_reg.downcast_ref::<String>().unwrap()).unwrap();
 
                     let ret_addr = Address::new(block.id.clone(), self.pos);
                     let mut borrowed_ctx = registers.data[CONTEXT_REG].borrow_mut();
@@ -151,10 +151,12 @@ impl VirtualMachine {
                     let new_namespace = target.namespace.clone();
 
                     {
+                        let borrowed = args_.borrow();
+                        let args = borrowed.downcast_ref::<Vec<Rc<RefCell<Value>>>>().unwrap();
+
                         for matcher in target.args.data_matchers.iter() {
-                            dbg!(matcher);
                             // TODO: define members for arguments
-                            let arg_value = Rc::new(RefCell::new(Value::Integer(1)));
+                            let arg_value = args[matcher.index].clone();
                             new_scope.def_member(matcher.name.clone(), arg_value);
                         }
                     }
@@ -192,7 +194,7 @@ impl VirtualMachine {
                     self.pos += 1;
                     let mut registers_ = self.registers_store[&self.registers_id].clone();
                     let mut registers = registers_.borrow_mut();
-                    let data = Vec::<Rc<RefCell<Any>>>::new();
+                    let data = Vec::<Rc<RefCell<Value>>>::new();
                     registers.insert(reg.clone(), Rc::new(RefCell::new(data)));
                 }
 
@@ -209,9 +211,7 @@ impl VirtualMachine {
                     }
                     let registers = registers_.borrow();
                     let mut target_ = registers.data[target_reg].borrow_mut();
-                    if let Some(arr) = target_.downcast_mut::<Vec<Value>>() {
-                        arr[index.clone()] = value;
-                    } else if let Some(args) = target_.downcast_mut::<Vec<Rc<RefCell<Any>>>>() {
+                    if let Some(args) = target_.downcast_mut::<Vec<Rc<RefCell<Value>>>>() {
                         while *index >= args.len() {
                             args.push(Rc::new(RefCell::new(Value::Void)));
                         }
