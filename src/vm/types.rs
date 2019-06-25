@@ -157,12 +157,20 @@ impl From<&Value> for Matcher {
     fn from(v: &Value) -> Matcher {
         match v {
             Value::Symbol(name) => {
-                if name.to_string() == "_" {
-                    Matcher::new(Vec::<DataMatcher>::new())
-                } else {
-                    let first = DataMatcher::new(name.to_string(), 0);
-                    Matcher::new(vec![first])
+                let mut matchers = Vec::<DataMatcher>::new();
+                if name.to_string() != "_" {
+                    matchers.push(DataMatcher::new(name.to_string(), 0));
                 }
+                Matcher::new(matchers)
+            }
+            Value::Array(args) => {
+                let mut matchers = Vec::<DataMatcher>::new();
+                let mut index = 0;
+                for name in args.iter() {
+                    matchers.push(DataMatcher::new(name.to_string(), index));
+                    index += 1;
+                }
+                Matcher::new(matchers)
             }
             _ => unimplemented!()
         }

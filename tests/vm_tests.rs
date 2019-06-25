@@ -192,4 +192,17 @@ fn test_functions() {
         let result = borrowed.downcast_ref::<Value>().unwrap();
         assert_eq!(*result, Value::Integer(1));
     }
+    {
+        let mut parser = Parser::new("
+            (fn f [a b] (a + b))
+            (f 1 2)
+        ");
+        let parsed = parser.parse();
+        let module_temp = compiler.compile(parsed.unwrap());
+        let module = &module_temp.borrow();
+        let result_temp = vm.load_module(module);
+        let borrowed = result_temp.borrow();
+        let result = borrowed.downcast_ref::<Value>().unwrap();
+        assert_eq!(*result, Value::Integer(3));
+    }
 }
