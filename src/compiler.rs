@@ -22,6 +22,7 @@ impl LiteralCheck for Value {
         match self {
             Value::Symbol(s) => false,
             Value::Array(v) => v.is_literal(),
+            Value::Gene(g) => g.is_literal(),
             _ => true
         }
     }
@@ -30,6 +31,12 @@ impl LiteralCheck for Value {
 impl LiteralCheck for Vec<Value> {
     fn is_literal(&self) -> bool {
         self.iter().all(|item| item.is_literal())
+    }
+}
+
+impl LiteralCheck for Gene {
+    fn is_literal(&self) -> bool {
+        false
     }
 }
 
