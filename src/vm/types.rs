@@ -121,7 +121,19 @@ impl Scope {
     }
 
     pub fn get_member(&self, name: String) -> Option<Rc<RefCell<Any>>> {
-        self.members.get(&name).cloned()
+        let value = self.members.get(&name);
+        if value.is_none() && self.parent.is_some() {
+            let parent_ = self.parent.clone().unwrap();
+            let parent = parent_.borrow();
+            let v = parent.get_member(name);
+            if v.is_some() {
+                Some(v.unwrap().clone())
+            } else {
+                None
+            }
+        } else {
+            value.cloned()
+        }
     }
 }
 

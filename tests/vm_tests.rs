@@ -205,4 +205,32 @@ fn test_functions() {
         let result = borrowed.downcast_ref::<Value>().unwrap();
         assert_eq!(*result, Value::Integer(3));
     }
+    {
+        let mut parser = Parser::new("
+            (fn f _ 1)
+            (fn g _ (f))
+            (g)
+        ");
+        let parsed = parser.parse();
+        let module_temp = compiler.compile(parsed.unwrap());
+        let module = &module_temp.borrow();
+        let result_temp = vm.load_module(module);
+        let borrowed = result_temp.borrow();
+        let result = borrowed.downcast_ref::<Value>().unwrap();
+        assert_eq!(*result, Value::Integer(1));
+    }
+    {
+        let mut parser = Parser::new("
+            (fn f [a b] (a + b))
+            (fn g [c d] (f c d))
+            (g 1 2)
+        ");
+        let parsed = parser.parse();
+        let module_temp = compiler.compile(parsed.unwrap());
+        let module = &module_temp.borrow();
+        let result_temp = vm.load_module(module);
+        let borrowed = result_temp.borrow();
+        let result = borrowed.downcast_ref::<Value>().unwrap();
+        assert_eq!(*result, Value::Integer(3));
+    }
 }
