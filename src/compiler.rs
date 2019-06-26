@@ -13,6 +13,26 @@ use super::types::Value;
 use super::vm::types::{Function, Matcher};
 use super::utils::new_uuidv4;
 
+trait LiteralCheck {
+    fn is_literal(&self) -> bool;
+}
+
+impl LiteralCheck for Value {
+    fn is_literal(&self) -> bool {
+        match self {
+            Value::Symbol(s) => false,
+            Value::Array(v) => v.is_literal(),
+            _ => true
+        }
+    }
+}
+
+impl LiteralCheck for Vec<Value> {
+    fn is_literal(&self) -> bool {
+        self.iter().all(|item| item.is_literal())
+    }
+}
+
 #[derive(Debug)]
 pub struct Compiler {
     module: Rc<RefCell<Module>>,
@@ -46,8 +66,7 @@ impl Compiler {
                 (*block).add_instr(Instruction::GetMember(s));
             }
             Value::Array(v) => {
-                // TODO: compile individual elements
-                (*block).add_instr(Instruction::Default(Value::Array(v)));
+                self.compile_array(block, v)
             }
             Value::Map(_) => {
                 // TODO: compile individual values
@@ -65,6 +84,36 @@ impl Compiler {
                 (*block).add_instr(Instruction::Default(ast));
             }
         };
+    }
+
+    fn compile_array(&mut self, block: &mut Block, arr: Vec<Value>) {
+        // TODO: compile individual elements
+        if arr.is_literal() {
+            (*block).add_instr(Instruction::Default(Value::Array(arr)));
+        } else {
+            let mut arr2 = Vec::<Value>::new();
+            for item in arr.iter() {
+                if item.is_literal() {
+                    arr2.push(item.clone());
+                } else {
+                    arr2.push(Value::Void);
+                }
+            }
+            let reg = new_reg();
+            (*block).add_instr(Instruction::Save(reg.clone(), Value::Array(arr2)));
+
+            let mut index = 0;
+            for item in arr.iter() {
+                if !item.is_literal() {
+                    self.compile_(block, item.clone());
+                    (*block).add_instr(Instruction::SetItem(reg.clone(), index, "default".to_string()));
+                }
+                index += 1;
+            }
+
+            // Copy the array to default register
+            (*block).add_instr(Instruction::Copy(reg, "default".to_string()));
+        }
     }
 
     fn compile_gene(&mut self, block: &mut Block, gene: Gene) {
@@ -228,6 +277,8 @@ pub enum Instruction {
 
     /// Save Value to default register
     Default(Value),
+    /// Save Value to default register
+    Save(String, Value),
     /// Copy from one register to another
     Copy(String, String),
 
@@ -236,27 +287,27 @@ pub enum Instruction {
     /// GetMember(name)
     GetMember(String),
 
-    // Literal types: number, string, boolean, array of literals, map of literals, gene with literals only
-    // TODO: Is it better to use individual instruction like CreateInt etc?
-    CreateLiteral(String, Box<Any>),
+    // // Literal types: number, string, boolean, array of literals, map of literals, gene with literals only
+    // // TODO: Is it better to use individual instruction like CreateInt etc?
+    // CreateLiteral(String, Box<Any>),
 
     /// GetItem(target reg, index)
     GetItem(String, usize),
-    /// GetItemDynamic(target reg, index reg)
-    GetItemDynamic(String, String),
+    // /// GetItemDynamic(target reg, index reg)
+    // GetItemDynamic(String, String),
     /// SetItem(target reg, index, value reg)
     SetItem(String, usize, String),
-    /// SetItemDynamic(target reg, index reg, value reg)
-    SetItemDynamic(String, String, String),
+    // /// SetItemDynamic(target reg, index reg, value reg)
+    // SetItemDynamic(String, String, String),
 
-    /// GetProp(target reg, name)
-    GetProp(String, String),
-    /// GetPropDynamic(target reg, name reg)
-    GetPropDynamic(String, String),
-    /// SetProp(target reg, name, value reg)
-    SetProp(String, String, String),
-    /// SetPropDynamic(target reg, name reg, value reg)
-    SetPropDynamic(String, String, String),
+    // /// GetProp(target reg, name)
+    // GetProp(String, String),
+    // /// GetPropDynamic(target reg, name reg)
+    // GetPropDynamic(String, String),
+    // /// SetProp(target reg, name, value reg)
+    // SetProp(String, String, String),
+    // /// SetPropDynamic(target reg, name reg, value reg)
+    // SetPropDynamic(String, String, String),
 
     /// BinaryOp(op, first reg, second reg)
     /// Result is stored in default reg
@@ -283,66 +334,72 @@ impl fmt::Display for Instruction {
                 fmt.write_str("Default ")?;
                 fmt.write_str(&v.to_string())?;
             }
+            Instruction::Save(reg, v) => {
+                fmt.write_str("Save ")?;
+                fmt.write_str(reg)?;
+                fmt.write_str(" ")?;
+                fmt.write_str(&v.to_string())?;
+            }
             Instruction::Copy(first, second) => {
                 fmt.write_str("Copy ")?;
-                fmt.write_str(&first)?;
+                fmt.write_str(first)?;
                 fmt.write_str(" ")?;
-                fmt.write_str(&second)?;
+                fmt.write_str(second)?;
             }
             Instruction::DefMember(name, reg) => {
-                fmt.write_str("Define ")?;
-                fmt.write_str(&name)?;
+                fmt.write_str("DefMember ")?;
+                fmt.write_str(name)?;
                 fmt.write_str(" ")?;
-                fmt.write_str(&reg)?;
+                fmt.write_str(reg)?;
             }
             Instruction::GetMember(name) => {
                 fmt.write_str("GetMember ")?;
-                fmt.write_str(&name)?;
+                fmt.write_str(name)?;
             }
             Instruction::GetItem(name, index) => {
                 fmt.write_str("GetItem ")?;
-                fmt.write_str(&name)?;
+                fmt.write_str(name)?;
                 fmt.write_str(" ")?;
                 fmt.write_str(&index.to_string())?;
             }
             Instruction::SetItem(name, index, value) => {
                 fmt.write_str("Get ")?;
-                fmt.write_str(&name)?;
+                fmt.write_str(name)?;
                 fmt.write_str(" ")?;
                 fmt.write_str(&index.to_string())?;
                 fmt.write_str(" ")?;
-                fmt.write_str(&value)?;
+                fmt.write_str(value)?;
             }
             Instruction::BinaryOp(op, first, second) => {
-                fmt.write_str(&first)?;
+                fmt.write_str(first)?;
                 fmt.write_str(" ")?;
-                fmt.write_str(&op)?;
+                fmt.write_str(op)?;
                 fmt.write_str(" ")?;
-                fmt.write_str(&second)?;
+                fmt.write_str(second)?;
             }
             Instruction::Function(name, matcher, body_id) => {
                 fmt.write_str("Function ")?;
-                fmt.write_str(&name)?;
+                fmt.write_str(name)?;
                 fmt.write_str(" ")?;
                 // TODO: matcher to string
                 // fmt.write_str(&matcher)?;
                 // fmt.write_str(" ")?;
-                fmt.write_str(&body_id)?;
+                fmt.write_str(body_id)?;
             }
             Instruction::Call(target, options) => {
                 fmt.write_str("Call ")?;
-                fmt.write_str(&target)?;
+                fmt.write_str(target)?;
             }
             Instruction::CallEnd => {
                 fmt.write_str("CallEnd")?;
             }
             Instruction::CreateArguments(reg) => {
                 fmt.write_str("CreateArguments ")?;
-                fmt.write_str(&reg)?;
+                fmt.write_str(reg)?;
             }
-            _ => {
-                fmt.write_str("???")?;
-            }
+            // _ => {
+            //     fmt.write_str("???")?;
+            // }
         }
         fmt.write_str(")")?;
         Ok(())

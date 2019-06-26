@@ -66,6 +66,12 @@ impl VirtualMachine {
                     registers.insert(DEFAULT_REG.into(), Rc::new(RefCell::new(v.clone())));
                 }
 
+                Instruction::Save(reg, v) => {
+                    self.pos += 1;
+                    let mut registers = self.registers_store.get_mut(&self.registers_id).unwrap().borrow_mut();
+                    registers.insert(reg.clone(), Rc::new(RefCell::new(v.clone())));
+                }
+
                 Instruction::Copy(from, to) => {
                     self.pos += 1;
                     let mut registers = self.registers_store.get_mut(&self.registers_id).unwrap().borrow_mut();
@@ -215,8 +221,17 @@ impl VirtualMachine {
                         while *index >= args.len() {
                             args.push(Rc::new(RefCell::new(Value::Void)));
                         }
-
                         args[index.clone()] = Rc::new(RefCell::new(value));
+                    } else if let Some(args) = target_.downcast_mut::<Value>() {
+                        match args {
+                            Value::Array(arr) => {
+                                while *index >= arr.len() {
+                                    arr.push(Value::Void);
+                                }
+                                arr[index.clone()] = value.clone();
+                            }
+                            _ => unimplemented!()
+                        }
                     } else {
                         unimplemented!();
                     }
