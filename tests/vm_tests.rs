@@ -166,6 +166,26 @@ fn test_variables() {
             Value::Integer(3),
         ]));
     }
+    {
+        let mut parser = Parser::new("
+            (var a 1)
+            (var b 2)
+            {^ka a ^kb b}
+        ");
+        let parsed = parser.parse();
+        let module_temp = compiler.compile(parsed.unwrap());
+        let module = &module_temp.borrow();
+        let result_temp = vm.load_module(module);
+        let borrowed = result_temp.borrow();
+        let result = borrowed.downcast_ref::<Value>().unwrap();
+        assert_eq!(
+            *result,
+            Value::Map(map! {
+                "ka" => Value::Integer(1),
+                "kb" => Value::Integer(2),
+            })
+        );
+    }
 }
 
 #[test]

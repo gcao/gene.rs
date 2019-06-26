@@ -34,6 +34,11 @@ impl LiteralCheck for Vec<Value> {
     }
 }
 
+impl LiteralCheck for BTreeMap<String, Value> {
+    fn is_literal(&self) -> bool {
+        false
+    }
+}
 impl LiteralCheck for Gene {
     fn is_literal(&self) -> bool {
         false
@@ -75,9 +80,8 @@ impl Compiler {
             Value::Array(v) => {
                 self.compile_array(block, v)
             }
-            Value::Map(_) => {
-                // TODO: compile individual values
-                (*block).add_instr(Instruction::Default(ast));
+            Value::Map(m) => {
+                self.compile_map(block, m)
             }
             Value::Gene(v) => {
                 self.compile_gene(block, normalize(v));
@@ -94,7 +98,6 @@ impl Compiler {
     }
 
     fn compile_array(&mut self, block: &mut Block, arr: Vec<Value>) {
-        // TODO: compile individual elements
         if arr.is_literal() {
             (*block).add_instr(Instruction::Default(Value::Array(arr)));
         } else {
@@ -118,7 +121,32 @@ impl Compiler {
                 index += 1;
             }
 
-            // Copy the array to default register
+            // Copy to default register
+            (*block).add_instr(Instruction::Copy(reg, "default".to_string()));
+        }
+    }
+
+    fn compile_map(&mut self, block: &mut Block, map: BTreeMap<String, Value>) {
+        if map.is_literal() {
+            (*block).add_instr(Instruction::Default(Value::Map(map)));
+        } else {
+            let mut map2 = BTreeMap::<String, Value>::new();
+            for (key, value) in map.iter() {
+                if value.is_literal() {
+                    map2.insert(key.clone(), value.clone());
+                }
+            }
+            let reg = new_reg();
+            (*block).add_instr(Instruction::Save(reg.clone(), Value::Map(map2)));
+
+            for (key, value) in map.iter() {
+                if !value.is_literal() {
+                    self.compile_(block, value.clone());
+                    (*block).add_instr(Instruction::SetProp(reg.clone(), key.clone(), "default".to_string()));
+                }
+            }
+
+            // Copy to default register
             (*block).add_instr(Instruction::Copy(reg, "default".to_string()));
         }
     }
@@ -311,8 +339,8 @@ pub enum Instruction {
     // GetProp(String, String),
     // /// GetPropDynamic(target reg, name reg)
     // GetPropDynamic(String, String),
-    // /// SetProp(target reg, name, value reg)
-    // SetProp(String, String, String),
+    /// SetProp(target reg, name, value reg)
+    SetProp(String, String, String),
     // /// SetPropDynamic(target reg, name reg, value reg)
     // SetPropDynamic(String, String, String),
 
@@ -374,6 +402,14 @@ impl fmt::Display for Instruction {
                 fmt.write_str(name)?;
                 fmt.write_str(" ")?;
                 fmt.write_str(&index.to_string())?;
+                fmt.write_str(" ")?;
+                fmt.write_str(value)?;
+            }
+            Instruction::SetProp(name, key, value) => {
+                fmt.write_str("Get ")?;
+                fmt.write_str(name)?;
+                fmt.write_str(" ")?;
+                fmt.write_str(key)?;
                 fmt.write_str(" ")?;
                 fmt.write_str(value)?;
             }

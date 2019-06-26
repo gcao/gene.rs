@@ -237,6 +237,31 @@ impl VirtualMachine {
                     }
                 }
 
+                Instruction::SetProp(target_reg, key, value_reg) => {
+                    self.pos += 1;
+
+                    let value;
+
+                    let registers_ = self.registers_store[&self.registers_id].clone();
+                    {
+                        let registers = registers_.borrow();
+                        let value_ = registers.data[value_reg].borrow();
+                        value = value_.downcast_ref::<Value>().unwrap().clone();
+                    }
+                    let registers = registers_.borrow();
+                    let mut target_ = registers.data[target_reg].borrow_mut();
+                    if let Some(v) = target_.downcast_mut::<Value>() {
+                        match v {
+                            Value::Map(map) => {
+                                map.insert(key.clone(), value);
+                            }
+                            _ => unimplemented!()
+                        }
+                    } else {
+                        unimplemented!();
+                    }
+                }
+
                 _ => unimplemented!()
             }
         }
