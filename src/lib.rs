@@ -1,9 +1,8 @@
 #![allow(unused_imports)]
 #![allow(clippy::needless_return)]
 #![allow(clippy::new_without_default)]
-#![allow(clippy::new_without_default_derive)]
+#![allow(clippy::new_without_default)]
 
-#![feature(range_contains)]
 #![feature(box_patterns)]
 
 #[macro_use]

@@ -7,7 +7,7 @@ use std::rc::Rc;
 
 use ordered_float::OrderedFloat;
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Value {
     Void, // Same as undefined, different from null, can be represented as ()
     Null, // Default value for any type, equivalent to false, 0, "", [], {}, (null) etc
@@ -20,6 +20,30 @@ pub enum Value {
     Map(BTreeMap<String, Value>),
     Gene(Gene),
     Stream(Vec<Value>),
+}
+
+impl Clone for Value {
+    fn clone(&self) -> Value {
+        match &self {
+            Value::Void => Value::Void,
+            Value::Null => Value::Null,
+            Value::Boolean(b) => Value::Boolean(*b),
+            Value::Integer(i) => Value::Integer(*i),
+            Value::Float(f) => Value::Float(*f),
+            Value::String(s) => Value::String(s.clone()),
+            Value::Symbol(symbol) => Value::Symbol(symbol.clone()),
+            Value::Array(a) => Value::Array(a.iter().map(|item| item.clone()).collect()),
+            Value::Map(m) => {
+                let mut new_map = BTreeMap::new();
+                for (k, v) in m.iter() {
+                    new_map.insert(k.to_string(), v.clone());
+                }
+                Value::Map(new_map)
+            }
+            Value::Gene(g) => Value::Gene(g.clone()),
+            Value::Stream(v) => Value::Stream(v.iter().map(|item| item.clone()).collect()),
+        }
+    }
 }
 
 impl fmt::Display for Value {
@@ -41,6 +65,9 @@ impl fmt::Display for Value {
                 fmt.write_str(&v.to_string())?;
             }
             Value::String(v) => {
+                fmt.write_str(&v)?;
+            }
+            Value::Symbol(v) => {
                 fmt.write_str(&v)?;
             }
             Value::Gene(v) => {

@@ -20,15 +20,5 @@ fn test_wip() {
     let mut compiler = Compiler::new();
     let mut vm = VirtualMachine::new();
     {
-        let mut parser = Parser::new("
-            (fn f _ 1)
-            (f)
-        ");
-        let parsed = parser.parse();
-        let module_temp = compiler.compile(parsed.unwrap());
-        let module = &module_temp.borrow();
-        let borrowed = (*vm.load_module(module)).borrow();
-        let result = borrowed.downcast_ref::<Value>().unwrap();
-        assert_eq!(*result, Value::Integer(1));
     }
 }
