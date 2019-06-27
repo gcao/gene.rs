@@ -263,19 +263,20 @@ impl Compiler {
             }
         }
         self.compile_(block, cond.borrow().clone());
-        let cond_index = block.instructions.len();
+        let cond_jump_index = block.instructions.len();
         (*block).add_instr(Instruction::Dummy);
 
         self.compile_statements(block, &then_stmts);
-        let else_index = block.instructions.len();
+        let then_jump_index = block.instructions.len();
         (*block).add_instr(Instruction::Dummy);
 
         self.compile_statements(block, &else_stmts);
 
-        let next_index = block.instructions.len();
+        let end_index = block.instructions.len();
 
-        mem::replace(&mut (*block).instructions[cond_index], Instruction::JumpIfFalse(else_index as i16));
-        mem::replace(&mut (*block).instructions[else_index], Instruction::Jump(next_index as i16));
+        let else_start = then_jump_index + 1;
+        mem::replace(&mut (*block).instructions[cond_jump_index], Instruction::JumpIfFalse(else_start as i16));
+        mem::replace(&mut (*block).instructions[then_jump_index], Instruction::Jump(end_index as i16));
     }
 }
 
