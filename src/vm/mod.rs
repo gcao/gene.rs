@@ -101,6 +101,26 @@ impl VirtualMachine {
                     registers.insert(DEFAULT_REG.into(), value);
                 }
 
+                Instruction::Jump(pos) => {
+                    self.pos = *pos as usize;
+                }
+
+                Instruction::JumpIfFalse(pos) => {
+                    let registers = self.registers_store.get_mut(&self.registers_id).unwrap().borrow();
+                    let value_ = registers.data[DEFAULT_REG.into()].borrow();
+                    let value = value_.downcast_ref::<Value>().unwrap();
+                    match value {
+                        Value::Boolean(b) => {
+                            if *b {
+                                self.pos += 1;
+                            } else {
+                                self.pos = *pos as usize;
+                            }
+                        }
+                        _ => unimplemented!()
+                    }
+                }
+
                 Instruction::BinaryOp(op, first, second) => {
                     self.pos += 1;
                     let mut registers = self.registers_store.get_mut(&self.registers_id).unwrap().borrow_mut();
@@ -204,6 +224,8 @@ impl VirtualMachine {
                     registers.insert(reg.clone(), Rc::new(RefCell::new(data)));
                 }
 
+                Instruction::GetItem(reg, index) => unimplemented!(),
+
                 Instruction::SetItem(target_reg, index, value_reg) => {
                     self.pos += 1;
 
@@ -262,7 +284,9 @@ impl VirtualMachine {
                     }
                 }
 
-                _ => unimplemented!()
+                Instruction::Dummy => unimplemented!(),
+
+                // _ => unimplemented!()
             }
         }
 

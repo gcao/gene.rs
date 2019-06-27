@@ -1,5 +1,6 @@
 extern crate rand;
 
+use std::mem;
 use std::any::Any;
 use std::cell::{RefCell, RefMut};
 use std::collections::BTreeMap;
@@ -153,7 +154,7 @@ impl Compiler {
 
     fn compile_gene(&mut self, block: &mut Block, gene: Gene) {
         let Gene {
-            _type, data, ..
+            _type, data, props,
         } = gene;
 
         if *_type.borrow() == Value::Symbol("var".to_string()) {
@@ -185,6 +186,9 @@ impl Compiler {
             module.add_block(body_id.clone(), body);
 
             (*block).add_instr(Instruction::Function(name, matcher, body_id));
+
+        } else if *_type.borrow() == Value::Symbol("if".to_string()) {
+            self.compile_if(block, data);
 
         } else if *_type.borrow() == Value::Symbol("+".to_string()) {
             let first = data[0].borrow().clone();
@@ -234,6 +238,44 @@ impl Compiler {
             let borrowed = item.borrow().clone();
             self.compile_(block, borrowed);
         }
+    }
+
+    fn compile_if(&mut self, block: &mut Block, mut data: Vec<Rc<RefCell<Value>>>) {
+        let cond = data.remove(0);
+        let mut then_stmts = Vec::<Rc<RefCell<Value>>>::new();
+        let mut else_stmts = Vec::<Rc<RefCell<Value>>>::new();
+        let mut is_else = false;
+        for item in data.iter() {
+            if is_else {
+                else_stmts.push(item.clone());
+            } else {
+                let borrowed_item = item.borrow();
+                match *borrowed_item {
+                    Value::Symbol(ref s) if s == "then" => (),
+                    Value::Symbol(ref s) if s == "else" => {
+                        is_else = true;
+                    }
+                    _ => {
+                        then_stmts.push(item.clone());
+                    }
+
+                }
+            }
+        }
+        self.compile_(block, cond.borrow().clone());
+        let cond_index = block.instructions.len();
+        (*block).add_instr(Instruction::Dummy);
+
+        self.compile_statements(block, &then_stmts);
+        let else_index = block.instructions.len();
+        (*block).add_instr(Instruction::Dummy);
+
+        self.compile_statements(block, &else_stmts);
+
+        let next_index = block.instructions.len();
+
+        mem::replace(&mut (*block).instructions[cond_index], Instruction::JumpIfFalse(else_index as i16));
+        mem::replace(&mut (*block).instructions[else_index], Instruction::Jump(next_index as i16));
     }
 }
 
@@ -308,6 +350,7 @@ impl fmt::Display for Block {
 
 #[derive(Debug)]
 pub enum Instruction {
+    Dummy,
     Init,
 
     /// Save Value to default register
@@ -344,6 +387,9 @@ pub enum Instruction {
     // /// SetPropDynamic(target reg, name reg, value reg)
     // SetPropDynamic(String, String, String),
 
+    Jump(i16),
+    JumpIfFalse(i16),
+
     /// BinaryOp(op, first reg, second reg)
     /// Result is stored in default reg
     BinaryOp(String, String, String),
@@ -362,6 +408,9 @@ impl fmt::Display for Instruction {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         fmt.write_str("(")?;
         match &self {
+            Instruction::Dummy => {
+                fmt.write_str("Dummy")?;
+            }
             Instruction::Init => {
                 fmt.write_str("Init")?;
             }
@@ -412,6 +461,14 @@ impl fmt::Display for Instruction {
                 fmt.write_str(key)?;
                 fmt.write_str(" ")?;
                 fmt.write_str(value)?;
+            }
+            Instruction::Jump(pos) => {
+                fmt.write_str("Jump ")?;
+                fmt.write_str(&pos.to_string())?;
+            }
+            Instruction::JumpIfFalse(pos) => {
+                fmt.write_str("JumpIfFalse ")?;
+                fmt.write_str(&pos.to_string())?;
             }
             Instruction::BinaryOp(op, first, second) => {
                 fmt.write_str(first)?;
