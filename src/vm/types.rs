@@ -63,6 +63,17 @@ impl Context {
             result
         }
     }
+
+    pub fn set_member(&mut self, name: String, value: Rc<RefCell<Any>>) {
+        if self.scope.borrow().has_member(name.clone()) {
+            self.scope.borrow_mut().set_member(name, value);
+        } else if self.namespace.borrow().has_member(name.clone()) {
+            self.namespace.borrow_mut().set_member(name, value);
+        } else {
+            panic!("Undefined variable: {}", name);
+        }
+    }
+
 }
 
 #[derive(Clone, Debug)]
@@ -92,6 +103,24 @@ impl Namespace {
 
     pub fn get_member(&self, name: String) -> Option<Rc<RefCell<Any>>> {
         self.members.get(&name).cloned()
+    }
+
+    pub fn set_member(&mut self, name: String, value: Rc<RefCell<Any>>) {
+        if self.members.contains_key(&name) {
+            self.members.insert(name.clone(), value);
+        } else {
+            self.parent.clone().unwrap().set_member(name, value);
+        }
+    }
+
+    pub fn has_member(&self, name: String) -> bool {
+        if self.members.contains_key(&name) {
+            true
+        } else if self.parent.is_some() {
+            self.parent.clone().unwrap().has_member(name)
+        } else {
+            false
+        }
     }
 }
 
@@ -133,6 +162,24 @@ impl Scope {
             }
         } else {
             value.cloned()
+        }
+    }
+
+    pub fn set_member(&mut self, name: String, value: Rc<RefCell<Any>>) {
+        if self.members.contains_key(&name) {
+            self.members.insert(name.clone(), value);
+        } else {
+            self.parent.clone().unwrap().borrow_mut().set_member(name, value);
+        }
+    }
+
+    pub fn has_member(&self, name: String) -> bool {
+        if self.members.contains_key(&name) {
+            true
+        } else if self.parent.is_some() {
+            self.parent.clone().unwrap().borrow().has_member(name)
+        } else {
+            false
         }
     }
 }

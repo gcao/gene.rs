@@ -87,8 +87,7 @@ impl VirtualMachine {
                         value = registers.data[reg].clone();
                     }
                     {
-                        let mut borrowed =
-                            registers.data.get_mut(CONTEXT_REG).unwrap().borrow_mut();
+                        let mut borrowed = registers.data.get_mut(CONTEXT_REG).unwrap().borrow_mut();
                         let context = borrowed.downcast_mut::<Context>().unwrap();
                         context.def_member(name.clone(), value, VarType::SCOPE);
                     }
@@ -99,6 +98,20 @@ impl VirtualMachine {
                     let value = self.get_member(name.clone()).unwrap();
                     let mut registers = self.registers_store.get_mut(&self.registers_id).unwrap().borrow_mut();
                     registers.insert(DEFAULT_REG.into(), value);
+                }
+
+                Instruction::SetMember(name, reg) => {
+                    self.pos += 1;
+                    let mut registers = self.registers_store.get_mut(&self.registers_id).unwrap().borrow_mut();
+                    let value;
+                    {
+                        value = registers.data[reg].clone();
+                    }
+                    {
+                        let mut borrowed = registers.data.get_mut(CONTEXT_REG).unwrap().borrow_mut();
+                        let context = borrowed.downcast_mut::<Context>().unwrap();
+                        context.set_member(name.clone(), value);
+                    }
                 }
 
                 Instruction::Jump(pos) => {

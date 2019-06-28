@@ -192,6 +192,12 @@ impl Compiler {
             Value::Symbol(ref s) if s == "if" => {
                 self.compile_if(block, data);
             }
+            Value::Symbol(ref s) if s == "=" => {
+                let name = data[0].borrow().to_string();
+                let value = data[1].borrow().clone();
+                self.compile_(block, value);
+                (*block).add_instr(Instruction::SetMember(name, "default".to_string()));
+            }
             Value::Symbol(ref s) if is_binary_op(s) => {
                 let first = data[0].borrow().clone();
                 self.compile_(block, first);
@@ -367,10 +373,9 @@ pub enum Instruction {
     /// Copy from one register to another
     Copy(String, String),
 
-    /// DefMember(name, value reg)
     DefMember(String, String),
-    /// GetMember(name)
     GetMember(String),
+    SetMember(String, String),
 
     // // Literal types: number, string, boolean, array of literals, map of literals, gene with literals only
     // // TODO: Is it better to use individual instruction like CreateInt etc?
@@ -446,6 +451,12 @@ impl fmt::Display for Instruction {
             Instruction::GetMember(name) => {
                 fmt.write_str("GetMember ")?;
                 fmt.write_str(name)?;
+            }
+            Instruction::SetMember(name, reg) => {
+                fmt.write_str("SetMember ")?;
+                fmt.write_str(name)?;
+                fmt.write_str(" ")?;
+                fmt.write_str(reg)?;
             }
             Instruction::GetItem(name, index) => {
                 fmt.write_str("GetItem ")?;
@@ -529,7 +540,7 @@ fn normalize(gene: Gene) -> Gene {
         let borrowed = gene.data[0].clone();
         let first = borrowed.borrow_mut();
         match *first {
-            Value::Symbol(ref s) if is_binary_op(s) => {
+            Value::Symbol(ref s) if is_binary_op(s) || s == "=" => {
                 let Gene {
                     _type,
                     mut data,

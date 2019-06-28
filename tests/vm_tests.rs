@@ -214,7 +214,7 @@ fn test_binary_operations() {
     let mut vm = VirtualMachine::new();
     {
         let mut parser = Parser::new("
-          (1 + 2)
+            (1 + 2)
         ");
         let parsed = parser.parse();
         let module_temp = compiler.compile(parsed.unwrap());
@@ -226,7 +226,7 @@ fn test_binary_operations() {
     }
     {
         let mut parser = Parser::new("
-          (1 < 2)
+            (1 < 2)
         ");
         let parsed = parser.parse();
         let module_temp = compiler.compile(parsed.unwrap());
@@ -235,6 +235,24 @@ fn test_binary_operations() {
         let borrowed = result_temp.borrow();
         let result = borrowed.downcast_ref::<Value>().unwrap();
         assert_eq!(*result, Value::Boolean(true));
+    }
+}
+fn test_assignments() {
+    let mut compiler = Compiler::new();
+    let mut vm = VirtualMachine::new();
+    {
+        let mut parser = Parser::new("
+            (var a 1)
+            (a = 2)
+            a
+        ");
+        let parsed = parser.parse();
+        let module_temp = compiler.compile(parsed.unwrap());
+        let module = &module_temp.borrow();
+        let result_temp = vm.load_module(module);
+        let borrowed = result_temp.borrow();
+        let result = borrowed.downcast_ref::<Value>().unwrap();
+        assert_eq!(*result, Value::Integer(2));
     }
 }
 
