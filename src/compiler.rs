@@ -217,6 +217,9 @@ impl Compiler {
             Value::Symbol(ref s) if s == "while" => {
                 self.compile_while(block, data);
             }
+            Value::Symbol(ref s) if s == "break" => {
+                (*block).add_instr(Instruction::Break);
+            }
             _ => {
                 // Invocation
                 let borrowed_type = _type.borrow().clone();
@@ -295,6 +298,8 @@ impl Compiler {
     fn compile_while(&mut self, block: &mut Block, mut data: Vec<Rc<RefCell<Value>>>) {
         let start_index = block.instructions.len();
 
+        (*block).add_instr(Instruction::LoopStart);
+
         let cond = data.remove(0);
         self.compile_(block, cond.borrow().clone());
         let jump_index = block.instructions.len();
@@ -304,6 +309,7 @@ impl Compiler {
             self.compile_(block, item.borrow().clone());
         }
         (*block).add_instr(Instruction::Jump(start_index as i16));
+        (*block).add_instr(Instruction::LoopEnd);
 
         let end_index = block.instructions.len();
         mem::replace(&mut (*block).instructions[jump_index], Instruction::JumpIfFalse(end_index as i16));
@@ -420,6 +426,9 @@ pub enum Instruction {
 
     Jump(i16),
     JumpIfFalse(i16),
+    Break,
+    LoopStart,
+    LoopEnd,
 
     /// BinaryOp(op, first reg, second reg)
     /// Result is stored in default reg
@@ -506,6 +515,15 @@ impl fmt::Display for Instruction {
             Instruction::JumpIfFalse(pos) => {
                 fmt.write_str("JumpIfFalse ")?;
                 fmt.write_str(&pos.to_string())?;
+            }
+            Instruction::Break => {
+                fmt.write_str("Break")?;
+            }
+            Instruction::LoopStart => {
+                fmt.write_str("LoopStart")?;
+            }
+            Instruction::LoopEnd => {
+                fmt.write_str("LoopEnd")?;
             }
             Instruction::BinaryOp(op, first, second) => {
                 fmt.write_str(first)?;

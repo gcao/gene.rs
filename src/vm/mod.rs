@@ -56,9 +56,25 @@ impl VirtualMachine {
         }
 
         self.pos = 0;
+        let mut break_from_loop = false;
         while self.pos < block.instructions.len() {
             let instr = &block.instructions[self.pos];
-            dbg!(instr);
+
+            // Handle break from loop
+            if break_from_loop {
+                self.pos += 1;
+                match instr {
+                    Instruction::LoopEnd => {
+                        break_from_loop = false;
+                    }
+                    _ => {
+                        continue;
+                    }
+                }
+            }
+
+            println!("{: <20} {: >5} {}", block.name, self.pos, instr);
+            // dbg!(instr);
             match instr {
                 Instruction::Default(v) => {
                     self.pos += 1;
@@ -132,6 +148,15 @@ impl VirtualMachine {
                         }
                         _ => unimplemented!()
                     }
+                }
+
+                Instruction::Break => {
+                    self.pos += 1;
+                    break_from_loop = true;
+                }
+
+                Instruction::LoopStart | Instruction::LoopEnd => {
+                    self.pos += 1;
                 }
 
                 Instruction::BinaryOp(op, first, second) => {

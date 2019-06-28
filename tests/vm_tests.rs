@@ -415,4 +415,21 @@ fn test_loops() {
         let result = borrowed.downcast_ref::<Value>().unwrap();
         assert_eq!(*result, Value::Integer(2));
     }
+    {
+        let mut parser = Parser::new("
+            (var a 0)
+            (while (a < 2)
+                (a = (a + 1))
+                (break)
+            )
+            a
+        ");
+        let parsed = parser.parse();
+        let module_temp = compiler.compile(parsed.unwrap());
+        let module = &module_temp.borrow();
+        let result_temp = vm.load_module(module);
+        let borrowed = result_temp.borrow();
+        let result = borrowed.downcast_ref::<Value>().unwrap();
+        assert_eq!(*result, Value::Integer(1));
+    }
 }
