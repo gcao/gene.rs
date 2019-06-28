@@ -157,74 +157,78 @@ impl Compiler {
             _type, data, props,
         } = gene;
 
-        if *_type.borrow() == Value::Symbol("var".to_string()) {
-            let first;
-            {
-                first = data[0].clone();
-            }
-            let second;
-            {
-                second = data[1].borrow().clone();
-            }
-            match *first.borrow_mut() {
-                Value::Symbol(ref name) => {
-                    self.compile_(block, second.clone());
-                    (*block).add_instr(Instruction::DefMember(name.clone(), "default".to_string()));
+        match *_type.borrow() {
+            Value::Symbol(ref s) if s == "var" => {
+                let first;
+                {
+                    first = data[0].clone();
                 }
-                _ => unimplemented!(),
-            };
-        } else if *_type.borrow() == Value::Symbol("fn".to_string()) {
-            let name = data[0].borrow().to_string();
-
-            let mut body = Block::new(name.clone());
-            let body_id = body.id.clone();
-
-            let matcher = self.compile_args(&mut body, data[1].clone());
-
-            self.compile_statements(&mut body, &data[2..]);
-            let mut module = self.module.borrow_mut();
-            module.add_block(body_id.clone(), body);
-
-            (*block).add_instr(Instruction::Function(name, matcher, body_id));
-
-        } else if *_type.borrow() == Value::Symbol("if".to_string()) {
-            self.compile_if(block, data);
-
-        } else if *_type.borrow() == Value::Symbol("+".to_string()) {
-            let first = data[0].borrow().clone();
-            self.compile_(block, first);
-
-            let first_reg = new_reg();
-            (*block).add_instr(Instruction::Copy("default".to_string(), first_reg.clone()));
-
-            let second = data[1].borrow().clone();
-            self.compile_(block, second);
-
-            (*block).add_instr(Instruction::BinaryOp(
-                "+".to_string(),
-                first_reg,
-                "default".to_string(),
-            ));
-        } else {
-            // Invocation
-            let borrowed_type = _type.borrow().clone();
-            self.compile_(block, borrowed_type);
-            let target_reg = new_reg();
-            (*block).add_instr(Instruction::Copy("default".to_string(), target_reg.clone()));
-
-            let mut options = BTreeMap::<String, Rc<Any>>::new();
-
-            let args_reg = new_reg();
-            (*block).add_instr(Instruction::CreateArguments(args_reg.clone()));
-            for (i, item) in data.iter().enumerate() {
-                let borrowed = item.borrow();
-                self.compile_(block, (*borrowed).clone());
-                (*block).add_instr(Instruction::SetItem(args_reg.clone(), i, "default".to_string()));
+                let second;
+                {
+                    second = data[1].borrow().clone();
+                }
+                match *first.borrow_mut() {
+                    Value::Symbol(ref name) => {
+                        self.compile_(block, second.clone());
+                        (*block).add_instr(Instruction::DefMember(name.clone(), "default".to_string()));
+                    }
+                    _ => unimplemented!(),
+                };
             }
+            Value::Symbol(ref s) if s == "fn" => {
+                let name = data[0].borrow().to_string();
 
-            options.insert("args".to_string(), Rc::new(args_reg.clone()));
+                let mut body = Block::new(name.clone());
+                let body_id = body.id.clone();
 
-            (*block).add_instr(Instruction::Call(target_reg.clone(), options));
+                let matcher = self.compile_args(&mut body, data[1].clone());
+
+                self.compile_statements(&mut body, &data[2..]);
+                let mut module = self.module.borrow_mut();
+                module.add_block(body_id.clone(), body);
+
+                (*block).add_instr(Instruction::Function(name, matcher, body_id));
+            }
+            Value::Symbol(ref s) if s == "if" => {
+                self.compile_if(block, data);
+            }
+            Value::Symbol(ref s) if is_binary_op(s) => {
+                let first = data[0].borrow().clone();
+                self.compile_(block, first);
+
+                let first_reg = new_reg();
+                (*block).add_instr(Instruction::Copy("default".to_string(), first_reg.clone()));
+
+                let second = data[1].borrow().clone();
+                self.compile_(block, second);
+
+                (*block).add_instr(Instruction::BinaryOp(
+                    s.to_string(),
+                    first_reg,
+                    "default".to_string(),
+                ));
+            }
+            _ => {
+                // Invocation
+                let borrowed_type = _type.borrow().clone();
+                self.compile_(block, borrowed_type);
+                let target_reg = new_reg();
+                (*block).add_instr(Instruction::Copy("default".to_string(), target_reg.clone()));
+
+                let mut options = BTreeMap::<String, Rc<Any>>::new();
+
+                let args_reg = new_reg();
+                (*block).add_instr(Instruction::CreateArguments(args_reg.clone()));
+                for (i, item) in data.iter().enumerate() {
+                    let borrowed = item.borrow();
+                    self.compile_(block, (*borrowed).clone());
+                    (*block).add_instr(Instruction::SetItem(args_reg.clone(), i, "default".to_string()));
+                }
+
+                options.insert("args".to_string(), Rc::new(args_reg.clone()));
+
+                (*block).add_instr(Instruction::Call(target_reg.clone(), options));
+            }
         };
     }
 
@@ -278,6 +282,8 @@ impl Compiler {
         mem::replace(&mut (*block).instructions[cond_jump_index], Instruction::JumpIfFalse(else_start as i16));
         mem::replace(&mut (*block).instructions[then_jump_index], Instruction::Jump(end_index as i16));
     }
+
+
 }
 
 pub struct Statements(Vec<Value>);
@@ -511,6 +517,11 @@ fn new_reg() -> String {
     format!("{}", random::<u32>())
 }
 
+fn is_binary_op(op: &str) -> bool {
+    let binary_ops = vec!["+", "<"];
+    binary_ops.contains(&op)
+}
+
 fn normalize(gene: Gene) -> Gene {
     if gene.data.is_empty() {
         gene
@@ -518,7 +529,7 @@ fn normalize(gene: Gene) -> Gene {
         let borrowed = gene.data[0].clone();
         let first = borrowed.borrow_mut();
         match *first {
-            Value::Symbol(ref s) if s == "+" => {
+            Value::Symbol(ref s) if is_binary_op(s) => {
                 let Gene {
                     _type,
                     mut data,

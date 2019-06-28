@@ -340,9 +340,20 @@ fn binary_op<'a>(
     let borrowed2 = second.borrow();
     let value1 = borrowed1.downcast_ref::<Value>().unwrap();
     let value2 = borrowed2.downcast_ref::<Value>().unwrap();
-    match (value1, value2) {
-        (Value::Integer(a), Value::Integer(b)) => Rc::new(RefCell::new(Value::Integer(a + b))),
-        _ => unimplemented!(),
+    match op {
+        "+" => {
+            match (value1, value2) {
+                (Value::Integer(a), Value::Integer(b)) => Rc::new(RefCell::new(Value::Integer(a + b))),
+                _ => unimplemented!()
+            }
+        }
+        "<" => {
+            match (value1, value2) {
+                (Value::Integer(a), Value::Integer(b)) => Rc::new(RefCell::new(Value::Boolean(a < b))),
+                _ => unimplemented!()
+            }
+        }
+        _ => unimplemented!()
     }
 }
 

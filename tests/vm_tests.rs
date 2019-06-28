@@ -224,6 +224,18 @@ fn test_binary_operations() {
         let result = borrowed.downcast_ref::<Value>().unwrap();
         assert_eq!(*result, Value::Integer(3));
     }
+    {
+        let mut parser = Parser::new("
+          (1 < 2)
+        ");
+        let parsed = parser.parse();
+        let module_temp = compiler.compile(parsed.unwrap());
+        let module = &module_temp.borrow();
+        let result_temp = vm.load_module(module);
+        let borrowed = result_temp.borrow();
+        let result = borrowed.downcast_ref::<Value>().unwrap();
+        assert_eq!(*result, Value::Boolean(true));
+    }
 }
 
 #[test]
@@ -317,7 +329,7 @@ fn test_ifs() {
     let mut vm = VirtualMachine::new();
     {
         let mut parser = Parser::new("
-            (if true 1)
+            (if true 1 else 2)
         ");
         let parsed = parser.parse();
         let module_temp = compiler.compile(parsed.unwrap());
@@ -338,6 +350,30 @@ fn test_ifs() {
         let borrowed = result_temp.borrow();
         let result = borrowed.downcast_ref::<Value>().unwrap();
         assert_eq!(*result, Value::Integer(2));
+    }
+    {
+        let mut parser = Parser::new("
+            (if true 1 2 else 3 4)
+        ");
+        let parsed = parser.parse();
+        let module_temp = compiler.compile(parsed.unwrap());
+        let module = &module_temp.borrow();
+        let result_temp = vm.load_module(module);
+        let borrowed = result_temp.borrow();
+        let result = borrowed.downcast_ref::<Value>().unwrap();
+        assert_eq!(*result, Value::Integer(2));
+    }
+    {
+        let mut parser = Parser::new("
+            (if false 1 2 else 3 4)
+        ");
+        let parsed = parser.parse();
+        let module_temp = compiler.compile(parsed.unwrap());
+        let module = &module_temp.borrow();
+        let result_temp = vm.load_module(module);
+        let borrowed = result_temp.borrow();
+        let result = borrowed.downcast_ref::<Value>().unwrap();
+        assert_eq!(*result, Value::Integer(4));
     }
 }
 
