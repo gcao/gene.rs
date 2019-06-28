@@ -214,6 +214,9 @@ impl Compiler {
                     "default".to_string(),
                 ));
             }
+            Value::Symbol(ref s) if s == "while" => {
+                self.compile_while(block, data);
+            }
             _ => {
                 // Invocation
                 let borrowed_type = _type.borrow().clone();
@@ -289,7 +292,22 @@ impl Compiler {
         mem::replace(&mut (*block).instructions[then_jump_index], Instruction::Jump(end_index as i16));
     }
 
+    fn compile_while(&mut self, block: &mut Block, mut data: Vec<Rc<RefCell<Value>>>) {
+        let start_index = block.instructions.len();
 
+        let cond = data.remove(0);
+        self.compile_(block, cond.borrow().clone());
+        let jump_index = block.instructions.len();
+        (*block).add_instr(Instruction::Dummy);
+
+        for item in data.iter() {
+            self.compile_(block, item.borrow().clone());
+        }
+        (*block).add_instr(Instruction::Jump(start_index as i16));
+
+        let end_index = block.instructions.len();
+        mem::replace(&mut (*block).instructions[jump_index], Instruction::JumpIfFalse(end_index as i16));
+    }
 }
 
 pub struct Statements(Vec<Value>);
@@ -352,7 +370,8 @@ impl fmt::Display for Block {
         fmt.write_str("(Block ")?;
         fmt.write_str(&self.name)?;
         fmt.write_str("\n")?;
-        for instr in &self.instructions {
+        for (i, instr) in self.instructions.iter().enumerate() {
+            fmt.write_str(&*format!("{: >5} ", i))?;
             fmt.write_str(&instr.to_string())?;
             fmt.write_str("\n")?;
         }
@@ -368,7 +387,7 @@ pub enum Instruction {
 
     /// Save Value to default register
     Default(Value),
-    /// Save Value to default register
+    /// Save Value to named register
     Save(String, Value),
     /// Copy from one register to another
     Copy(String, String),
