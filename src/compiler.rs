@@ -184,6 +184,9 @@ impl Compiler {
                 let matcher = self.compile_args(&mut body, data[1].clone());
 
                 self.compile_statements(&mut body, &data[2..]);
+                body.add_instr(Instruction::CallEnd);
+                println!("Block: {}", body);
+
                 let mut module = self.module.borrow_mut();
                 module.add_block(body_id.clone(), body);
 
@@ -566,7 +569,7 @@ fn new_reg() -> String {
 }
 
 fn is_binary_op(op: &str) -> bool {
-    let binary_ops = vec!["+", "<"];
+    let binary_ops = vec!["+", "-", "*", "/", "<", "<=", ">", ">=", "=="];
     binary_ops.contains(&op)
 }
 

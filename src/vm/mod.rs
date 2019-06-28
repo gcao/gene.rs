@@ -210,6 +210,8 @@ impl VirtualMachine {
                     let caller_namespace = caller_context.namespace.clone();
 
                     let mut new_registers = Registers::new();
+                    new_registers.insert("caller".to_string(), Rc::new(RefCell::new(ret_addr)));
+                    new_registers.insert("caller_registers".to_string(), Rc::new(RefCell::new(registers.id.clone())));
 
                     let mut new_scope = Scope::new(caller_scope);
                     let new_namespace = target.namespace.clone();
@@ -232,13 +234,32 @@ impl VirtualMachine {
                     self.registers_store.insert(new_registers.id.clone(), Rc::new(RefCell::new(new_registers)));
 
                     block = self.code_manager.get_block(target.body.to_string()).clone();
-                    dbg!(block.clone());
                     self.pos = 0;
                 }
 
                 Instruction::CallEnd => {
-                    self.pos += 1;
-                    // TODO: return to caller
+                    let registers_temp = self.registers_store[&self.registers_id].clone();
+                    let registers = registers_temp.borrow();
+                    if registers.data.contains_key("caller") {
+                        let borrowed = registers.data["caller".into()].borrow();
+                        let ret_addr = borrowed.downcast_ref::<Address>().unwrap();
+
+                        block = self.code_manager.get_block(ret_addr.block_id.to_string()).clone();
+                        self.pos = ret_addr.pos;
+
+                        let registers_borrowed = registers.data["caller_registers".into()].borrow();
+                        let registers_id = registers_borrowed.downcast_ref::<String>().unwrap();
+                        self.registers_id = registers_id.clone();
+
+                        let caller_registers_temp = self.registers_store[registers_id].clone();
+                        let mut caller_registers = caller_registers_temp.borrow_mut();
+
+                        // Save returned value in default register
+                        let default = registers.data["default".into()].clone();
+                        caller_registers.insert("default".to_string(), default);
+                    } else {
+                        self.pos += 1;
+                    }
                 }
 
                 Instruction::Function(name, args, body) => {
@@ -385,9 +406,51 @@ fn binary_op<'a>(
                 _ => unimplemented!()
             }
         }
+        "-" => {
+            match (value1, value2) {
+                (Value::Integer(a), Value::Integer(b)) => Rc::new(RefCell::new(Value::Integer(a - b))),
+                _ => unimplemented!()
+            }
+        }
+        "*" => {
+            match (value1, value2) {
+                (Value::Integer(a), Value::Integer(b)) => Rc::new(RefCell::new(Value::Integer(a * b))),
+                _ => unimplemented!()
+            }
+        }
+        "/" => {
+            match (value1, value2) {
+                (Value::Integer(a), Value::Integer(b)) => Rc::new(RefCell::new(Value::Integer(a / b))),
+                _ => unimplemented!()
+            }
+        }
         "<" => {
             match (value1, value2) {
                 (Value::Integer(a), Value::Integer(b)) => Rc::new(RefCell::new(Value::Boolean(a < b))),
+                _ => unimplemented!()
+            }
+        }
+        "<=" => {
+            match (value1, value2) {
+                (Value::Integer(a), Value::Integer(b)) => Rc::new(RefCell::new(Value::Boolean(a <= b))),
+                _ => unimplemented!()
+            }
+        }
+        ">" => {
+            match (value1, value2) {
+                (Value::Integer(a), Value::Integer(b)) => Rc::new(RefCell::new(Value::Boolean(a > b))),
+                _ => unimplemented!()
+            }
+        }
+        ">=" => {
+            match (value1, value2) {
+                (Value::Integer(a), Value::Integer(b)) => Rc::new(RefCell::new(Value::Boolean(a >= b))),
+                _ => unimplemented!()
+            }
+        }
+        "==" => {
+            match (value1, value2) {
+                (Value::Integer(a), Value::Integer(b)) => Rc::new(RefCell::new(Value::Boolean(a == b))),
                 _ => unimplemented!()
             }
         }
