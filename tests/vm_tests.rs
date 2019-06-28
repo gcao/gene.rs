@@ -413,6 +413,6 @@ fn test_loops() {
         let result_temp = vm.load_module(module);
         let borrowed = result_temp.borrow();
         let result = borrowed.downcast_ref::<Value>().unwrap();
-        assert_eq!(*result, Value::Integer(1));
+        assert_eq!(*result, Value::Integer(2));
     }
 }
