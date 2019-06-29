@@ -30,4 +30,4 @@ vvvvvvvvvvvvvvvvvvvvvvvvvvvv
 
 EOC
 
-time target/debug/gene 2>&1 | tee $FILE
+bash -c "time target/debug/gene" 2>&1 | tee -a $FILE
