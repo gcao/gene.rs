@@ -73,7 +73,7 @@ impl VirtualMachine {
                 }
             }
 
-            println!("{: <20} {: >5} {}", block.name, self.pos, instr);
+            // println!("{: <20} {: >5} {}", block.name, self.pos, instr);
             // dbg!(instr);
             match instr {
                 Instruction::Default(v) => {

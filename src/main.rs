@@ -17,7 +17,7 @@ fn main() {
           ((fibonacci (n - 1)) + (fibonacci (n - 2)))
         )
       )
-      (fibonacci 25)
+      (fibonacci 24)
     ");
     let parsed = parser.parse();
     let module_temp = compiler.compile(parsed.unwrap());

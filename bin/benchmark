@@ -1,0 +1,33 @@
+#/usr/bin/bash
+
+if [ "$#" -ne 1 ]; then
+  SCRIPT=`basename "$0"`
+  echo "Usage: $SCRIPT <TESTCASE>"
+  exit 1
+fi
+
+TESTCASE=$1
+COMMIT=$(git rev-parse HEAD | cut -b 1-8)
+DATE=`date '+%Y-%m-%d'`
+TIME=`date '+%T'`
+
+FILE="benchmark-logs/${TESTCASE}_${DATE}_${TIME}_${COMMIT}.txt"
+
+echo Write to $FILE
+echo
+
+# Use below command to extract commit from a log file
+# cat <FILE> | sed -n '3p'
+
+cat <<EOC | tee $FILE
+Testcase: $1
+$DATE $TIME
+$COMMIT
+
+============================
+Application log starts below
+vvvvvvvvvvvvvvvvvvvvvvvvvvvv
+
+EOC
+
+time target/debug/gene 2>&1 | tee $FILE
