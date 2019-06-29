@@ -1,0 +1,58 @@
+Testcase: fib24
+2019-06-29 13:59:12
+c4e46f25
+72d02712 c4e46f25
+
+============================
+Application log starts below
+vvvvvvvvvvvvvvvvvvvvvvvvvvvv
+
+Block: (Block fibonacci
+    0 (GetMember n)
+    1 (Copy default 1195493865)
+    2 (Default 2)
+    3 (1195493865 < default)
+    4 (JumpIfFalse 7)
+    5 (GetMember n)
+    6 (Jump 27)
+    7 (GetMember fibonacci)
+    8 (Copy default 3564243680)
+    9 (CreateArguments 1027275044)
+   10 (GetMember n)
+   11 (Copy default 2516909391)
+   12 (Default 1)
+   13 (2516909391 - default)
+   14 (Get 1027275044 0 default)
+   15 (Call 3564243680)
+   16 (Copy default 2655730441)
+   17 (GetMember fibonacci)
+   18 (Copy default 4145936969)
+   19 (CreateArguments 1393012807)
+   20 (GetMember n)
+   21 (Copy default 1384929940)
+   22 (Default 2)
+   23 (1384929940 - default)
+   24 (Get 1393012807 0 default)
+   25 (Call 4145936969)
+   26 (2655730441 + default)
+   27 (CallEnd)
+)
+Block: (Block __default__
+    0 (Init)
+    1 (Function fibonacci 7b2be11e-69ba-466a-a3ae-665827b0a9fd)
+    2 (GetMember fibonacci)
+    3 (Copy default 1861586368)
+    4 (CreateArguments 3963655473)
+    5 (Default 24)
+    6 (Get 3963655473 0 default)
+    7 (Call 1861586368)
+    8 (CallEnd)
+)
+[src/vm/mod.rs:354] result.borrow().downcast_ref::<Value>().unwrap() = Integer(
+    46368,
+)
+Result: 46368
+
+real	0m2.961s
+user	0m2.691s
+sys	0m0.259s

@@ -6,10 +6,16 @@ if [ "$#" -ne 1 ]; then
   exit 1
 fi
 
+echo Build release version if it's not already built
+cargo build --release
+
 TESTCASE=$1
 COMMIT=$(git rev-parse HEAD | cut -b 1-8)
 DATE=`date '+%Y-%m-%d'`
 TIME=`date '+%T'`
+
+# Save previous commit for comparison purpose
+PREV_COMMIT=$(ls -1tra benchmark-logs/$TESTCASE*.txt | tail -1 | xargs cat | sed -n "3p")
 
 FILE="benchmark-logs/${TESTCASE}_${DATE}_${TIME}_${COMMIT}.txt"
 
@@ -23,6 +29,7 @@ cat <<EOC | tee $FILE
 Testcase: $1
 $DATE $TIME
 $COMMIT
+$PREV_COMMIT $COMMIT
 
 ============================
 Application log starts below
@@ -30,4 +37,4 @@ vvvvvvvvvvvvvvvvvvvvvvvvvvvv
 
 EOC
 
-bash -c "time target/debug/gene" 2>&1 | tee -a $FILE
+bash -c "time target/release/gene" 2>&1 | tee -a $FILE
