@@ -67,8 +67,8 @@ impl<'a> Parser<'a> {
         let ch = self.chr?;
         if ch == '(' {
             self.next();
-            let mut type_is_set = false;
-            let mut _type = Value::Null;
+            let mut kind_is_set = false;
+            let mut kind = Value::Null;
             let mut props = BTreeMap::<String, Rc<RefCell<Value>>>::new();
             let mut data = Vec::<Rc<RefCell<Value>>>::new();
             loop {
@@ -87,17 +87,17 @@ impl<'a> Parser<'a> {
                     let result = self.read();
                     if result.is_some() {
                         let val = result.unwrap().unwrap();
-                        if type_is_set {
+                        if kind_is_set {
                             data.push(Rc::new(RefCell::new(val)));
                         } else {
-                            type_is_set = true;
-                            _type = val;
+                            kind_is_set = true;
+                            kind = val;
                         }
                     }
                 }
             }
             return Some(Ok(Value::Gene(Gene {
-                _type: Rc::new(RefCell::new(_type)),
+                kind: Rc::new(RefCell::new(kind)),
                 props,
                 data,
             })));

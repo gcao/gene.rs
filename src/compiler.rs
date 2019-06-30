@@ -152,10 +152,10 @@ impl Compiler {
 
     fn compile_gene(&mut self, block: &mut Block, gene: Gene) {
         let Gene {
-            _type, data, props: _,
+            kind, data, props: _,
         } = gene;
 
-        match *_type.borrow() {
+        match *kind.borrow() {
             Value::Symbol(ref s) if s == "var" => {
                 let first;
                 {
@@ -224,8 +224,8 @@ impl Compiler {
             }
             _ => {
                 // Invocation
-                let borrowed_type = _type.borrow().clone();
-                self.compile_(block, borrowed_type);
+                let borrowed_kind = kind.borrow().clone();
+                self.compile_(block, borrowed_kind);
                 let target_reg = new_reg();
                 (*block).add_instr(Instruction::Copy("default".to_string(), target_reg.clone()));
 
@@ -576,14 +576,14 @@ fn normalize(gene: Gene) -> Gene {
         match *first {
             Value::Symbol(ref s) if is_binary_op(s) || s == "=" => {
                 let Gene {
-                    _type,
+                    kind,
                     mut data,
                     props,
                 } = gene;
-                let new_type = data.remove(0);
-                data.insert(0, _type);
+                let new_kind = data.remove(0);
+                data.insert(0, kind);
                 Gene {
-                    _type: new_type,
+                    kind: new_kind,
                     props,
                     data,
                 }
