@@ -11,6 +11,8 @@ use super::compiler::{Block, Instruction, Module};
 use super::types::Value;
 use super::utils::new_uuidv4;
 
+use super::benchmarker::Benchmarker;
+
 const DEFAULT_REG: &str = "default";
 const CONTEXT_REG: &str = "context";
 
@@ -57,6 +59,10 @@ impl VirtualMachine {
 
         self.pos = 0;
         let mut break_from_loop = false;
+
+        let mut benchmarker = Benchmarker::new();
+        benchmarker.loop_start();
+
         while self.pos < block.instructions.len() {
             let instr = &block.instructions[self.pos];
 
@@ -73,33 +79,49 @@ impl VirtualMachine {
                 }
             }
 
+            benchmarker.report_loop();
+
             // println!("{: <20} {: >5} {}", block.name, self.pos, instr);
             // dbg!(instr);
 
             match instr {
                 Instruction::Default(v) => {
+                    benchmarker.op_start("Default");
+
                     self.pos += 1;
                     let registers_temp = registers_.clone();
                     let mut registers = registers_temp.borrow_mut();
                     registers.insert(DEFAULT_REG.into(), Rc::new(RefCell::new(v.clone())));
+
+                    benchmarker.op_end();
                 }
 
                 Instruction::Save(reg, v) => {
+                    benchmarker.op_start("Save");
+
                     self.pos += 1;
                     let registers_temp = registers_.clone();
                     let mut registers = registers_temp.borrow_mut();
                     registers.insert(reg.clone(), Rc::new(RefCell::new(v.clone())));
+
+                    benchmarker.op_end();
                 }
 
                 Instruction::Copy(from, to) => {
+                    benchmarker.op_start("Copy");
+
                     self.pos += 1;
                     let registers_temp = registers_.clone();
                     let mut registers = registers_temp.borrow_mut();
                     let from_value = registers.data[from].clone();
                     registers.insert(to.clone(), from_value);
+
+                    benchmarker.op_end();
                 }
 
                 Instruction::DefMember(name, reg) => {
+                    benchmarker.op_start("DefMember");
+
                     self.pos += 1;
                     let registers_temp = registers_.clone();
                     let mut registers = registers_temp.borrow_mut();
@@ -112,17 +134,25 @@ impl VirtualMachine {
                         let context = borrowed.downcast_mut::<Context>().unwrap();
                         context.def_member(name.clone(), value, VarType::SCOPE);
                     }
+
+                    benchmarker.op_end();
                 }
 
                 Instruction::GetMember(name) => {
+                    benchmarker.op_start("GetMember");
+
                     self.pos += 1;
                     let value = self.get_member(registers_.clone(), name.clone()).unwrap();
                     let registers_temp = registers_.clone();
                     let mut registers = registers_temp.borrow_mut();
                     registers.insert(DEFAULT_REG.into(), value);
+
+                    benchmarker.op_end();
                 }
 
                 Instruction::SetMember(name, reg) => {
+                    benchmarker.op_start("SetMember");
+
                     self.pos += 1;
                     let registers_temp = registers_.clone();
                     let mut registers = registers_temp.borrow_mut();
@@ -135,13 +165,21 @@ impl VirtualMachine {
                         let context = borrowed.downcast_mut::<Context>().unwrap();
                         context.set_member(name.clone(), value);
                     }
+
+                    benchmarker.op_end();
                 }
 
                 Instruction::Jump(pos) => {
+                    benchmarker.op_start("Jump");
+
                     self.pos = *pos as usize;
+
+                    benchmarker.op_end();
                 }
 
                 Instruction::JumpIfFalse(pos) => {
+                    benchmarker.op_start("JumpIfFalse");
+
                     let registers_temp = registers_.clone();
                     let registers = registers_temp.borrow_mut();
                     let value_ = registers.data[DEFAULT_REG].borrow();
@@ -156,18 +194,38 @@ impl VirtualMachine {
                         }
                         _ => unimplemented!()
                     }
+
+                    benchmarker.op_end();
                 }
 
                 Instruction::Break => {
+                    benchmarker.op_start("Break");
+
                     self.pos += 1;
                     break_from_loop = true;
+
+                    benchmarker.op_end();
                 }
 
-                Instruction::LoopStart | Instruction::LoopEnd => {
+                Instruction::LoopStart => {
+                    benchmarker.op_start("LoopStart");
+
                     self.pos += 1;
+
+                    benchmarker.op_end();
+                }
+
+                Instruction::LoopEnd => {
+                    benchmarker.op_start("LoopEnd");
+
+                    self.pos += 1;
+
+                    benchmarker.op_end();
                 }
 
                 Instruction::BinaryOp(op, first, second) => {
+                    benchmarker.op_start("BinaryOp");
+
                     self.pos += 1;
                     let registers_temp = registers_.clone();
                     let mut registers = registers_temp.borrow_mut();
@@ -175,16 +233,24 @@ impl VirtualMachine {
                     let second = registers.data[second].clone();
                     let result = binary_op(op, first, second);
                     registers.data.insert(DEFAULT_REG.into(), result);
+
+                    benchmarker.op_end();
                 }
 
                 Instruction::Init => {
+                    benchmarker.op_start("Init");
+
                     self.pos += 1;
                     let registers_temp = registers_.clone();
                     let mut registers = registers_temp.borrow_mut();
                     registers.data.insert(CONTEXT_REG.into(), Rc::new(RefCell::new(Context::root())));
+
+                    benchmarker.op_end();
                 }
 
                 Instruction::Function(name, args, body_id) => {
+                    benchmarker.op_start("Function");
+
                     self.pos += 1;
                     let function_temp;
                     {
@@ -201,9 +267,13 @@ impl VirtualMachine {
                         let mut registers = registers_temp.borrow_mut();
                         registers.data.insert(DEFAULT_REG.into(), function_temp.clone());
                     }
+
+                    benchmarker.op_end();
                 }
 
                 Instruction::Call(target_reg, options) => {
+                    benchmarker.op_start("Call");
+
                     self.pos += 1;
 
                     let registers_temp = registers_.clone();
@@ -249,9 +319,13 @@ impl VirtualMachine {
 
                     block = self.code_manager.get_block(target.body.to_string()).clone();
                     self.pos = 0;
+
+                    benchmarker.op_end();
                 }
 
                 Instruction::CallEnd => {
+                    benchmarker.op_start("CallEnd");
+
                     let registers_temp = registers_.clone();
                     let registers = registers_temp.borrow();
                     if registers.data.contains_key("caller") {
@@ -275,19 +349,27 @@ impl VirtualMachine {
                     } else {
                         self.pos += 1;
                     }
+
+                    benchmarker.op_end();
                 }
 
                 Instruction::CreateArguments(reg) => {
+                    benchmarker.op_start("CreateArguments");
+
                     self.pos += 1;
                     let registers_temp = registers_.clone();
                     let mut registers = registers_temp.borrow_mut();
                     let data = Vec::<Rc<RefCell<Value>>>::new();
                     registers.insert(reg.clone(), Rc::new(RefCell::new(data)));
+
+                    benchmarker.op_end();
                 }
 
                 Instruction::GetItem(_reg, _index) => unimplemented!(),
 
                 Instruction::SetItem(target_reg, index, value_reg) => {
+                    benchmarker.op_start("SetItem");
+
                     self.pos += 1;
 
                     let value;
@@ -317,9 +399,13 @@ impl VirtualMachine {
                     } else {
                         unimplemented!();
                     }
+
+                    benchmarker.op_end();
                 }
 
                 Instruction::SetProp(target_reg, key, value_reg) => {
+                    benchmarker.op_start("SetProp");
+
                     self.pos += 1;
 
                     let value;
@@ -341,11 +427,16 @@ impl VirtualMachine {
                     } else {
                         unimplemented!();
                     }
+
+                    benchmarker.op_end();
                 }
 
                 Instruction::Dummy => unimplemented!(),
             }
         }
+
+        benchmarker.loop_end();
+        dbg!(benchmarker);
 
         let registers = registers_.borrow();
         let result = registers.data[DEFAULT_REG].clone();
