@@ -3,7 +3,7 @@ pub mod types;
 use std::ptr;
 use std::any::Any;
 use std::cell::{Ref, RefCell, RefMut};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 use std::rc::Rc;
 
 use self::types::*;
@@ -15,7 +15,7 @@ const DEFAULT_REG: &str = "default";
 const CONTEXT_REG: &str = "context";
 
 pub struct VirtualMachine {
-    registers_store: BTreeMap<String, Rc<RefCell<Registers>>>,
+    registers_store: HashMap<String, Rc<RefCell<Registers>>>,
     registers_id: String,
     pos: usize,
     // app: Application,
@@ -25,7 +25,7 @@ pub struct VirtualMachine {
 impl VirtualMachine {
     pub fn new() -> Self {
         VirtualMachine {
-            registers_store: BTreeMap::new(),
+            registers_store: HashMap::new(),
             registers_id: "".into(),
             pos: 0,
             // app: Application::new(),
@@ -252,8 +252,8 @@ impl VirtualMachine {
                         let mut caller_registers = caller_registers_temp.borrow_mut();
 
                         // Save returned value in default register
-                        let default = registers.data["default"].clone();
-                        caller_registers.insert("default".to_string(), default);
+                        let default = registers.data[DEFAULT_REG].clone();
+                        caller_registers.insert(DEFAULT_REG.into(), default);
                     } else {
                         self.pos += 1;
                     }
@@ -357,12 +357,12 @@ impl VirtualMachine {
 #[derive(Debug)]
 pub struct Registers {
     pub id: String,
-    pub data: BTreeMap<String, Rc<RefCell<Any>>>,
+    pub data: HashMap<String, Rc<RefCell<Any>>>,
 }
 
 impl Registers {
     pub fn new() -> Self {
-        let data = BTreeMap::new();
+        let data = HashMap::new();
         Registers {
             id: new_uuidv4(),
             data,
@@ -457,13 +457,13 @@ impl Address {
 }
 
 pub struct CodeManager {
-    pub blocks: BTreeMap<String, Rc<Block>>,
+    pub blocks: HashMap<String, Rc<Block>>,
 }
 
 impl CodeManager {
     pub fn new() -> Self {
         CodeManager {
-            blocks: BTreeMap::new(),
+            blocks: HashMap::new(),
         }
     }
 

@@ -6,7 +6,7 @@ if [ "$#" -ne 1 ]; then
   exit 1
 fi
 
-echo Build release version if it's not already built
+echo "Build release version if it's not already built"
 cargo build --release
 
 TESTCASE=$1
