@@ -18,8 +18,7 @@ pub struct VirtualMachine {
     registers_store: BTreeMap<String, Rc<RefCell<Registers>>>,
     registers_id: String,
     pos: usize,
-    block: Option<Rc<Block>>,
-    app: Application,
+    // app: Application,
     code_manager: CodeManager,
 }
 
@@ -29,8 +28,7 @@ impl VirtualMachine {
             registers_store: BTreeMap::new(),
             registers_id: "".into(),
             pos: 0,
-            block: None,
-            app: Application::new(),
+            // app: Application::new(),
             code_manager: CodeManager::new(),
         }
     }
@@ -136,7 +134,7 @@ impl VirtualMachine {
 
                 Instruction::JumpIfFalse(pos) => {
                     let registers = self.registers_store.get_mut(&self.registers_id).unwrap().borrow();
-                    let value_ = registers.data[DEFAULT_REG.into()].borrow();
+                    let value_ = registers.data[DEFAULT_REG].borrow();
                     let value = value_.downcast_ref::<Value>().unwrap();
                     match value {
                         Value::Boolean(b) => {
@@ -203,17 +201,16 @@ impl VirtualMachine {
                     let args_ = registers.data.get(args_reg.downcast_ref::<String>().unwrap()).unwrap();
 
                     let ret_addr = Address::new(block.id.clone(), self.pos);
-                    let mut borrowed_ctx = registers.data[CONTEXT_REG].borrow_mut();
+                    // let mut borrowed_ctx = registers.data[CONTEXT_REG].borrow_mut();
 
-                    let caller_context = borrowed_ctx.downcast_mut::<Context>().unwrap();
-                    let caller_scope = caller_context.scope.clone();
-                    let caller_namespace = caller_context.namespace.clone();
+                    // let caller_context = borrowed_ctx.downcast_mut::<Context>().unwrap();
+                    // let caller_scope = caller_context.scope.clone();
 
                     let mut new_registers = Registers::new();
                     new_registers.insert("caller".to_string(), Rc::new(RefCell::new(ret_addr)));
                     new_registers.insert("caller_registers".to_string(), Rc::new(RefCell::new(registers.id.clone())));
 
-                    let mut new_scope = Scope::new(caller_scope);
+                    let mut new_scope = Scope::new(target.scope.clone());
                     let new_namespace = target.namespace.clone();
 
                     {
@@ -241,13 +238,13 @@ impl VirtualMachine {
                     let registers_temp = self.registers_store[&self.registers_id].clone();
                     let registers = registers_temp.borrow();
                     if registers.data.contains_key("caller") {
-                        let borrowed = registers.data["caller".into()].borrow();
+                        let borrowed = registers.data["caller"].borrow();
                         let ret_addr = borrowed.downcast_ref::<Address>().unwrap();
 
                         block = self.code_manager.get_block(ret_addr.block_id.to_string()).clone();
                         self.pos = ret_addr.pos;
 
-                        let registers_borrowed = registers.data["caller_registers".into()].borrow();
+                        let registers_borrowed = registers.data["caller_registers"].borrow();
                         let registers_id = registers_borrowed.downcast_ref::<String>().unwrap();
                         self.registers_id = registers_id.clone();
 
@@ -255,35 +252,22 @@ impl VirtualMachine {
                         let mut caller_registers = caller_registers_temp.borrow_mut();
 
                         // Save returned value in default register
-                        let default = registers.data["default".into()].clone();
+                        let default = registers.data["default"].clone();
                         caller_registers.insert("default".to_string(), default);
                     } else {
                         self.pos += 1;
                     }
                 }
 
-                Instruction::Function(name, args, body) => {
-                    self.pos += 1;
-                    let registers_temp = self.registers_store[&self.registers_id].clone();
-                    let registers = registers_temp.borrow();
-                    let _context = registers.data[CONTEXT_REG].borrow();
-                    let context = _context.downcast_ref::<Context>().unwrap();
-                    let f = Function::new(name.to_string(), (*args).clone(), body.to_string(), false, context.namespace.clone(), context.scope.clone());
-
-                    let registers_mut_temp = self.registers_store[&self.registers_id].clone();
-                    let mut registers_mut = registers_mut_temp.borrow_mut();
-                    registers_mut.data.insert(DEFAULT_REG.into(), Rc::new(RefCell::new(f)));
-                }
-
                 Instruction::CreateArguments(reg) => {
                     self.pos += 1;
-                    let mut registers_ = self.registers_store[&self.registers_id].clone();
+                    let registers_ = self.registers_store[&self.registers_id].clone();
                     let mut registers = registers_.borrow_mut();
                     let data = Vec::<Rc<RefCell<Value>>>::new();
                     registers.insert(reg.clone(), Rc::new(RefCell::new(data)));
                 }
 
-                Instruction::GetItem(reg, index) => unimplemented!(),
+                Instruction::GetItem(_reg, _index) => unimplemented!(),
 
                 Instruction::SetItem(target_reg, index, value_reg) => {
                     self.pos += 1;
@@ -302,14 +286,14 @@ impl VirtualMachine {
                         while *index >= args.len() {
                             args.push(Rc::new(RefCell::new(Value::Void)));
                         }
-                        args[index.clone()] = Rc::new(RefCell::new(value));
+                        args[*index] = Rc::new(RefCell::new(value));
                     } else if let Some(args) = target_.downcast_mut::<Value>() {
                         match args {
                             Value::Array(arr) => {
                                 while *index >= arr.len() {
                                     arr.push(Value::Void);
                                 }
-                                arr[index.clone()] = value.clone();
+                                arr[*index] = value.clone();
                             }
                             _ => unimplemented!()
                         }

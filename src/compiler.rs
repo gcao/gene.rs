@@ -21,7 +21,7 @@ trait LiteralCheck {
 impl LiteralCheck for Value {
     fn is_literal(&self) -> bool {
         match self {
-            Value::Symbol(s) => false,
+            Value::Symbol(_s) => false,
             Value::Array(v) => v.is_literal(),
             Value::Gene(g) => g.is_literal(),
             _ => true
@@ -31,7 +31,7 @@ impl LiteralCheck for Value {
 
 impl LiteralCheck for Vec<Value> {
     fn is_literal(&self) -> bool {
-        self.iter().all(|item| item.is_literal())
+        self.iter().all(LiteralCheck::is_literal)
     }
 }
 
@@ -113,13 +113,11 @@ impl Compiler {
             let reg = new_reg();
             (*block).add_instr(Instruction::Save(reg.clone(), Value::Array(arr2)));
 
-            let mut index = 0;
-            for item in arr.iter() {
+            for (index, item) in arr.iter().enumerate() {
                 if !item.is_literal() {
                     self.compile_(block, item.clone());
                     (*block).add_instr(Instruction::SetItem(reg.clone(), index, "default".to_string()));
                 }
-                index += 1;
             }
 
             // Copy to default register
@@ -154,7 +152,7 @@ impl Compiler {
 
     fn compile_gene(&mut self, block: &mut Block, gene: Gene) {
         let Gene {
-            _type, data, props,
+            _type, data, props: _,
         } = gene;
 
         match *_type.borrow() {
@@ -181,7 +179,8 @@ impl Compiler {
                 let mut body = Block::new(name.clone());
                 let body_id = body.id.clone();
 
-                let matcher = self.compile_args(&mut body, data[1].clone());
+                let borrowed = data[1].borrow();
+                let matcher =  Matcher::from(&*borrowed);
 
                 self.compile_statements(&mut body, &data[2..]);
                 body.add_instr(Instruction::CallEnd);
@@ -245,11 +244,6 @@ impl Compiler {
                 (*block).add_instr(Instruction::Call(target_reg.clone(), options));
             }
         };
-    }
-
-    fn compile_args(&mut self, block: &mut Block, args: Rc<RefCell<Value>>) -> Matcher {
-        let borrowed = args.borrow();
-        return Matcher::from(&*borrowed);
     }
 
     fn compile_statements(&mut self, block: &mut Block, stmts: &[Rc<RefCell<Value>>]) {
@@ -535,7 +529,7 @@ impl fmt::Display for Instruction {
                 fmt.write_str(" ")?;
                 fmt.write_str(second)?;
             }
-            Instruction::Function(name, matcher, body_id) => {
+            Instruction::Function(name, _matcher, body_id) => {
                 fmt.write_str("Function ")?;
                 fmt.write_str(name)?;
                 fmt.write_str(" ")?;
@@ -544,7 +538,7 @@ impl fmt::Display for Instruction {
                 // fmt.write_str(" ")?;
                 fmt.write_str(body_id)?;
             }
-            Instruction::Call(target, options) => {
+            Instruction::Call(target, _options) => {
                 fmt.write_str("Call ")?;
                 fmt.write_str(target)?;
             }

@@ -217,17 +217,15 @@ impl From<&Value> for Matcher {
         match v {
             Value::Symbol(name) => {
                 let mut matchers = Vec::<DataMatcher>::new();
-                if name.to_string() != "_" {
+                if name != "_" {
                     matchers.push(DataMatcher::new(name.to_string(), 0));
                 }
                 Matcher::new(matchers)
             }
             Value::Array(args) => {
                 let mut matchers = Vec::<DataMatcher>::new();
-                let mut index = 0;
-                for name in args.iter() {
+                for (index, name) in args.iter().enumerate() {
                     matchers.push(DataMatcher::new(name.to_string(), index));
-                    index += 1;
                 }
                 Matcher::new(matchers)
             }

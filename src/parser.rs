@@ -64,11 +64,7 @@ impl<'a> Parser<'a> {
         // Will stop after hitting first non-whitespace char
         self.skip_whitespaces();
 
-        if self.chr.is_none() {
-            return None;
-        }
-
-        let ch = self.chr.unwrap();
+        let ch = self.chr?;
         if ch == '(' {
             self.next();
             let mut type_is_set = false;

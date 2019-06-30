@@ -2,6 +2,8 @@
 // It is referenced in .vscode/tasks.json like
 // cargo test --no-run --message-format=json temp_tests
 
+#![allow(unused_imports)]
+
 extern crate ordered_float;
 extern crate gene;
 

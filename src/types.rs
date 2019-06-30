@@ -1,5 +1,6 @@
 extern crate ordered_float;
 
+use std::clone::Clone;
 use std::cell::{RefCell, RefMut};
 use std::collections::BTreeMap;
 use std::fmt;
@@ -32,7 +33,7 @@ impl Clone for Value {
             Value::Float(f) => Value::Float(*f),
             Value::String(s) => Value::String(s.clone()),
             Value::Symbol(symbol) => Value::Symbol(symbol.clone()),
-            Value::Array(a) => Value::Array(a.iter().map(|item| item.clone()).collect()),
+            Value::Array(a) => Value::Array(a.iter().cloned().collect()),
             Value::Map(m) => {
                 let mut new_map = BTreeMap::new();
                 for (k, v) in m.iter() {
@@ -41,7 +42,7 @@ impl Clone for Value {
                 Value::Map(new_map)
             }
             Value::Gene(g) => Value::Gene(g.clone()),
-            Value::Stream(v) => Value::Stream(v.iter().map(|item| item.clone()).collect()),
+            Value::Stream(v) => Value::Stream(v.iter().cloned().collect()),
         }
     }
 }

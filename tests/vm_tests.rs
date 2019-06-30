@@ -237,6 +237,8 @@ fn test_binary_operations() {
         assert_eq!(*result, Value::Boolean(true));
     }
 }
+
+#[test]
 fn test_assignments() {
     let mut compiler = Compiler::new();
     let mut vm = VirtualMachine::new();
