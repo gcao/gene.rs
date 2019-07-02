@@ -63,13 +63,14 @@ impl Benchmarker {
 impl fmt::Display for Benchmarker {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         fmt.write_str("<<< BENCHMARK BEGIN >>>\n\n")?;
-        fmt.write_str(&*format!("{: >20}: 100.000% {:13.8}\n",
+        fmt.write_str(&*format!("{: >20}: {:7.3}% {:13.8}\n",
           "Total",
+          100.,
           self.total_time.as_nanos() as f64 / 1000000000.))?;
 
-        fmt.write_str(&*format!("{: >20}: {:7.3}% {:13.8} / {:8} = {:8.0}\n",
+        fmt.write_str(&*format!("{: >20}: {:7.3}% {:13.8} / {:8} = {:8.0} ns\n",
           "Loop",
-          self.loop_time().as_nanos() as f64 / self.total_time.as_nanos() as f64 * 100.,
+          self.loop_time().as_nanos() as f64 * 100. / self.total_time.as_nanos() as f64,
           self.loop_time().as_nanos() as f64 / 1000000000.,
           self.loop_count,
           self.loop_average_time()))?;
@@ -129,7 +130,7 @@ impl OpTime {
 
 impl fmt::Display for OpTime {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        fmt.write_str(&*format!("{: >20}: {:7.3}% {:13.8} / {:8} = {:8.0}\n",
+        fmt.write_str(&*format!("{: >20}: {:7.3}% {:13.8} / {:8} = {:8.0} ns\n",
           self.name,
           self.percentage * 100.,
           self.total_time.as_nanos() as f64 / 1000000000.,
