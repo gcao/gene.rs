@@ -436,7 +436,8 @@ impl VirtualMachine {
         }
 
         benchmarker.loop_end();
-        dbg!(benchmarker);
+        println!("{}", benchmarker);
+        // dbg!(benchmarker);
 
         let registers = registers_.borrow();
         let result = registers.data[DEFAULT_REG].clone();
