@@ -152,7 +152,7 @@ impl Compiler {
 
     fn compile_gene(&mut self, block: &mut Block, gene: Gene) {
         let Gene {
-            kind, data, props: _,
+            kind, data, ..
         } = gene;
 
         match *kind.borrow() {

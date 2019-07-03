@@ -98,12 +98,12 @@ impl fmt::Display for Benchmarker {
         fmt.write_str(&*format!("{: >20}: {:7.3}% {:13.8}\n",
           "Total",
           100.,
-          self.total_time.as_nanos() as f64 / 1000000000.))?;
+          self.total_time.as_nanos() as f64 / 1_000_000_000.))?;
 
         fmt.write_str(&*format!("{: >20}: {:7.3}% {:13.8} / {:8} = {:8.0} ns\n",
           "Loop",
           self.loop_time().as_nanos() as f64 * 100. / self.total_time.as_nanos() as f64,
-          self.loop_time().as_nanos() as f64 / 1000000000.,
+          self.loop_time().as_nanos() as f64 / 1_000_000_000.,
           self.loop_count,
           self.loop_average_time()))?;
 
@@ -165,7 +165,7 @@ impl fmt::Display for OpTime {
         fmt.write_str(&*format!("{: >20}: {:7.3}% {:13.8} / {:8} = {:8.0} ns\n",
           self.name,
           self.percentage * 100.,
-          self.total_time.as_nanos() as f64 / 1000000000.,
+          self.total_time.as_nanos() as f64 / 1_000_000_000.,
           self.count,
           self.average_time()))?;
         Ok(())
