@@ -5,6 +5,7 @@ use std::any::Any;
 use std::cell::{Ref, RefCell, RefMut};
 use std::collections::{BTreeMap, HashMap};
 use std::rc::Rc;
+use std::time::Instant;
 
 use self::types::*;
 use super::compiler::{Block, Instruction, Module};
@@ -47,6 +48,8 @@ impl VirtualMachine {
     }
 
     pub fn process(&mut self, mut block: Rc<Block>) -> Rc<RefCell<Any>> {
+        let start_time = Instant::now();
+
         self.create_registers();
 
         let mut registers_ = self.registers_store.get(&self.registers_id).unwrap().clone();
@@ -442,6 +445,9 @@ impl VirtualMachine {
         let registers = registers_.borrow();
         let result = registers.data[DEFAULT_REG].clone();
         // dbg!(result.borrow().downcast_ref::<Value>().unwrap());
+
+        println!("Execution time: {:.6} seconds", start_time.elapsed().as_nanos() as f64 / 1000000000.);
+
         result
     }
 
