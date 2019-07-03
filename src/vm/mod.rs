@@ -86,29 +86,29 @@ impl VirtualMachine {
 
             match instr {
                 Instruction::Default(v) => {
-                    benchmarker.op_start("Default");
+                    benchmarker.default_time.report_start();
 
                     self.pos += 1;
                     let registers_temp = registers_.clone();
                     let mut registers = registers_temp.borrow_mut();
                     registers.insert(DEFAULT_REG.into(), Rc::new(RefCell::new(v.clone())));
 
-                    benchmarker.op_end();
+                    benchmarker.default_time.report_end();
                 }
 
                 Instruction::Save(reg, v) => {
-                    benchmarker.op_start("Save");
+                    benchmarker.save_time.report_start();
 
                     self.pos += 1;
                     let registers_temp = registers_.clone();
                     let mut registers = registers_temp.borrow_mut();
                     registers.insert(reg.clone(), Rc::new(RefCell::new(v.clone())));
 
-                    benchmarker.op_end();
+                    benchmarker.save_time.report_end();
                 }
 
                 Instruction::Copy(from, to) => {
-                    benchmarker.op_start("Copy");
+                    benchmarker.copy_time.report_start();
 
                     self.pos += 1;
                     let registers_temp = registers_.clone();
@@ -116,11 +116,11 @@ impl VirtualMachine {
                     let from_value = registers.data[from].clone();
                     registers.insert(to.clone(), from_value);
 
-                    benchmarker.op_end();
+                    benchmarker.copy_time.report_end();
                 }
 
                 Instruction::DefMember(name, reg) => {
-                    benchmarker.op_start("DefMember");
+                    benchmarker.def_member_time.report_start();
 
                     self.pos += 1;
                     let registers_temp = registers_.clone();
@@ -135,11 +135,11 @@ impl VirtualMachine {
                         context.def_member(name.clone(), value, VarType::SCOPE);
                     }
 
-                    benchmarker.op_end();
+                    benchmarker.def_member_time.report_end();
                 }
 
                 Instruction::GetMember(name) => {
-                    benchmarker.op_start("GetMember");
+                    benchmarker.get_member_time.report_start();
 
                     self.pos += 1;
                     let value = self.get_member(registers_.clone(), name.clone()).unwrap();
@@ -147,11 +147,11 @@ impl VirtualMachine {
                     let mut registers = registers_temp.borrow_mut();
                     registers.insert(DEFAULT_REG.into(), value);
 
-                    benchmarker.op_end();
+                    benchmarker.get_member_time.report_end();
                 }
 
                 Instruction::SetMember(name, reg) => {
-                    benchmarker.op_start("SetMember");
+                    benchmarker.set_member_time.report_start();
 
                     self.pos += 1;
                     let registers_temp = registers_.clone();
@@ -166,19 +166,19 @@ impl VirtualMachine {
                         context.set_member(name.clone(), value);
                     }
 
-                    benchmarker.op_end();
+                    benchmarker.set_member_time.report_end();
                 }
 
                 Instruction::Jump(pos) => {
-                    benchmarker.op_start("Jump");
+                    benchmarker.jump_time.report_start();
 
                     self.pos = *pos as usize;
 
-                    benchmarker.op_end();
+                    benchmarker.jump_time.report_end();
                 }
 
                 Instruction::JumpIfFalse(pos) => {
-                    benchmarker.op_start("JumpIfFalse");
+                    benchmarker.jump_if_false_time.report_start();
 
                     let registers_temp = registers_.clone();
                     let registers = registers_temp.borrow_mut();
@@ -195,36 +195,36 @@ impl VirtualMachine {
                         _ => unimplemented!()
                     }
 
-                    benchmarker.op_end();
+                    benchmarker.jump_if_false_time.report_end();
                 }
 
                 Instruction::Break => {
-                    benchmarker.op_start("Break");
+                    // benchmarker.break_time.report_start();
 
                     self.pos += 1;
                     break_from_loop = true;
 
-                    benchmarker.op_end();
+                    // benchmarker.break_time.report_end();
                 }
 
                 Instruction::LoopStart => {
-                    benchmarker.op_start("LoopStart");
+                    // benchmarker.default_time.report_start();
 
                     self.pos += 1;
 
-                    benchmarker.op_end();
+                    // benchmarker.default_time.report_end();
                 }
 
                 Instruction::LoopEnd => {
-                    benchmarker.op_start("LoopEnd");
+                    // benchmarker.default_time.report_start();
 
                     self.pos += 1;
 
-                    benchmarker.op_end();
+                    // benchmarker.default_time.report_end();
                 }
 
                 Instruction::BinaryOp(op, first, second) => {
-                    benchmarker.op_start("BinaryOp");
+                    benchmarker.binary_op_time.report_start();
 
                     self.pos += 1;
                     let registers_temp = registers_.clone();
@@ -234,22 +234,22 @@ impl VirtualMachine {
                     let result = binary_op(op, first, second);
                     registers.data.insert(DEFAULT_REG.into(), result);
 
-                    benchmarker.op_end();
+                    benchmarker.binary_op_time.report_end();
                 }
 
                 Instruction::Init => {
-                    benchmarker.op_start("Init");
+                    benchmarker.init_time.report_start();
 
                     self.pos += 1;
                     let registers_temp = registers_.clone();
                     let mut registers = registers_temp.borrow_mut();
                     registers.data.insert(CONTEXT_REG.into(), Rc::new(RefCell::new(Context::root())));
 
-                    benchmarker.op_end();
+                    benchmarker.init_time.report_end();
                 }
 
                 Instruction::Function(name, args, body_id) => {
-                    benchmarker.op_start("Function");
+                    benchmarker.function_time.report_start();
 
                     self.pos += 1;
                     let function_temp;
@@ -268,11 +268,11 @@ impl VirtualMachine {
                         registers.data.insert(DEFAULT_REG.into(), function_temp.clone());
                     }
 
-                    benchmarker.op_end();
+                    benchmarker.function_time.report_end();
                 }
 
                 Instruction::Call(target_reg, options) => {
-                    benchmarker.op_start("Call");
+                    benchmarker.call_time.report_start();
 
                     self.pos += 1;
 
@@ -320,11 +320,11 @@ impl VirtualMachine {
                     block = self.code_manager.get_block(target.body.to_string()).clone();
                     self.pos = 0;
 
-                    benchmarker.op_end();
+                    benchmarker.call_time.report_end();
                 }
 
                 Instruction::CallEnd => {
-                    benchmarker.op_start("CallEnd");
+                    benchmarker.call_end_time.report_start();
 
                     let registers_temp = registers_.clone();
                     let registers = registers_temp.borrow();
@@ -350,11 +350,11 @@ impl VirtualMachine {
                         self.pos += 1;
                     }
 
-                    benchmarker.op_end();
+                    benchmarker.call_end_time.report_end();
                 }
 
                 Instruction::CreateArguments(reg) => {
-                    benchmarker.op_start("CreateArguments");
+                    benchmarker.create_arguments_time.report_start();
 
                     self.pos += 1;
                     let registers_temp = registers_.clone();
@@ -362,13 +362,13 @@ impl VirtualMachine {
                     let data = Vec::<Rc<RefCell<Value>>>::new();
                     registers.insert(reg.clone(), Rc::new(RefCell::new(data)));
 
-                    benchmarker.op_end();
+                    benchmarker.create_arguments_time.report_end();
                 }
 
                 Instruction::GetItem(_reg, _index) => unimplemented!(),
 
                 Instruction::SetItem(target_reg, index, value_reg) => {
-                    benchmarker.op_start("SetItem");
+                    benchmarker.set_item_time.report_start();
 
                     self.pos += 1;
 
@@ -400,11 +400,11 @@ impl VirtualMachine {
                         unimplemented!();
                     }
 
-                    benchmarker.op_end();
+                    benchmarker.set_item_time.report_end();
                 }
 
                 Instruction::SetProp(target_reg, key, value_reg) => {
-                    benchmarker.op_start("SetProp");
+                    // benchmarker.default_time.report_start();
 
                     self.pos += 1;
 
@@ -428,7 +428,7 @@ impl VirtualMachine {
                         unimplemented!();
                     }
 
-                    benchmarker.op_end();
+                    // benchmarker.default_time.report_end();
                 }
 
                 Instruction::Dummy => unimplemented!(),

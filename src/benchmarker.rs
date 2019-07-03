@@ -7,8 +7,22 @@ pub struct Benchmarker {
     loop_count: usize,
     loop_start_time: Instant,
     total_time: Duration,
-    op_times: BTreeMap<String, OpTime>,
-    last_op: String,
+    pub init_time: OpTime,
+    pub default_time: OpTime,
+    pub save_time: OpTime,
+    pub copy_time: OpTime,
+    pub def_member_time: OpTime,
+    pub get_member_time: OpTime,
+    pub set_member_time: OpTime,
+    pub function_time: OpTime,
+    pub create_arguments_time: OpTime,
+    pub call_time: OpTime,
+    pub call_end_time: OpTime,
+    pub jump_time: OpTime,
+    pub jump_if_false_time: OpTime,
+    pub get_item_time: OpTime,
+    pub set_item_time: OpTime,
+    pub binary_op_time: OpTime,
 }
 
 impl Benchmarker {
@@ -17,8 +31,22 @@ impl Benchmarker {
             loop_count: 0,
             loop_start_time: Instant::now(),
             total_time: Duration::new(0, 0),
-            op_times: BTreeMap::new(),
-            last_op: "".to_string(),
+            init_time: OpTime::new("Init".to_string()),
+            default_time: OpTime::new("Default".to_string()),
+            save_time: OpTime::new("Save".to_string()),
+            copy_time: OpTime::new("Copy".to_string()),
+            def_member_time: OpTime::new("DefMember".to_string()),
+            get_member_time: OpTime::new("GetMember".to_string()),
+            set_member_time: OpTime::new("SetMember".to_string()),
+            function_time: OpTime::new("Function".to_string()),
+            create_arguments_time: OpTime::new("CreateArguments".to_string()),
+            call_time: OpTime::new("Call".to_string()),
+            call_end_time: OpTime::new("CallEnd".to_string()),
+            jump_time: OpTime::new("Jump".to_string()),
+            jump_if_false_time: OpTime::new("JumpIfFalse".to_string()),
+            get_item_time: OpTime::new("GetItem".to_string()),
+            set_item_time: OpTime::new("SetItem".to_string()),
+            binary_op_time: OpTime::new("BinaryOp".to_string()),
         }
     }
 
@@ -32,27 +60,31 @@ impl Benchmarker {
 
     pub fn loop_end(&mut self) {
         self.total_time = self.loop_start_time.elapsed();
-        for (_name, op_time) in self.op_times.iter_mut() {
-            op_time.calc_percentage(self.total_time.as_nanos() as f64);
-        }
     }
 
-    pub fn op_start(&mut self, name: &str) {
-        self.last_op = name.to_string();
-        if let Some(op_time) = self.op_times.get_mut(name) {
-            op_time.report_start();
-        } else {
-            let op_time = OpTime::new(name.to_string());
-            self.op_times.insert(name.to_string(), op_time);
-        }
-    }
-
-    pub fn op_end(&mut self) {
-        self.op_times.get_mut(&self.last_op).unwrap().report_end();
+    pub fn op_times(&self) -> Vec<OpTime> {
+        let mut op_times = Vec::new();
+        op_times.push(self.init_time.clone());
+        op_times.push(self.default_time.clone());
+        op_times.push(self.save_time.clone());
+        op_times.push(self.copy_time.clone());
+        op_times.push(self.def_member_time.clone());
+        op_times.push(self.set_member_time.clone());
+        op_times.push(self.get_member_time.clone());
+        op_times.push(self.function_time.clone());
+        op_times.push(self.create_arguments_time.clone());
+        op_times.push(self.call_time.clone());
+        op_times.push(self.call_end_time.clone());
+        op_times.push(self.jump_time.clone());
+        op_times.push(self.jump_if_false_time.clone());
+        op_times.push(self.get_item_time.clone());
+        op_times.push(self.set_item_time.clone());
+        op_times.push(self.binary_op_time.clone());
+        op_times
     }
 
     pub fn loop_time(&self) -> Duration {
-        self.total_time - self.op_times.values().map(|item| item.total_time ).sum()
+        self.total_time - self.op_times().iter().map(|item| item.total_time ).sum()
     }
 
     pub fn loop_average_time(&self) -> f64 {
@@ -75,9 +107,9 @@ impl fmt::Display for Benchmarker {
           self.loop_count,
           self.loop_average_time()))?;
 
-        let mut sorted_op_times: Vec<OpTime> = self.op_times.values().cloned().collect();
-        sorted_op_times.sort_by(|first, second| second.total_time.cmp(&first.total_time));
-        for op_time in sorted_op_times {
+        let mut op_times = self.op_times();
+        op_times.sort_by(|first, second| second.total_time.cmp(&first.total_time));
+        for op_time in op_times {
             fmt.write_str(&*format!("{}", op_time))?;
         }
 
