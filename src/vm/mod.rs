@@ -446,7 +446,7 @@ impl VirtualMachine {
         let result = registers.data[DEFAULT_REG].clone();
         // dbg!(result.borrow().downcast_ref::<Value>().unwrap());
 
-        println!("Execution time: {:.6} seconds", start_time.elapsed().as_nanos() as f64 / 1000000000.);
+        println!("Execution time: {:.6} seconds", start_time.elapsed().as_nanos() as f64 / 1_000_000_000.);
 
         result
     }
@@ -462,7 +462,7 @@ impl VirtualMachine {
         let registers_ = registers.borrow();
         let mut borrowed = registers_.data[CONTEXT_REG].borrow_mut();
         let context = borrowed.downcast_mut::<Context>().unwrap();
-        context.get_member(name).map(|val| val.clone())
+        context.get_member(name)
     }
 }
 
