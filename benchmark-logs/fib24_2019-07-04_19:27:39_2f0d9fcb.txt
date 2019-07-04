@@ -1,0 +1,56 @@
+Testcase: fib24 (The improvement comes from upgrading Rust to 2019-07-03 nightly build)
+2019-07-04 19:27:39
+2f0d9fcb
+41d7a9f1 2f0d9fcb
+
+============================
+Application log starts below
+vvvvvvvvvvvvvvvvvvvvvvvvvvvv
+
+Block: (Block fibonacci
+    0 (GetMember n)
+    1 (CopyFromDefault 4182986934)
+    2 (Default 2)
+    3 (4182986934 <)
+    4 (JumpIfFalse 7)
+    5 (GetMember n)
+    6 (Jump 27)
+    7 (GetMember fibonacci)
+    8 (CopyFromDefault 3861393155)
+    9 (CreateArguments 706860420)
+   10 (GetMember n)
+   11 (CopyFromDefault 73426821)
+   12 (Default 1)
+   13 (73426821 -)
+   14 (SetItem 706860420 0)
+   15 (Call 3861393155 706860420)
+   16 (CopyFromDefault 3393199606)
+   17 (GetMember fibonacci)
+   18 (CopyFromDefault 4174368273)
+   19 (CreateArguments 1745237464)
+   20 (GetMember n)
+   21 (CopyFromDefault 2744084471)
+   22 (Default 2)
+   23 (2744084471 -)
+   24 (SetItem 1745237464 0)
+   25 (Call 4174368273 1745237464)
+   26 (3393199606 +)
+   27 (CallEnd)
+)
+Block: (Block __default__
+    0 (Init)
+    1 (Function fibonacci b948c6d7-644e-4d49-a7e8-979b5e4112af)
+    2 (GetMember fibonacci)
+    3 (CopyFromDefault 3601405249)
+    4 (CreateArguments 4000764809)
+    5 (Default 24)
+    6 (SetItem 4000764809 0)
+    7 (Call 3601405249 4000764809)
+    8 (CallEnd)
+)
+Execution time: 0.887556 seconds
+Result: 46368
+
+real	0m1.727s
+user	0m1.544s
+sys	0m0.176s
