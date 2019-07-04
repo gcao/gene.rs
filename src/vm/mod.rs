@@ -278,24 +278,21 @@ impl VirtualMachine {
                     let borrowed = registers.data[target_reg].borrow();
                     let target = borrowed.downcast_ref::<Function>().unwrap();
 
-                    let args_reg = options["args"].clone();
-                    let args_ = registers.data.get(args_reg.downcast_ref::<String>().unwrap()).unwrap();
-
-                    let mut new_scope = Scope::new(target.scope.clone());
-                    let new_namespace = target.namespace.clone();
+                    let mut new_scope = Scope::new(target.parent_scope.clone());
 
                     {
-                        let borrowed = args_.borrow();
-                        let args = borrowed.downcast_ref::<Vec<Rc<RefCell<Value>>>>().unwrap();
+                        let args_reg = options["args"].clone();
+                        let args_ = registers.data.get(args_reg.downcast_ref::<String>().unwrap()).unwrap().borrow();
+                        let args = args_.downcast_ref::<Vec<Rc<RefCell<Value>>>>().unwrap();
 
                         for matcher in target.args.data_matchers.iter() {
-                            // TODO: define members for arguments
                             let arg_value = args[matcher.index].clone();
                             new_scope.def_member(matcher.name.clone(), arg_value);
                         }
                     }
 
-                    let new_context = Context::new(new_namespace, Rc::new(RefCell::new(new_scope)), None);
+                    let new_namespace = Namespace::new(target.parent_namespace.clone());
+                    let new_context = Context::new(Rc::new(RefCell::new(new_namespace)), Rc::new(RefCell::new(new_scope)), None);
                     let mut new_registers = Registers::new(Rc::new(RefCell::new(new_context)));
 
                     let ret_addr = Address::new(block.id.clone(), self.pos);
