@@ -225,7 +225,7 @@ impl Compiler {
                 let target_reg = new_reg();
                 (*block).add_instr(Instruction::CopyFromDefault(target_reg.clone()));
 
-                let options = HashMap::<String, Rc<Any>>::new();
+                let options = HashMap::<String, Rc<dyn Any>>::new();
 
                 let args_reg = new_reg();
                 (*block).add_instr(Instruction::CreateArguments(args_reg.clone()));
@@ -428,7 +428,7 @@ pub enum Instruction {
     CreateArguments(String),
 
     /// Call(options)
-    Call(String, String, HashMap<String, Rc<Any>>),
+    Call(String, String, HashMap<String, Rc<dyn Any>>),
     CallEnd,
 }
 
