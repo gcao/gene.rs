@@ -268,7 +268,7 @@ impl VirtualMachine {
                     benchmarker.op_end();
                 }
 
-                Instruction::Call(target_reg, options) => {
+                Instruction::Call(target_reg, args_reg, _options) => {
                     benchmarker.op_start("Call");
 
                     self.pos += 1;
@@ -281,8 +281,7 @@ impl VirtualMachine {
                     let mut new_scope = Scope::new(target.parent_scope.clone());
 
                     {
-                        let args_reg = options["args"].clone();
-                        let args_ = registers.data.get(args_reg.downcast_ref::<String>().unwrap()).unwrap().borrow();
+                        let args_ = registers.data[args_reg].borrow();
                         let args = args_.downcast_ref::<Vec<Rc<RefCell<Value>>>>().unwrap();
 
                         for matcher in target.args.data_matchers.iter() {
