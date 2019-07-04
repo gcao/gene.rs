@@ -116,12 +116,12 @@ impl Compiler {
             for (index, item) in arr.iter().enumerate() {
                 if !item.is_literal() {
                     self.compile_(block, item.clone());
-                    (*block).add_instr(Instruction::SetItem(reg.clone(), index, "default".to_string()));
+                    (*block).add_instr(Instruction::SetItem(reg.clone(), index));
                 }
             }
 
             // Copy to default register
-            (*block).add_instr(Instruction::Copy(reg, "default".to_string()));
+            (*block).add_instr(Instruction::CopyToDefault(reg));
         }
     }
 
@@ -141,18 +141,18 @@ impl Compiler {
             for (key, value) in map.iter() {
                 if !value.is_literal() {
                     self.compile_(block, value.clone());
-                    (*block).add_instr(Instruction::SetProp(reg.clone(), key.clone(), "default".to_string()));
+                    (*block).add_instr(Instruction::SetProp(reg.clone(), key.clone()));
                 }
             }
 
             // Copy to default register
-            (*block).add_instr(Instruction::Copy(reg, "default".to_string()));
+            (*block).add_instr(Instruction::CopyToDefault(reg));
         }
     }
 
     fn compile_gene(&mut self, block: &mut Block, gene: Gene) {
         let Gene {
-            kind, data, props: _,
+            kind, data, ..
         } = gene;
 
         match *kind.borrow() {
@@ -168,7 +168,7 @@ impl Compiler {
                 match *first.borrow_mut() {
                     Value::Symbol(ref name) => {
                         self.compile_(block, second.clone());
-                        (*block).add_instr(Instruction::DefMember(name.clone(), "default".to_string()));
+                        (*block).add_instr(Instruction::DefMember(name.clone()));
                     }
                     _ => unimplemented!(),
                 };
@@ -198,23 +198,19 @@ impl Compiler {
                 let name = data[0].borrow().to_string();
                 let value = data[1].borrow().clone();
                 self.compile_(block, value);
-                (*block).add_instr(Instruction::SetMember(name, "default".to_string()));
+                (*block).add_instr(Instruction::SetMember(name));
             }
             Value::Symbol(ref s) if is_binary_op(s) => {
                 let first = data[0].borrow().clone();
                 self.compile_(block, first);
 
                 let first_reg = new_reg();
-                (*block).add_instr(Instruction::Copy("default".to_string(), first_reg.clone()));
+                (*block).add_instr(Instruction::CopyFromDefault(first_reg.clone()));
 
                 let second = data[1].borrow().clone();
                 self.compile_(block, second);
 
-                (*block).add_instr(Instruction::BinaryOp(
-                    s.to_string(),
-                    first_reg,
-                    "default".to_string(),
-                ));
+                (*block).add_instr(Instruction::BinaryOp(s.to_string(), first_reg));
             }
             Value::Symbol(ref s) if s == "while" => {
                 self.compile_while(block, data);
@@ -227,7 +223,7 @@ impl Compiler {
                 let borrowed_kind = kind.borrow().clone();
                 self.compile_(block, borrowed_kind);
                 let target_reg = new_reg();
-                (*block).add_instr(Instruction::Copy("default".to_string(), target_reg.clone()));
+                (*block).add_instr(Instruction::CopyFromDefault(target_reg.clone()));
 
                 let mut options = BTreeMap::<String, Rc<Any>>::new();
 
@@ -236,7 +232,7 @@ impl Compiler {
                 for (i, item) in data.iter().enumerate() {
                     let borrowed = item.borrow();
                     self.compile_(block, (*borrowed).clone());
-                    (*block).add_instr(Instruction::SetItem(args_reg.clone(), i, "default".to_string()));
+                    (*block).add_instr(Instruction::SetItem(args_reg.clone(), i));
                 }
 
                 options.insert("args".to_string(), Rc::new(args_reg.clone()));
@@ -392,23 +388,19 @@ pub enum Instruction {
     Default(Value),
     /// Save Value to named register
     Save(String, Value),
-    /// Copy from one register to another
-    Copy(String, String),
+    CopyFromDefault(String),
+    CopyToDefault(String),
 
-    DefMember(String, String),
+    DefMember(String),
     GetMember(String),
-    SetMember(String, String),
-
-    // // Literal types: number, string, boolean, array of literals, map of literals, gene with literals only
-    // // TODO: Is it better to use individual instruction like CreateInt etc?
-    // CreateLiteral(String, Box<Any>),
+    SetMember(String),
 
     /// GetItem(target reg, index)
     GetItem(String, usize),
     // /// GetItemDynamic(target reg, index reg)
     // GetItemDynamic(String, String),
     /// SetItem(target reg, index, value reg)
-    SetItem(String, usize, String),
+    SetItem(String, usize),
     // /// SetItemDynamic(target reg, index reg, value reg)
     // SetItemDynamic(String, String, String),
 
@@ -417,7 +409,7 @@ pub enum Instruction {
     // /// GetPropDynamic(target reg, name reg)
     // GetPropDynamic(String, String),
     /// SetProp(target reg, name, value reg)
-    SetProp(String, String, String),
+    SetProp(String, String),
     // /// SetPropDynamic(target reg, name reg, value reg)
     // SetPropDynamic(String, String, String),
 
@@ -427,9 +419,10 @@ pub enum Instruction {
     LoopStart,
     LoopEnd,
 
-    /// BinaryOp(op, first reg, second reg)
+    /// BinaryOp(op, first reg)
+    /// Second operand is in default reg
     /// Result is stored in default reg
-    BinaryOp(String, String, String),
+    BinaryOp(String, String),
 
     /// Function(name, args reg, block id)
     Function(String, Matcher, String),
@@ -461,27 +454,25 @@ impl fmt::Display for Instruction {
                 fmt.write_str(" ")?;
                 fmt.write_str(&v.to_string())?;
             }
-            Instruction::Copy(first, second) => {
-                fmt.write_str("Copy ")?;
-                fmt.write_str(first)?;
-                fmt.write_str(" ")?;
-                fmt.write_str(second)?;
+            Instruction::CopyFromDefault(reg) => {
+                fmt.write_str("CopyFromDefault ")?;
+                fmt.write_str(reg)?;
             }
-            Instruction::DefMember(name, reg) => {
+            Instruction::CopyToDefault(reg) => {
+                fmt.write_str("CopyToDefault ")?;
+                fmt.write_str(reg)?;
+            }
+            Instruction::DefMember(name) => {
                 fmt.write_str("DefMember ")?;
                 fmt.write_str(name)?;
-                fmt.write_str(" ")?;
-                fmt.write_str(reg)?;
             }
             Instruction::GetMember(name) => {
                 fmt.write_str("GetMember ")?;
                 fmt.write_str(name)?;
             }
-            Instruction::SetMember(name, reg) => {
+            Instruction::SetMember(name) => {
                 fmt.write_str("SetMember ")?;
                 fmt.write_str(name)?;
-                fmt.write_str(" ")?;
-                fmt.write_str(reg)?;
             }
             Instruction::GetItem(name, index) => {
                 fmt.write_str("GetItem ")?;
@@ -489,21 +480,17 @@ impl fmt::Display for Instruction {
                 fmt.write_str(" ")?;
                 fmt.write_str(&index.to_string())?;
             }
-            Instruction::SetItem(name, index, value) => {
-                fmt.write_str("Get ")?;
+            Instruction::SetItem(name, index) => {
+                fmt.write_str("SetItem ")?;
                 fmt.write_str(name)?;
                 fmt.write_str(" ")?;
                 fmt.write_str(&index.to_string())?;
-                fmt.write_str(" ")?;
-                fmt.write_str(value)?;
             }
-            Instruction::SetProp(name, key, value) => {
+            Instruction::SetProp(name, key) => {
                 fmt.write_str("Get ")?;
                 fmt.write_str(name)?;
                 fmt.write_str(" ")?;
                 fmt.write_str(key)?;
-                fmt.write_str(" ")?;
-                fmt.write_str(value)?;
             }
             Instruction::Jump(pos) => {
                 fmt.write_str("Jump ")?;
@@ -522,12 +509,10 @@ impl fmt::Display for Instruction {
             Instruction::LoopEnd => {
                 fmt.write_str("LoopEnd")?;
             }
-            Instruction::BinaryOp(op, first, second) => {
+            Instruction::BinaryOp(op, first) => {
                 fmt.write_str(first)?;
                 fmt.write_str(" ")?;
                 fmt.write_str(op)?;
-                fmt.write_str(" ")?;
-                fmt.write_str(second)?;
             }
             Instruction::Function(name, _matcher, body_id) => {
                 fmt.write_str("Function ")?;
