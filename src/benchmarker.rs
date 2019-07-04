@@ -112,7 +112,8 @@ impl fmt::Display for Benchmarker {
 
         let mut op_times = self.op_times();
         op_times.sort_by(|first, second| second.total_time.cmp(&first.total_time));
-        for op_time in op_times {
+        for mut op_time in op_times {
+            op_time.calc_percentage(self.total_time.as_nanos() as f64);
             fmt.write_str(&*format!("{}", op_time))?;
         }
 
