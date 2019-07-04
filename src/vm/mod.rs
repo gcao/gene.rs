@@ -14,7 +14,6 @@ use super::utils::new_uuidv4;
 
 use super::benchmarker::Benchmarker;
 
-const DEFAULT_REG: &str = "default";
 const CONTEXT_REG: &str = "context";
 
 pub struct VirtualMachine {
@@ -94,7 +93,7 @@ impl VirtualMachine {
                     self.pos += 1;
                     let registers_temp = registers_.clone();
                     let mut registers = registers_temp.borrow_mut();
-                    registers.insert(DEFAULT_REG.into(), Rc::new(RefCell::new(v.clone())));
+                    registers.default = Rc::new(RefCell::new(v.clone()));
 
                     benchmarker.default_time.report_end();
                 }
@@ -110,28 +109,39 @@ impl VirtualMachine {
                     benchmarker.save_time.report_end();
                 }
 
-                Instruction::Copy(from, to) => {
-                    benchmarker.copy_time.report_start();
+                Instruction::CopyFromDefault(to) => {
+                    benchmarker.copy_from_default_time.report_start();
 
                     self.pos += 1;
                     let registers_temp = registers_.clone();
                     let mut registers = registers_temp.borrow_mut();
-                    let from_value = registers.data[from].clone();
-                    registers.insert(to.clone(), from_value);
+                    let default;
+                    {
+                        default = registers.default.clone();
+                    }
+                    registers.insert(to.clone(), default);
 
-                    benchmarker.copy_time.report_end();
+                    benchmarker.copy_from_default_time.report_end();
                 }
 
-                Instruction::DefMember(name, reg) => {
+                Instruction::CopyToDefault(to) => {
+                    benchmarker.copy_to_default_time.report_start();
+
+                    self.pos += 1;
+                    let registers_temp = registers_.clone();
+                    let mut registers = registers_temp.borrow_mut();
+                    registers.default = registers.data[to].clone();
+
+                    benchmarker.copy_to_default_time.report_end();
+                }
+
+                Instruction::DefMember(name) => {
                     benchmarker.def_member_time.report_start();
 
                     self.pos += 1;
                     let registers_temp = registers_.clone();
                     let mut registers = registers_temp.borrow_mut();
-                    let value;
-                    {
-                        value = registers.data[reg].clone();
-                    }
+                    let value = registers.default.clone();
                     {
                         let mut borrowed = registers.data.get_mut(CONTEXT_REG).unwrap().borrow_mut();
                         let context = borrowed.downcast_mut::<Context>().unwrap();
@@ -148,21 +158,18 @@ impl VirtualMachine {
                     let value = self.get_member(registers_.clone(), name.clone()).unwrap();
                     let registers_temp = registers_.clone();
                     let mut registers = registers_temp.borrow_mut();
-                    registers.insert(DEFAULT_REG.into(), value);
+                    registers.default = value;
 
                     benchmarker.get_member_time.report_end();
                 }
 
-                Instruction::SetMember(name, reg) => {
+                Instruction::SetMember(name) => {
                     benchmarker.set_member_time.report_start();
 
                     self.pos += 1;
                     let registers_temp = registers_.clone();
                     let mut registers = registers_temp.borrow_mut();
-                    let value;
-                    {
-                        value = registers.data[reg].clone();
-                    }
+                    let value = registers.default.clone();
                     {
                         let mut borrowed = registers.data.get_mut(CONTEXT_REG).unwrap().borrow_mut();
                         let context = borrowed.downcast_mut::<Context>().unwrap();
@@ -185,7 +192,7 @@ impl VirtualMachine {
 
                     let registers_temp = registers_.clone();
                     let registers = registers_temp.borrow_mut();
-                    let value_ = registers.data[DEFAULT_REG].borrow();
+                    let value_ = registers.default.borrow();
                     let value = value_.downcast_ref::<Value>().unwrap();
                     match value {
                         Value::Boolean(b) => {
@@ -226,16 +233,16 @@ impl VirtualMachine {
                     // benchmarker.default_time.report_end();
                 }
 
-                Instruction::BinaryOp(op, first, second) => {
+                Instruction::BinaryOp(op, first) => {
                     benchmarker.binary_op_time.report_start();
 
                     self.pos += 1;
                     let registers_temp = registers_.clone();
                     let mut registers = registers_temp.borrow_mut();
                     let first = registers.data[first].clone();
-                    let second = registers.data[second].clone();
+                    let second = registers.default.clone();
                     let result = binary_op(op, first, second);
-                    registers.data.insert(DEFAULT_REG.into(), result);
+                    registers.default = result;
 
                     benchmarker.binary_op_time.report_end();
                 }
@@ -268,7 +275,7 @@ impl VirtualMachine {
                     {
                         let registers_temp = registers_.clone();
                         let mut registers = registers_temp.borrow_mut();
-                        registers.data.insert(DEFAULT_REG.into(), function_temp.clone());
+                        registers.default = function_temp.clone();
                     }
 
                     benchmarker.function_time.report_end();
@@ -346,9 +353,8 @@ impl VirtualMachine {
                         registers_ = caller_registers_temp.clone();
                         let mut caller_registers = caller_registers_temp.borrow_mut();
 
-                        // Save returned value in default register
-                        let default = registers.data[DEFAULT_REG].clone();
-                        caller_registers.insert(DEFAULT_REG.into(), default);
+                        // Save returned value in caller's default register
+                        caller_registers.default = registers.default.clone();
                     } else {
                         self.pos += 1;
                     }
@@ -370,7 +376,7 @@ impl VirtualMachine {
 
                 Instruction::GetItem(_reg, _index) => unimplemented!(),
 
-                Instruction::SetItem(target_reg, index, value_reg) => {
+                Instruction::SetItem(target_reg, index) => {
                     benchmarker.set_item_time.report_start();
 
                     self.pos += 1;
@@ -380,7 +386,7 @@ impl VirtualMachine {
                     let registers_temp = registers_.clone();
                     let registers = registers_temp.borrow();
                     {
-                        let value_ = registers.data[value_reg].borrow();
+                        let value_ = registers.default.borrow();
                         value = value_.downcast_ref::<Value>().unwrap().clone();
                     }
                     let mut target_ = registers.data[target_reg].borrow_mut();
@@ -406,7 +412,7 @@ impl VirtualMachine {
                     benchmarker.set_item_time.report_end();
                 }
 
-                Instruction::SetProp(target_reg, key, value_reg) => {
+                Instruction::SetProp(target_reg, key) => {
                     // benchmarker.default_time.report_start();
 
                     self.pos += 1;
@@ -416,7 +422,7 @@ impl VirtualMachine {
                     let registers_temp = registers_.clone();
                     let registers = registers_temp.borrow();
                     {
-                        let value_ = registers.data[value_reg].borrow();
+                        let value_ = registers.default.borrow();
                         value = value_.downcast_ref::<Value>().unwrap().clone();
                     }
                     let mut target_ = registers.data[target_reg].borrow_mut();
@@ -443,7 +449,7 @@ impl VirtualMachine {
         // dbg!(benchmarker);
 
         let registers = registers_.borrow();
-        let result = registers.data[DEFAULT_REG].clone();
+        let result = registers.default.clone();
         // dbg!(result.borrow().downcast_ref::<Value>().unwrap());
 
         println!("Execution time: {:.6} seconds", start_time.elapsed().as_nanos() as f64 / 1_000_000_000.);
@@ -469,6 +475,7 @@ impl VirtualMachine {
 #[derive(Debug)]
 pub struct Registers {
     pub id: String,
+    pub default: Rc<RefCell<Any>>,
     pub data: HashMap<String, Rc<RefCell<Any>>>,
 }
 
@@ -477,6 +484,7 @@ impl Registers {
         let data = HashMap::new();
         Registers {
             id: new_uuidv4(),
+            default: Rc::new(RefCell::new(0)), // Put a dummy value
             data,
         }
     }

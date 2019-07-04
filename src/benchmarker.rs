@@ -10,7 +10,8 @@ pub struct Benchmarker {
     pub init_time: OpTime,
     pub default_time: OpTime,
     pub save_time: OpTime,
-    pub copy_time: OpTime,
+    pub copy_from_default_time: OpTime,
+    pub copy_to_default_time: OpTime,
     pub def_member_time: OpTime,
     pub get_member_time: OpTime,
     pub set_member_time: OpTime,
@@ -34,7 +35,8 @@ impl Benchmarker {
             init_time: OpTime::new("Init".to_string()),
             default_time: OpTime::new("Default".to_string()),
             save_time: OpTime::new("Save".to_string()),
-            copy_time: OpTime::new("Copy".to_string()),
+            copy_from_default_time: OpTime::new("CopyFromDefault".to_string()),
+            copy_to_default_time: OpTime::new("CopyToDefault".to_string()),
             def_member_time: OpTime::new("DefMember".to_string()),
             get_member_time: OpTime::new("GetMember".to_string()),
             set_member_time: OpTime::new("SetMember".to_string()),
@@ -67,7 +69,8 @@ impl Benchmarker {
         op_times.push(self.init_time.clone());
         op_times.push(self.default_time.clone());
         op_times.push(self.save_time.clone());
-        op_times.push(self.copy_time.clone());
+        op_times.push(self.copy_from_default_time.clone());
+        op_times.push(self.copy_to_default_time.clone());
         op_times.push(self.def_member_time.clone());
         op_times.push(self.set_member_time.clone());
         op_times.push(self.get_member_time.clone());
