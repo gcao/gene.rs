@@ -33,7 +33,7 @@ impl Clone for Value {
             Value::Float(f) => Value::Float(*f),
             Value::String(s) => Value::String(s.clone()),
             Value::Symbol(symbol) => Value::Symbol(symbol.clone()),
-            Value::Array(a) => Value::Array(a.iter().cloned().collect()),
+            Value::Array(a) => Value::Array(a.to_vec()),
             Value::Map(m) => {
                 let mut new_map = BTreeMap::new();
                 for (k, v) in m.iter() {
@@ -42,7 +42,7 @@ impl Clone for Value {
                 Value::Map(new_map)
             }
             Value::Gene(g) => Value::Gene(g.clone()),
-            Value::Stream(v) => Value::Stream(v.iter().cloned().collect()),
+            Value::Stream(v) => Value::Stream(v.to_vec()),
         }
     }
 }
