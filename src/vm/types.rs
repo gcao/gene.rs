@@ -1,6 +1,6 @@
 use std::any::Any;
 use std::cell::RefCell;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 use std::rc::Rc;
 
 use super::super::types::Value;
@@ -79,21 +79,21 @@ impl Context {
 #[derive(Clone, Debug)]
 pub struct Namespace {
     parent: Option<Rc<RefCell<Namespace>>>,
-    members: BTreeMap<String, Rc<RefCell<Any>>>,
+    members: HashMap<String, Rc<RefCell<Any>>>,
 }
 
 impl Namespace {
     pub fn new(parent: Rc<RefCell<Namespace>>) -> Self {
         Self {
             parent: Some(parent),
-            members: BTreeMap::new(),
+            members: HashMap::new(),
         }
     }
 
     pub fn root() -> Self {
         Self {
             parent: None,
-            members: BTreeMap::new(),
+            members: HashMap::new(),
         }
     }
 
@@ -135,21 +135,21 @@ impl Namespace {
 #[derive(Clone, Debug)]
 pub struct Scope {
     pub parent: Option<Rc<RefCell<Scope>>>,
-    pub members: BTreeMap<String, Rc<RefCell<Any>>>,
+    pub members: HashMap<String, Rc<RefCell<Any>>>,
 }
 
 impl Scope {
     pub fn new(parent: Rc<RefCell<Scope>>) -> Self {
         Scope {
             parent: Some(parent),
-            members: BTreeMap::new(),
+            members: HashMap::new(),
         }
     }
 
     pub fn root() -> Self {
         Scope {
             parent: None,
-            members: BTreeMap::new(),
+            members: HashMap::new(),
         }
     }
 
@@ -274,13 +274,11 @@ impl<'a> Function {
 
 #[derive(Debug)]
 pub struct Arguments {
-    // pub props: BTreeMap<String, Rc<RefCell<Any>>>,
     pub data: Vec<Rc<RefCell<Any>>>,
 }
 
 impl Arguments {
     pub fn new(
-        // props: BTreeMap<String, Rc<RefCell<Any>>>,
         data: Vec<Rc<RefCell<Any>>>,
     ) -> Self {
         Arguments {
@@ -293,7 +291,7 @@ impl Arguments {
 #[derive(Debug)]
 pub struct Module {
     name: String,
-    methods: BTreeMap<String, Function>,
+    methods: HashMap<String, Function>,
 }
 
 #[derive(Debug)]

@@ -3,7 +3,7 @@ extern crate rand;
 use std::mem;
 use std::any::Any;
 use std::cell::{RefCell, RefMut};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 use std::fmt;
 use std::rc::Rc;
 
@@ -225,7 +225,7 @@ impl Compiler {
                 let target_reg = new_reg();
                 (*block).add_instr(Instruction::CopyFromDefault(target_reg.clone()));
 
-                let mut options = BTreeMap::<String, Rc<Any>>::new();
+                let mut options = HashMap::<String, Rc<Any>>::new();
 
                 let args_reg = new_reg();
                 (*block).add_instr(Instruction::CreateArguments(args_reg.clone()));
@@ -314,7 +314,7 @@ pub struct Statements(Vec<Value>);
 #[derive(Debug)]
 pub struct Module {
     pub id: String,
-    pub blocks: BTreeMap<String, Rc<Block>>,
+    pub blocks: HashMap<String, Rc<Block>>,
     default_block_id: String,
 }
 
@@ -322,7 +322,7 @@ impl Module {
     pub fn new() -> Self {
         Module {
             id: new_uuidv4(),
-            blocks: BTreeMap::new(),
+            blocks: HashMap::new(),
             default_block_id: "".to_string(),
         }
     }
@@ -430,7 +430,7 @@ pub enum Instruction {
     CreateArguments(String),
 
     /// Call(options)
-    Call(String, BTreeMap<String, Rc<Any>>),
+    Call(String, HashMap<String, Rc<Any>>),
     CallEnd,
 }
 
