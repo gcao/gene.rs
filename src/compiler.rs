@@ -3,7 +3,7 @@ extern crate rand;
 use std::mem;
 use std::any::Any;
 use std::cell::{RefCell, RefMut};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 use std::fmt;
 use std::rc::Rc;
 
@@ -225,7 +225,7 @@ impl Compiler {
                 let target_reg = new_reg();
                 (*block).add_instr(Instruction::CopyFromDefault(target_reg.clone()));
 
-                let mut options = BTreeMap::<String, Rc<Any>>::new();
+                let options = HashMap::<String, Rc<Any>>::new();
 
                 let args_reg = new_reg();
                 (*block).add_instr(Instruction::CreateArguments(args_reg.clone()));
@@ -235,9 +235,7 @@ impl Compiler {
                     (*block).add_instr(Instruction::SetItem(args_reg.clone(), i));
                 }
 
-                options.insert("args".to_string(), Rc::new(args_reg.clone()));
-
-                (*block).add_instr(Instruction::Call(target_reg.clone(), options));
+                (*block).add_instr(Instruction::Call(target_reg.clone(), args_reg.clone(), options));
             }
         };
     }
@@ -314,7 +312,7 @@ pub struct Statements(Vec<Value>);
 #[derive(Debug)]
 pub struct Module {
     pub id: String,
-    pub blocks: BTreeMap<String, Rc<Block>>,
+    pub blocks: HashMap<String, Rc<Block>>,
     default_block_id: String,
 }
 
@@ -322,7 +320,7 @@ impl Module {
     pub fn new() -> Self {
         Module {
             id: new_uuidv4(),
-            blocks: BTreeMap::new(),
+            blocks: HashMap::new(),
             default_block_id: "".to_string(),
         }
     }
@@ -430,7 +428,7 @@ pub enum Instruction {
     CreateArguments(String),
 
     /// Call(options)
-    Call(String, BTreeMap<String, Rc<Any>>),
+    Call(String, String, HashMap<String, Rc<Any>>),
     CallEnd,
 }
 
@@ -523,9 +521,11 @@ impl fmt::Display for Instruction {
                 // fmt.write_str(" ")?;
                 fmt.write_str(body_id)?;
             }
-            Instruction::Call(target, _options) => {
+            Instruction::Call(target, args, _options) => {
                 fmt.write_str("Call ")?;
                 fmt.write_str(target)?;
+                fmt.write_str(" ")?;
+                fmt.write_str(args)?;
             }
             Instruction::CallEnd => {
                 fmt.write_str("CallEnd")?;

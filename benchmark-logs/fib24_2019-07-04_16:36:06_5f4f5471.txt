@@ -1,0 +1,56 @@
+Testcase: fib24
+2019-07-04 16:36:06
+5f4f5471
+e1269803 5f4f5471
+
+============================
+Application log starts below
+vvvvvvvvvvvvvvvvvvvvvvvvvvvv
+
+Block: (Block fibonacci
+    0 (GetMember n)
+    1 (CopyFromDefault 3409450817)
+    2 (Default 2)
+    3 (3409450817 <)
+    4 (JumpIfFalse 7)
+    5 (GetMember n)
+    6 (Jump 27)
+    7 (GetMember fibonacci)
+    8 (CopyFromDefault 3564313821)
+    9 (CreateArguments 2030103310)
+   10 (GetMember n)
+   11 (CopyFromDefault 1536616325)
+   12 (Default 1)
+   13 (1536616325 -)
+   14 (SetItem 2030103310 0)
+   15 (Call 3564313821 2030103310)
+   16 (CopyFromDefault 2019076952)
+   17 (GetMember fibonacci)
+   18 (CopyFromDefault 1779872607)
+   19 (CreateArguments 2020794615)
+   20 (GetMember n)
+   21 (CopyFromDefault 4058464355)
+   22 (Default 2)
+   23 (4058464355 -)
+   24 (SetItem 2020794615 0)
+   25 (Call 1779872607 2020794615)
+   26 (2019076952 +)
+   27 (CallEnd)
+)
+Block: (Block __default__
+    0 (Init)
+    1 (Function fibonacci 45b7bf87-b304-4883-a6d3-2c1603d1bd43)
+    2 (GetMember fibonacci)
+    3 (CopyFromDefault 837040653)
+    4 (CreateArguments 3454069635)
+    5 (Default 24)
+    6 (SetItem 3454069635 0)
+    7 (Call 837040653 3454069635)
+    8 (CallEnd)
+)
+Execution time: 1.077085 seconds
+Result: 46368
+
+real	0m2.256s
+user	0m1.834s
+sys	0m0.417s
