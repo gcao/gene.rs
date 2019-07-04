@@ -78,14 +78,14 @@ impl Context {
 
 #[derive(Clone, Debug)]
 pub struct Namespace {
-    parent: Option<Box<Namespace>>,
+    parent: Option<Rc<RefCell<Namespace>>>,
     members: BTreeMap<String, Rc<RefCell<Any>>>,
 }
 
 impl Namespace {
-    pub fn new(parent: Self) -> Self {
+    pub fn new(parent: Rc<RefCell<Namespace>>) -> Self {
         Self {
-            parent: Some(Box::new(parent)),
+            parent: Some(parent),
             members: BTreeMap::new(),
         }
     }
@@ -102,14 +102,22 @@ impl Namespace {
     }
 
     pub fn get_member(&self, name: String) -> Option<Rc<RefCell<Any>>> {
-        self.members.get(&name).cloned()
+        if self.members.contains_key(&name) {
+            self.members.get(&name).cloned()
+        } else if self.parent.is_some() {
+            self.parent.clone().unwrap().borrow().get_member(name)
+        } else {
+            None
+        }
     }
 
     pub fn set_member(&mut self, name: String, value: Rc<RefCell<Any>>) {
         if self.members.contains_key(&name) {
             self.members.insert(name.clone(), value);
         } else {
-            self.parent.clone().unwrap().set_member(name, value);
+            let parent = self.parent.clone().unwrap();
+            let mut borrowed = parent.borrow_mut();
+            borrowed.set_member(name, value);
         }
     }
 
@@ -117,7 +125,7 @@ impl Namespace {
         if self.members.contains_key(&name) {
             true
         } else if self.parent.is_some() {
-            self.parent.clone().unwrap().has_member(name)
+            self.parent.clone().unwrap().borrow().has_member(name)
         } else {
             false
         }
@@ -240,8 +248,8 @@ pub struct Function {
     pub args: Matcher,
     pub body: String,
     pub inherit_scope: bool,
-    pub namespace: Rc<RefCell<Namespace>>,
-    pub scope: Rc<RefCell<Scope>>,
+    pub parent_namespace: Rc<RefCell<Namespace>>,
+    pub parent_scope: Rc<RefCell<Scope>>,
 }
 
 impl<'a> Function {
@@ -250,16 +258,16 @@ impl<'a> Function {
         args: Matcher,
         body: String,
         inherit_scope: bool,
-        namespace: Rc<RefCell<Namespace>>,
-        scope: Rc<RefCell<Scope>>,
+        parent_namespace: Rc<RefCell<Namespace>>,
+        parent_scope: Rc<RefCell<Scope>>,
     ) -> Self {
         Function {
             name,
             args,
             body,
             inherit_scope,
-            namespace,
-            scope,
+            parent_namespace,
+            parent_scope,
         }
     }
 }
