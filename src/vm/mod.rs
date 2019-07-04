@@ -16,7 +16,6 @@ use super::benchmarker::Benchmarker;
 
 pub struct VirtualMachine {
     registers_store: HashMap<String, Rc<RefCell<Registers>>>,
-    registers_id: String,
     pos: usize,
     // app: Application,
     code_manager: CodeManager,
@@ -26,7 +25,6 @@ impl VirtualMachine {
     pub fn new() -> Self {
         VirtualMachine {
             registers_store: HashMap::new(),
-            registers_id: "".into(),
             pos: 0,
             // app: Application::new(),
             code_manager: CodeManager::new(),
@@ -48,9 +46,10 @@ impl VirtualMachine {
         let start_time = Instant::now();
 
         let root_context = Context::root();
-        self.create_registers(Rc::new(RefCell::new(root_context)));
-
-        let mut registers_ = self.registers_store.get(&self.registers_id).unwrap().clone();
+        let registers_temp = Registers::new(Rc::new(RefCell::new(root_context)));
+        let id = registers_temp.id.clone();
+        let mut registers_ = Rc::new(RefCell::new(registers_temp));
+        self.registers_store.insert(id, registers_.clone());
 
         self.pos = 0;
         let mut break_from_loop = false;
@@ -298,14 +297,12 @@ impl VirtualMachine {
                     new_registers.insert("caller".to_string(), Rc::new(RefCell::new(ret_addr)));
                     new_registers.insert("caller_registers".to_string(), Rc::new(RefCell::new(registers.id.clone())));
 
-                    self.registers_id = new_registers.id.clone();
-
                     let id = new_registers.id.clone();
                     let registers = Rc::new(RefCell::new(new_registers));
                     registers_ = registers.clone();
                     self.registers_store.insert(id, registers);
 
-                    block = self.code_manager.get_block(target.body.to_string()).clone();
+                    block = self.code_manager.blocks[&target.body].clone();
                     self.pos = 0;
 
                     benchmarker.call_time.report_end();
@@ -320,17 +317,15 @@ impl VirtualMachine {
                         let borrowed = registers.data["caller"].borrow();
                         let ret_addr = borrowed.downcast_ref::<Address>().unwrap();
 
-                        block = self.code_manager.get_block(ret_addr.block_id.to_string()).clone();
+                        block = self.code_manager.blocks[&ret_addr.block_id].clone();
                         self.pos = ret_addr.pos;
 
-                        let registers_borrowed = registers.data["caller_registers"].borrow();
-                        let registers_id = registers_borrowed.downcast_ref::<String>().unwrap();
-                        self.registers_id = registers_id.clone();
-
+                        let registers_id_borrowed = registers.data["caller_registers"].borrow();
+                        let registers_id = registers_id_borrowed.downcast_ref::<String>().unwrap();
                         let caller_registers_temp = self.registers_store[registers_id].clone();
                         registers_ = caller_registers_temp.clone();
-                        let mut caller_registers = caller_registers_temp.borrow_mut();
 
+                        let mut caller_registers = caller_registers_temp.borrow_mut();
                         // Save returned value in caller's default register
                         caller_registers.default = registers.default.clone();
                     } else {
@@ -433,13 +428,6 @@ impl VirtualMachine {
         println!("Execution time: {:.6} seconds", start_time.elapsed().as_nanos() as f64 / 1_000_000_000.);
 
         result
-    }
-
-    pub fn create_registers(&mut self, context: Rc<RefCell<Context>>) {
-        let registers = Registers::new(context);
-        let id = registers.id.clone();
-        self.registers_id = id.clone();
-        self.registers_store.insert(id, Rc::new(RefCell::new(registers)));
     }
 
     fn get_member(&self, registers: Rc<RefCell<Registers>>, name: String) -> Option<Rc<RefCell<Any>>> {
@@ -566,9 +554,9 @@ impl CodeManager {
         }
     }
 
-    pub fn get_block(&self, id: String) -> Rc<Block> {
-        self.blocks[&id].clone()
-    }
+    // pub fn get_block(&self, id: String) -> Rc<Block> {
+    //     self.blocks[&id].clone()
+    // }
 
     pub fn set_block(&mut self, id: String, block: Rc<Block>) {
         self.blocks.insert(id, block);
