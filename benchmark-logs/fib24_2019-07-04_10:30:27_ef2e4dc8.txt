@@ -1,0 +1,81 @@
+Testcase: fib24
+2019-07-04 10:30:27
+ef2e4dc8
+250203ba ef2e4dc8
+
+============================
+Application log starts below
+vvvvvvvvvvvvvvvvvvvvvvvvvvvv
+
+Block: (Block fibonacci
+    0 (GetMember n)
+    1 (CopyFromDefault 1428823456)
+    2 (Default 2)
+    3 (1428823456 <)
+    4 (JumpIfFalse 7)
+    5 (GetMember n)
+    6 (Jump 27)
+    7 (GetMember fibonacci)
+    8 (CopyFromDefault 2733515951)
+    9 (CreateArguments 372509838)
+   10 (GetMember n)
+   11 (CopyFromDefault 440898019)
+   12 (Default 1)
+   13 (440898019 -)
+   14 (SetItem 372509838 0)
+   15 (Call 2733515951)
+   16 (CopyFromDefault 719484854)
+   17 (GetMember fibonacci)
+   18 (CopyFromDefault 126956554)
+   19 (CreateArguments 3990879793)
+   20 (GetMember n)
+   21 (CopyFromDefault 2457994722)
+   22 (Default 2)
+   23 (2457994722 -)
+   24 (SetItem 3990879793 0)
+   25 (Call 126956554)
+   26 (719484854 +)
+   27 (CallEnd)
+)
+Block: (Block __default__
+    0 (Init)
+    1 (Function fibonacci 8e26cbcd-8968-4e69-b70b-9fb90f35dca0)
+    2 (GetMember fibonacci)
+    3 (CopyFromDefault 2822247812)
+    4 (CreateArguments 3033689363)
+    5 (Default 24)
+    6 (SetItem 3033689363 0)
+    7 (Call 2822247812)
+    8 (CallEnd)
+)
+<<< BENCHMARK BEGIN >>>
+
+               Total: 100.000%    1.35065697
+                Loop:  11.203%    0.15132022 /  2550833 =       59 ns
+                Call:  41.229%    0.55686271 /   150049 =     3711 ns
+           GetMember:  17.112%    0.23112015 /   525171 =      440 ns
+             CallEnd:   7.135%    0.09637484 /   150050 =      642 ns
+            BinaryOp:   6.587%    0.08896611 /   375121 =      237 ns
+     CopyFromDefault:   6.460%    0.08724698 /   525170 =      166 ns
+             SetItem:   4.217%    0.05695208 /   150049 =      380 ns
+             Default:   2.888%    0.03901132 /   300098 =      130 ns
+     CreateArguments:   2.644%    0.03571008 /   150049 =      238 ns
+         JumpIfFalse:   0.391%    0.00528143 /   150049 =       35 ns
+                Jump:   0.134%    0.00180813 /    75025 =       24 ns
+            Function:   0.000%    0.00000290 /        1 =     2896 ns
+                Init:   0.000%    0.00000003 /        1 =       30 ns
+                Save:   0.000%    0.00000000 /        0 =      NaN ns
+       CopyToDefault:   0.000%    0.00000000 /        0 =      NaN ns
+           DefMember:   0.000%    0.00000000 /        0 =      NaN ns
+           SetMember:   0.000%    0.00000000 /        0 =      NaN ns
+             GetItem:   0.000%    0.00000000 /        0 =      NaN ns
+
+<<<  BENCHMARK END  >>>
+
+
+Execution time: 1.350920 seconds
+Result: 46368
+
+real	0m2.558s
+user	0m2.052s
+sys	0m0.398s
