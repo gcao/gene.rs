@@ -31,7 +31,7 @@ impl VirtualMachine {
         }
     }
 
-    pub fn load_module(&mut self, module: &Module) -> Rc<RefCell<Any>> {
+    pub fn load_module(&mut self, module: &Module) -> Rc<RefCell<dyn Any>> {
         let block = module.get_default_block();
 
         module.blocks.values().for_each(|block| {
@@ -42,7 +42,7 @@ impl VirtualMachine {
         self.process(block.clone())
     }
 
-    pub fn process(&mut self, mut block: Rc<Block>) -> Rc<RefCell<Any>> {
+    pub fn process(&mut self, mut block: Rc<Block>) -> Rc<RefCell<dyn Any>> {
         let start_time = Instant::now();
 
         let root_context = Context::root();
@@ -430,7 +430,7 @@ impl VirtualMachine {
         result
     }
 
-    fn get_member(&self, registers: Rc<RefCell<Registers>>, name: String) -> Option<Rc<RefCell<Any>>> {
+    fn get_member(&self, registers: Rc<RefCell<Registers>>, name: String) -> Option<Rc<RefCell<dyn Any>>> {
         let registers_ = registers.borrow();
         let context = registers_.context.borrow();
         context.get_member(name)
@@ -440,9 +440,9 @@ impl VirtualMachine {
 #[derive(Debug)]
 pub struct Registers {
     pub id: String,
-    pub default: Rc<RefCell<Any>>,
+    pub default: Rc<RefCell<dyn Any>>,
     pub context: Rc<RefCell<Context>>,
-    pub data: HashMap<String, Rc<RefCell<Any>>>,
+    pub data: HashMap<String, Rc<RefCell<dyn Any>>>,
 }
 
 impl Registers {
@@ -456,16 +456,16 @@ impl Registers {
         }
     }
 
-    pub fn insert(&mut self, key: String, val: Rc<RefCell<Any>>) {
+    pub fn insert(&mut self, key: String, val: Rc<RefCell<dyn Any>>) {
         self.data.insert(key, val);
     }
 }
 
 fn binary_op<'a>(
     op: &'a str,
-    first: Rc<RefCell<Any>>,
-    second: Rc<RefCell<Any>>,
-) -> Rc<RefCell<Any>> {
+    first: Rc<RefCell<dyn Any>>,
+    second: Rc<RefCell<dyn Any>>,
+) -> Rc<RefCell<dyn Any>> {
     let borrowed1 = first.borrow();
     let borrowed2 = second.borrow();
     let value1 = borrowed1.downcast_ref::<Value>().unwrap();

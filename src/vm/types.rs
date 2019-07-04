@@ -19,7 +19,7 @@ impl Application {
 pub struct Context {
     pub namespace: Rc<RefCell<Namespace>>,
     pub scope: Rc<RefCell<Scope>>,
-    pub _self: Option<Rc<RefCell<Any>>>,
+    pub _self: Option<Rc<RefCell<dyn Any>>>,
 }
 
 pub enum VarType {
@@ -28,7 +28,7 @@ pub enum VarType {
 }
 
 impl Context {
-    pub fn new(namespace: Rc<RefCell<Namespace>>, scope: Rc<RefCell<Scope>>, _self: Option<Rc<RefCell<Any>>>) -> Self {
+    pub fn new(namespace: Rc<RefCell<Namespace>>, scope: Rc<RefCell<Scope>>, _self: Option<Rc<RefCell<dyn Any>>>) -> Self {
         Self {
             namespace,
             scope,
@@ -44,7 +44,7 @@ impl Context {
         }
     }
 
-    pub fn def_member(&mut self, name: String, value: Rc<RefCell<Any>>, var_type: VarType) {
+    pub fn def_member(&mut self, name: String, value: Rc<RefCell<dyn Any>>, var_type: VarType) {
         match var_type {
             VarType::SCOPE => {
                 self.scope.borrow_mut().def_member(name, value);
@@ -55,7 +55,7 @@ impl Context {
         }
     }
 
-    pub fn get_member(&self, name: String) -> Option<Rc<RefCell<Any>>> {
+    pub fn get_member(&self, name: String) -> Option<Rc<RefCell<dyn Any>>> {
         let result = self.scope.borrow().get_member(name.clone());
         if result.is_none() {
             self.namespace.borrow().get_member(name)
@@ -64,7 +64,7 @@ impl Context {
         }
     }
 
-    pub fn set_member(&mut self, name: String, value: Rc<RefCell<Any>>) {
+    pub fn set_member(&mut self, name: String, value: Rc<RefCell<dyn Any>>) {
         if self.scope.borrow().has_member(name.clone()) {
             self.scope.borrow_mut().set_member(name, value);
         } else if self.namespace.borrow().has_member(name.clone()) {
@@ -79,7 +79,7 @@ impl Context {
 #[derive(Clone, Debug)]
 pub struct Namespace {
     parent: Option<Rc<RefCell<Namespace>>>,
-    members: HashMap<String, Rc<RefCell<Any>>>,
+    members: HashMap<String, Rc<RefCell<dyn Any>>>,
 }
 
 impl Namespace {
@@ -97,11 +97,11 @@ impl Namespace {
         }
     }
 
-    pub fn def_member(&mut self, name: String, value: Rc<RefCell<Any>>) {
+    pub fn def_member(&mut self, name: String, value: Rc<RefCell<dyn Any>>) {
         self.members.insert(name, value);
     }
 
-    pub fn get_member(&self, name: String) -> Option<Rc<RefCell<Any>>> {
+    pub fn get_member(&self, name: String) -> Option<Rc<RefCell<dyn Any>>> {
         if self.members.contains_key(&name) {
             self.members.get(&name).cloned()
         } else if self.parent.is_some() {
@@ -111,7 +111,7 @@ impl Namespace {
         }
     }
 
-    pub fn set_member(&mut self, name: String, value: Rc<RefCell<Any>>) {
+    pub fn set_member(&mut self, name: String, value: Rc<RefCell<dyn Any>>) {
         if self.members.contains_key(&name) {
             self.members.insert(name.clone(), value);
         } else {
@@ -135,7 +135,7 @@ impl Namespace {
 #[derive(Clone, Debug)]
 pub struct Scope {
     pub parent: Option<Rc<RefCell<Scope>>>,
-    pub members: HashMap<String, Rc<RefCell<Any>>>,
+    pub members: HashMap<String, Rc<RefCell<dyn Any>>>,
 }
 
 impl Scope {
@@ -153,11 +153,11 @@ impl Scope {
         }
     }
 
-    pub fn def_member(&mut self, name: String, value: Rc<RefCell<Any>>) {
+    pub fn def_member(&mut self, name: String, value: Rc<RefCell<dyn Any>>) {
         self.members.insert(name, value);
     }
 
-    pub fn get_member(&self, name: String) -> Option<Rc<RefCell<Any>>> {
+    pub fn get_member(&self, name: String) -> Option<Rc<RefCell<dyn Any>>> {
         let value = self.members.get(&name);
         if value.is_none() && self.parent.is_some() {
             let parent_ = self.parent.clone().unwrap();
@@ -173,7 +173,7 @@ impl Scope {
         }
     }
 
-    pub fn set_member(&mut self, name: String, value: Rc<RefCell<Any>>) {
+    pub fn set_member(&mut self, name: String, value: Rc<RefCell<dyn Any>>) {
         if self.members.contains_key(&name) {
             self.members.insert(name.clone(), value);
         } else {
@@ -274,12 +274,12 @@ impl<'a> Function {
 
 #[derive(Debug)]
 pub struct Arguments {
-    pub data: Vec<Rc<RefCell<Any>>>,
+    pub data: Vec<Rc<RefCell<dyn Any>>>,
 }
 
 impl Arguments {
     pub fn new(
-        data: Vec<Rc<RefCell<Any>>>,
+        data: Vec<Rc<RefCell<dyn Any>>>,
     ) -> Self {
         Arguments {
             // props,
