@@ -184,19 +184,15 @@ impl VirtualMachine {
                 Instruction::Function(name, args, body_id) => {
                     self.pos += 1;
                     let function_temp;
+                    let registers_temp = registers_.clone();
+                    let mut registers = registers_temp.borrow_mut();
                     {
-                        let registers_temp = registers_.clone();
-                        let registers = registers_temp.borrow();
                         let mut context = registers.context.borrow_mut();
                         let function = Function::new(name.clone(), (*args).clone(), body_id.clone(), true, context.namespace.clone(), context.scope.clone());
                         function_temp = Rc::new(RefCell::new(function));
                         context.def_member(name.clone(), function_temp.clone(), VarType::NAMESPACE);
                     }
-                    {
-                        let registers_temp = registers_.clone();
-                        let mut registers = registers_temp.borrow_mut();
-                        registers.default = function_temp.clone();
-                    }
+                    registers.default = function_temp.clone();
                 }
 
                 Instruction::Call(target_reg, args_reg, _options) => {

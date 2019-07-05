@@ -50,7 +50,7 @@ impl Context {
                 self.scope.borrow_mut().def_member(name, value);
             }
             VarType::NAMESPACE => {
-                self.scope.borrow_mut().def_member(name, value);
+                self.namespace.borrow_mut().def_member(name, value);
             }
         }
     }
