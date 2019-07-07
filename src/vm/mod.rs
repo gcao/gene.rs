@@ -195,43 +195,6 @@ impl VirtualMachine {
                     registers.default = function_temp.clone();
                 }
 
-                Instruction::Call(target_reg, args_reg, _options) => {
-                    self.pos += 1;
-
-                    let registers_temp = registers_.clone();
-                    let registers = registers_temp.borrow();
-                    let borrowed = registers.data[target_reg].borrow();
-                    let target = borrowed.downcast_ref::<Function>().unwrap();
-
-                    let mut new_scope = Scope::new(target.parent_scope.clone());
-
-                    {
-                        let args_ = registers.data[args_reg].borrow();
-                        let args = args_.downcast_ref::<Vec<Rc<RefCell<Value>>>>().unwrap();
-
-                        for matcher in target.args.data_matchers.iter() {
-                            let arg_value = args[matcher.index].clone();
-                            new_scope.def_member(matcher.name.clone(), arg_value);
-                        }
-                    }
-
-                    let new_namespace = Namespace::new(target.parent_namespace.clone());
-                    let new_context = Context::new(Rc::new(RefCell::new(new_namespace)), Rc::new(RefCell::new(new_scope)), None);
-                    let mut new_registers = Registers::new(Rc::new(RefCell::new(new_context)));
-
-                    let ret_addr = Address::new(block.id.clone(), self.pos);
-                    new_registers.insert("caller".to_string(), Rc::new(RefCell::new(ret_addr)));
-                    new_registers.insert("caller_registers".to_string(), Rc::new(RefCell::new(registers.id.clone())));
-
-                    let id = new_registers.id.clone();
-                    let registers = Rc::new(RefCell::new(new_registers));
-                    registers_ = registers.clone();
-                    self.registers_store.insert(id, registers);
-
-                    block = self.code_manager.blocks[&target.body].clone();
-                    self.pos = 0;
-                }
-
                 Instruction::CallEnd => {
                     let registers_temp = registers_.clone();
                     let registers = registers_temp.borrow();
