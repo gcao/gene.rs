@@ -125,7 +125,7 @@ impl VirtualMachine {
                     self.pos += 1;
                     let registers_temp = registers_.clone();
                     let mut registers = registers_temp.borrow_mut();
-                    registers.default = registers.data[to].clone();
+                    registers.default = registers.get(to);
 
                     benchmarker.copy_to_default_time.report_end();
                 }
@@ -232,7 +232,7 @@ impl VirtualMachine {
                     self.pos += 1;
                     let registers_temp = registers_.clone();
                     let mut registers = registers_temp.borrow_mut();
-                    let first = registers.data[first].clone();
+                    let first = registers.get(first);
                     let second = registers.default.clone();
                     let result = binary_op(op, first, second);
                     registers.default = result;
@@ -277,13 +277,15 @@ impl VirtualMachine {
 
                     let registers_temp = registers_.clone();
                     let registers = registers_temp.borrow();
-                    let borrowed = registers.data[target_reg].borrow();
+                    let borrowed_ = registers.get(target_reg);
+                    let borrowed = borrowed_.borrow();
                     let target = borrowed.downcast_ref::<Function>().unwrap();
 
                     let mut new_scope = Scope::new(target.parent_scope.clone());
 
                     {
-                        let args_ = registers.data[args_reg].borrow();
+                        let args_temp = registers.get(args_reg);
+                        let args_ = args_temp.borrow();
                         let args = args_.downcast_ref::<Vec<Rc<RefCell<Value>>>>().unwrap();
 
                         for matcher in target.args.data_matchers.iter() {
@@ -316,14 +318,16 @@ impl VirtualMachine {
 
                     let registers_temp = registers_.clone();
                     let registers = registers_temp.borrow();
-                    if registers.data.contains_key(&CALLER_REG) {
-                        let borrowed = registers.data[&CALLER_REG].borrow();
+                    if registers.contains_key(&CALLER_REG) {
+                        let borrowed_ = registers.get(&CALLER_REG);
+                        let borrowed = borrowed_.borrow();
                         let ret_addr = borrowed.downcast_ref::<Address>().unwrap();
 
                         block = self.code_manager.blocks[&ret_addr.block_id].clone();
                         self.pos = ret_addr.pos;
 
-                        let registers_id_borrowed = registers.data[&CALLER_REGISTERS_REG].borrow();
+                        let borrowed_ = registers.get(&CALLER_REGISTERS_REG);
+                        let registers_id_borrowed = borrowed_.borrow();
                         let registers_id = registers_id_borrowed.downcast_ref::<String>().unwrap();
                         let caller_registers_temp = self.registers_store[registers_id].clone();
                         registers_ = caller_registers_temp.clone();
@@ -365,7 +369,8 @@ impl VirtualMachine {
                         let value_ = registers.default.borrow();
                         value = value_.downcast_ref::<Value>().unwrap().clone();
                     }
-                    let mut target_ = registers.data[target_reg].borrow_mut();
+                    let target_temp = registers.get(target_reg);
+                    let mut target_ = target_temp.borrow_mut();
                     if let Some(args) = target_.downcast_mut::<Vec<Rc<RefCell<Value>>>>() {
                         while *index >= args.len() {
                             args.push(Rc::new(RefCell::new(Value::Void)));
@@ -401,7 +406,8 @@ impl VirtualMachine {
                         let value_ = registers.default.borrow();
                         value = value_.downcast_ref::<Value>().unwrap().clone();
                     }
-                    let mut target_ = registers.data[target_reg].borrow_mut();
+                    let target_temp = registers.get(target_reg);
+                    let mut target_ = target_temp.borrow_mut();
                     if let Some(v) = target_.downcast_mut::<Value>() {
                         match v {
                             Value::Map(map) => {
@@ -461,8 +467,19 @@ impl Registers {
         }
     }
 
+    #[inline]
     pub fn insert(&mut self, key: u16, val: Rc<RefCell<dyn Any>>) {
         self.data.insert(key, val);
+    }
+
+    #[inline]
+    pub fn contains_key(&self, key: &u16) -> bool {
+        self.data.contains_key(key)
+    }
+
+    #[inline]
+    pub fn get(&self, key: &u16) -> Rc<RefCell<dyn Any>> {
+        self.data[key].clone()
     }
 }
 
