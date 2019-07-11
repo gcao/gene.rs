@@ -141,7 +141,7 @@ impl Compiler {
             for (key, value) in map.iter() {
                 if !value.is_literal() {
                     self.compile_(block, value.clone());
-                    (*block).add_instr(Instruction::SetProp(reg.clone(), key.clone()));
+                    (*block).add_instr(Instruction::SetProp(reg, key.clone()));
                 }
             }
 
@@ -385,20 +385,20 @@ pub enum Instruction {
     /// Save Value to default register
     Default(Value),
     /// Save Value to named register
-    Save(String, Value),
-    CopyFromDefault(String),
-    CopyToDefault(String),
+    Save(u16, Value),
+    CopyFromDefault(u16),
+    CopyToDefault(u16),
 
     DefMember(String),
     GetMember(String),
     SetMember(String),
 
     /// GetItem(target reg, index)
-    GetItem(String, usize),
+    GetItem(u16, usize),
     // /// GetItemDynamic(target reg, index reg)
     // GetItemDynamic(String, String),
     /// SetItem(target reg, index, value reg)
-    SetItem(String, usize),
+    SetItem(u16, usize),
     // /// SetItemDynamic(target reg, index reg, value reg)
     // SetItemDynamic(String, String, String),
 
@@ -407,7 +407,7 @@ pub enum Instruction {
     // /// GetPropDynamic(target reg, name reg)
     // GetPropDynamic(String, String),
     /// SetProp(target reg, name, value reg)
-    SetProp(String, String),
+    SetProp(u16, String),
     // /// SetPropDynamic(target reg, name reg, value reg)
     // SetPropDynamic(String, String, String),
 
@@ -420,15 +420,15 @@ pub enum Instruction {
     /// BinaryOp(op, first reg)
     /// Second operand is in default reg
     /// Result is stored in default reg
-    BinaryOp(String, String),
+    BinaryOp(String, u16),
 
     /// Function(name, args reg, block id)
     Function(String, Matcher, String),
     /// Create an argument object and store in a register
-    CreateArguments(String),
+    CreateArguments(u16),
 
     /// Call(options)
-    Call(String, String, HashMap<String, Rc<dyn Any>>),
+    Call(u16, u16, HashMap<String, Rc<dyn Any>>),
     CallEnd,
 }
 
@@ -448,17 +448,17 @@ impl fmt::Display for Instruction {
             }
             Instruction::Save(reg, v) => {
                 fmt.write_str("Save ")?;
-                fmt.write_str(reg)?;
+                fmt.write_str(&reg.to_string())?;
                 fmt.write_str(" ")?;
                 fmt.write_str(&v.to_string())?;
             }
             Instruction::CopyFromDefault(reg) => {
                 fmt.write_str("CopyFromDefault ")?;
-                fmt.write_str(reg)?;
+                fmt.write_str(&reg.to_string())?;
             }
             Instruction::CopyToDefault(reg) => {
                 fmt.write_str("CopyToDefault ")?;
-                fmt.write_str(reg)?;
+                fmt.write_str(&reg.to_string())?;
             }
             Instruction::DefMember(name) => {
                 fmt.write_str("DefMember ")?;
@@ -472,21 +472,21 @@ impl fmt::Display for Instruction {
                 fmt.write_str("SetMember ")?;
                 fmt.write_str(name)?;
             }
-            Instruction::GetItem(name, index) => {
+            Instruction::GetItem(reg, index) => {
                 fmt.write_str("GetItem ")?;
-                fmt.write_str(name)?;
+                fmt.write_str(&reg.to_string())?;
                 fmt.write_str(" ")?;
                 fmt.write_str(&index.to_string())?;
             }
-            Instruction::SetItem(name, index) => {
+            Instruction::SetItem(reg, index) => {
                 fmt.write_str("SetItem ")?;
-                fmt.write_str(name)?;
+                fmt.write_str(&reg.to_string())?;
                 fmt.write_str(" ")?;
                 fmt.write_str(&index.to_string())?;
             }
-            Instruction::SetProp(name, key) => {
+            Instruction::SetProp(reg, key) => {
                 fmt.write_str("Get ")?;
-                fmt.write_str(name)?;
+                fmt.write_str(&reg.to_string())?;
                 fmt.write_str(" ")?;
                 fmt.write_str(key)?;
             }
@@ -508,7 +508,7 @@ impl fmt::Display for Instruction {
                 fmt.write_str("LoopEnd")?;
             }
             Instruction::BinaryOp(op, first) => {
-                fmt.write_str(first)?;
+                fmt.write_str(&first.to_string())?;
                 fmt.write_str(" ")?;
                 fmt.write_str(op)?;
             }
@@ -521,18 +521,18 @@ impl fmt::Display for Instruction {
                 // fmt.write_str(" ")?;
                 fmt.write_str(body_id)?;
             }
-            Instruction::Call(target, args, _options) => {
+            Instruction::Call(target_reg, args_reg, _options) => {
                 fmt.write_str("Call ")?;
-                fmt.write_str(target)?;
+                fmt.write_str(&target_reg.to_string())?;
                 fmt.write_str(" ")?;
-                fmt.write_str(args)?;
+                fmt.write_str(&args_reg.to_string())?;
             }
             Instruction::CallEnd => {
                 fmt.write_str("CallEnd")?;
             }
             Instruction::CreateArguments(reg) => {
                 fmt.write_str("CreateArguments ")?;
-                fmt.write_str(reg)?;
+                fmt.write_str(&reg.to_string())?;
             }
             // _ => {
             //     fmt.write_str("???")?;
@@ -543,8 +543,8 @@ impl fmt::Display for Instruction {
     }
 }
 
-fn new_reg() -> String {
-    format!("{}", random::<u32>())
+fn new_reg() -> u16 {
+    random::<u16>()
 }
 
 fn is_binary_op(op: &str) -> bool {

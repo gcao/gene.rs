@@ -14,6 +14,9 @@ use super::utils::new_uuidv4;
 
 use super::benchmarker::Benchmarker;
 
+const CALLER_REG: u16 = 0;
+const CALLER_REGISTERS_REG: u16 = 1;
+
 pub struct VirtualMachine {
     registers_store: HashMap<String, Rc<RefCell<Registers>>>,
     pos: usize,
@@ -96,7 +99,7 @@ impl VirtualMachine {
                     self.pos += 1;
                     let registers_temp = registers_.clone();
                     let mut registers = registers_temp.borrow_mut();
-                    registers.insert(reg.clone(), Rc::new(RefCell::new(v.clone())));
+                    registers.insert(*reg, Rc::new(RefCell::new(v.clone())));
 
                     benchmarker.save_time.report_end();
                 }
@@ -294,8 +297,8 @@ impl VirtualMachine {
                     let mut new_registers = Registers::new(Rc::new(RefCell::new(new_context)));
 
                     let ret_addr = Address::new(block.id.clone(), self.pos);
-                    new_registers.insert("caller".to_string(), Rc::new(RefCell::new(ret_addr)));
-                    new_registers.insert("caller_registers".to_string(), Rc::new(RefCell::new(registers.id.clone())));
+                    new_registers.insert(CALLER_REG, Rc::new(RefCell::new(ret_addr)));
+                    new_registers.insert(CALLER_REGISTERS_REG, Rc::new(RefCell::new(registers.id.clone())));
 
                     let id = new_registers.id.clone();
                     let registers = Rc::new(RefCell::new(new_registers));
@@ -313,14 +316,14 @@ impl VirtualMachine {
 
                     let registers_temp = registers_.clone();
                     let registers = registers_temp.borrow();
-                    if registers.data.contains_key("caller") {
-                        let borrowed = registers.data["caller"].borrow();
+                    if registers.data.contains_key(&CALLER_REG) {
+                        let borrowed = registers.data[&CALLER_REG].borrow();
                         let ret_addr = borrowed.downcast_ref::<Address>().unwrap();
 
                         block = self.code_manager.blocks[&ret_addr.block_id].clone();
                         self.pos = ret_addr.pos;
 
-                        let registers_id_borrowed = registers.data["caller_registers"].borrow();
+                        let registers_id_borrowed = registers.data[&CALLER_REGISTERS_REG].borrow();
                         let registers_id = registers_id_borrowed.downcast_ref::<String>().unwrap();
                         let caller_registers_temp = self.registers_store[registers_id].clone();
                         registers_ = caller_registers_temp.clone();
@@ -442,7 +445,9 @@ pub struct Registers {
     pub id: String,
     pub default: Rc<RefCell<dyn Any>>,
     pub context: Rc<RefCell<Context>>,
-    pub data: HashMap<String, Rc<RefCell<dyn Any>>>,
+    pub data: HashMap<u16, Rc<RefCell<dyn Any>>>,
+    // pub cache: [Rc<RefCell<dyn Any>>; 16],
+    // pub store: HashMap<usize, Vec<Rc<RefCell<dyn Any>>>>,
 }
 
 impl Registers {
@@ -456,7 +461,7 @@ impl Registers {
         }
     }
 
-    pub fn insert(&mut self, key: String, val: Rc<RefCell<dyn Any>>) {
+    pub fn insert(&mut self, key: u16, val: Rc<RefCell<dyn Any>>) {
         self.data.insert(key, val);
     }
 }
