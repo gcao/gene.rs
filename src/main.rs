@@ -1,6 +1,6 @@
 extern crate gene;
 
-use std::collections::HashMap;
+use std::collections::*;
 use std::time::*;
 
 use gene::compiler::Compiler;
@@ -13,7 +13,9 @@ struct Dummy {
     total_time: Duration,
     recent_start_time: Instant,
     arr: [i64; 16],
+    vec: Vec<i64>,
     map: HashMap<usize, i64>,
+    map2: BTreeMap<usize, i64>,
 }
 
 impl Dummy {
@@ -23,7 +25,9 @@ impl Dummy {
             total_time: Duration::new(0, 0),
             recent_start_time: Instant::now(),
             arr: [0; 16],
+            vec: Vec::new(),
             map: HashMap::new(),
+            map2: BTreeMap::new(),
         }
     }
 
@@ -36,6 +40,8 @@ impl Dummy {
     }
 
     pub fn calibrate_perf(&mut self) {
+        let mut result = 0;
+
         let start = Instant::now();
         self.pos += 1;
         self.pos += 2;
@@ -48,7 +54,7 @@ impl Dummy {
         self.pos += 9;
         self.pos += 10;
         let time = start.elapsed();
-        println!("Increment struct property: {:6.3} ns", time.as_nanos() as f64 / 10.);
+        show("Increment struct property", time.as_nanos());
 
         let mut _pos = 0;
         let start = Instant::now();
@@ -63,7 +69,7 @@ impl Dummy {
         _pos += 9;
         _pos += 10;
         let time = start.elapsed();
-        println!("Increment local variable: {:6.3} ns", time.as_nanos() as f64 / 10.);
+        show("Increment local variable", time.as_nanos());
 
         // 1
         self.report_start();
@@ -95,7 +101,7 @@ impl Dummy {
         // 10
         self.report_start();
         self.report_end();
-        println!("Report_start/report_end: {:6.3} ns", self.total_time.as_nanos() as f64 / 10.);
+        show("Report_start/report_end", self.total_time.as_nanos());
 
         let start = Instant::now();
         self.arr[0] = 1;
@@ -109,7 +115,49 @@ impl Dummy {
         self.arr[8] = 1;
         self.arr[9] = 1;
         let time = start.elapsed();
-        println!("Access array: {:6.3} ns", time.as_nanos() as f64 / 10.);
+        show("Array write", time.as_nanos());
+
+        let start = Instant::now();
+        result += self.arr[0];
+        result += self.arr[1];
+        result += self.arr[2];
+        result += self.arr[3];
+        result += self.arr[4];
+        result += self.arr[5];
+        result += self.arr[6];
+        result += self.arr[7];
+        result += self.arr[8];
+        result += self.arr[9];
+        let time = start.elapsed();
+        show("Array read", time.as_nanos());
+
+        let start = Instant::now();
+        self.vec.insert(0, 1);
+        self.vec.insert(0, 1);
+        self.vec.insert(0, 1);
+        self.vec.insert(0, 1);
+        self.vec.insert(0, 1);
+        self.vec.insert(0, 1);
+        self.vec.insert(0, 1);
+        self.vec.insert(0, 1);
+        self.vec.insert(0, 1);
+        self.vec.insert(0, 1);
+        let time = start.elapsed();
+        show("Vec insert", time.as_nanos());
+
+        let start = Instant::now();
+        result += self.vec[0];
+        result += self.vec[1];
+        result += self.vec[2];
+        result += self.vec[3];
+        result += self.vec[4];
+        result += self.vec[5];
+        result += self.vec[6];
+        result += self.vec[7];
+        result += self.vec[8];
+        result += self.vec[9];
+        let time = start.elapsed();
+        show("Vec read", time.as_nanos());
 
         let start = Instant::now();
         self.map.insert(0, 1);
@@ -123,9 +171,51 @@ impl Dummy {
         self.map.insert(8, 1);
         self.map.insert(9, 1);
         let time = start.elapsed();
-        println!("Access map: {:6.3} ns", time.as_nanos() as f64 / 10.);
+        show("HashMap insert", time.as_nanos());
 
-        println!("");
+        let start = Instant::now();
+        result += self.map[&0];
+        result += self.map[&1];
+        result += self.map[&2];
+        result += self.map[&3];
+        result += self.map[&4];
+        result += self.map[&5];
+        result += self.map[&6];
+        result += self.map[&7];
+        result += self.map[&8];
+        result += self.map[&9];
+        let time = start.elapsed();
+        show("HashMap read", time.as_nanos());
+
+        let start = Instant::now();
+        self.map2.insert(0, 1);
+        self.map2.insert(1, 1);
+        self.map2.insert(2, 1);
+        self.map2.insert(3, 1);
+        self.map2.insert(4, 1);
+        self.map2.insert(5, 1);
+        self.map2.insert(6, 1);
+        self.map2.insert(7, 1);
+        self.map2.insert(8, 1);
+        self.map2.insert(9, 1);
+        let time = start.elapsed();
+        show("BTreeMap insert", time.as_nanos());
+
+        let start = Instant::now();
+        result += self.map2[&0];
+        result += self.map2[&1];
+        result += self.map2[&2];
+        result += self.map2[&3];
+        result += self.map2[&4];
+        result += self.map2[&5];
+        result += self.map2[&6];
+        result += self.map2[&7];
+        result += self.map2[&8];
+        result += self.map2[&9];
+        let time = start.elapsed();
+        show("BTreeMap read", time.as_nanos());
+
+        println!("IGNORE THIS: {}\n", result);
     }
 }
 
@@ -153,4 +243,8 @@ fn main() {
     let borrowed = result_temp.borrow();
     let result = borrowed.downcast_ref::<Value>().unwrap();
     println!("Result: {}", result);
+}
+
+fn show(name: &str, time: u128) {
+    println!("{:>40}: {:9.3} ns", name, time as f64 / 10.);
 }
