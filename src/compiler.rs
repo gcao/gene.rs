@@ -325,9 +325,9 @@ impl Compiler {
     fn get_reg(&mut self, block: &mut Block) -> u16 {
         let trackers = self.reg_trackers.get_mut(&block.id).unwrap();
         for i in 2..16 {
-            let mut available = false;
+            let mut available = true;
             for tracker in trackers.iter() {
-                if tracker == &(i as u16) {
+                if *tracker == i as u16 {
                     available = false;
                 }
             }
