@@ -68,35 +68,35 @@ impl Dummy {
         let time = start.elapsed();
         println!("Increment local variable: {:6.3} ns", time.as_nanos() as f64 / 10.);
 
+        // 1
         self.report_start();
-        self.pos += 1;
         self.report_end();
+        // 2
         self.report_start();
-        self.pos += 2;
         self.report_end();
+        // 3
         self.report_start();
-        self.pos += 3;
         self.report_end();
+        // 4
         self.report_start();
-        self.pos += 4;
         self.report_end();
+        // 5
         self.report_start();
-        self.pos += 5;
         self.report_end();
+        // 6
         self.report_start();
-        self.pos += 6;
         self.report_end();
+        // 7
         self.report_start();
-        self.pos += 7;
         self.report_end();
+        // 8
         self.report_start();
-        self.pos += 8;
         self.report_end();
+        // 9
         self.report_start();
-        self.pos += 9;
         self.report_end();
+        // 10
         self.report_start();
-        self.pos += 10;
         self.report_end();
         println!("Report_start/report_end: {:6.3} ns", self.total_time.as_nanos() as f64 / 10.);
 

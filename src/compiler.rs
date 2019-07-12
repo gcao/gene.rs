@@ -49,6 +49,10 @@ impl LiteralCheck for Gene {
 #[derive(Debug)]
 pub struct Compiler {
     module: Rc<RefCell<Module>>,
+    // reg_trackers:
+    //   key: block id,
+    //   value: list of registers being used
+    reg_trackers: HashMap<String, Vec<u16>>,
 }
 
 impl Compiler {
@@ -56,12 +60,15 @@ impl Compiler {
         let module = Module::new();
         Compiler {
             module: Rc::new(RefCell::new(module)),
+            reg_trackers: HashMap::new(),
         }
     }
 
     pub fn compile(&mut self, ast: Value) -> Rc<RefCell<Module>> {
         let mut block = Block::new("__default__".to_string());
-        // let block_id = block.id.clone();
+
+        self.reg_trackers.insert(block.id.clone(), Vec::new());
+
         block.add_instr(Instruction::Init);
         self.compile_(&mut block, ast);
         block.add_instr(Instruction::CallEnd);
@@ -110,18 +117,19 @@ impl Compiler {
                     arr2.push(Value::Void);
                 }
             }
-            let reg = new_reg();
-            (*block).add_instr(Instruction::Save(reg.clone(), Value::Array(arr2)));
+            let reg = self.get_reg(block);
+            (*block).add_instr(Instruction::Save(reg, Value::Array(arr2)));
 
             for (index, item) in arr.iter().enumerate() {
                 if !item.is_literal() {
                     self.compile_(block, item.clone());
-                    (*block).add_instr(Instruction::SetItem(reg.clone(), index));
+                    (*block).add_instr(Instruction::SetItem(reg, index));
                 }
             }
 
             // Copy to default register
             (*block).add_instr(Instruction::CopyToDefault(reg));
+            self.free_reg(block, reg);
         }
     }
 
@@ -135,8 +143,8 @@ impl Compiler {
                     map2.insert(key.clone(), value.clone());
                 }
             }
-            let reg = new_reg();
-            (*block).add_instr(Instruction::Save(reg.clone(), Value::Map(map2)));
+            let reg = self.get_reg(block);
+            (*block).add_instr(Instruction::Save(reg, Value::Map(map2)));
 
             for (key, value) in map.iter() {
                 if !value.is_literal() {
@@ -147,6 +155,7 @@ impl Compiler {
 
             // Copy to default register
             (*block).add_instr(Instruction::CopyToDefault(reg));
+            self.free_reg(block, reg);
         }
     }
 
@@ -179,6 +188,8 @@ impl Compiler {
                 let mut body = Block::new(name.clone());
                 let body_id = body.id.clone();
 
+                self.reg_trackers.insert(body_id.clone(), Vec::new());
+
                 let borrowed = data[1].borrow();
                 let matcher =  Matcher::from(&*borrowed);
 
@@ -204,13 +215,14 @@ impl Compiler {
                 let first = data[0].borrow().clone();
                 self.compile_(block, first);
 
-                let first_reg = new_reg();
-                (*block).add_instr(Instruction::CopyFromDefault(first_reg.clone()));
+                let first_reg = self.get_reg(block);
+                (*block).add_instr(Instruction::CopyFromDefault(first_reg));
 
                 let second = data[1].borrow().clone();
                 self.compile_(block, second);
 
                 (*block).add_instr(Instruction::BinaryOp(s.to_string(), first_reg));
+                self.free_reg(block, first_reg);
             }
             Value::Symbol(ref s) if s == "while" => {
                 self.compile_while(block, data);
@@ -222,20 +234,22 @@ impl Compiler {
                 // Invocation
                 let borrowed_kind = kind.borrow().clone();
                 self.compile_(block, borrowed_kind);
-                let target_reg = new_reg();
-                (*block).add_instr(Instruction::CopyFromDefault(target_reg.clone()));
+                let target_reg = self.get_reg(block);
+                (*block).add_instr(Instruction::CopyFromDefault(target_reg));
 
                 let options = HashMap::<String, Rc<dyn Any>>::new();
 
-                let args_reg = new_reg();
-                (*block).add_instr(Instruction::CreateArguments(args_reg.clone()));
+                let args_reg = self.get_reg(block);
+                (*block).add_instr(Instruction::CreateArguments(args_reg));
                 for (i, item) in data.iter().enumerate() {
                     let borrowed = item.borrow();
                     self.compile_(block, (*borrowed).clone());
-                    (*block).add_instr(Instruction::SetItem(args_reg.clone(), i));
+                    (*block).add_instr(Instruction::SetItem(args_reg, i));
                 }
 
-                (*block).add_instr(Instruction::Call(target_reg.clone(), args_reg.clone(), options));
+                (*block).add_instr(Instruction::Call(target_reg, args_reg, options));
+                self.free_reg(block, target_reg);
+                self.free_reg(block, args_reg);
             }
         };
     }
@@ -304,6 +318,32 @@ impl Compiler {
 
         let end_index = block.instructions.len();
         mem::replace(&mut (*block).instructions[jump_index], Instruction::JumpIfFalse(end_index as i16));
+    }
+
+    /// 1. find and return available register
+    /// 2. if all registers are occupied
+    fn get_reg(&mut self, block: &mut Block) -> u16 {
+        let trackers = self.reg_trackers.get_mut(&block.id).unwrap();
+        for i in 2..16 {
+            let mut available = false;
+            for tracker in trackers.iter() {
+                if tracker == &(i as u16) {
+                    available = false;
+                }
+            }
+            if available {
+                trackers.push(i);
+                return i as u16;
+            }
+        }
+        16 + random::<u16>()
+    }
+
+    fn free_reg(&mut self, block: &mut Block, reg: u16) {
+        if reg < 16 {
+            let trackers = self.reg_trackers.get_mut(&block.id).unwrap();
+            trackers.retain(|&tracker| tracker != reg)
+        }
     }
 }
 
@@ -511,6 +551,7 @@ impl fmt::Display for Instruction {
                 fmt.write_str(&first.to_string())?;
                 fmt.write_str(" ")?;
                 fmt.write_str(op)?;
+                fmt.write_str(" Default")?;
             }
             Instruction::Function(name, _matcher, body_id) => {
                 fmt.write_str("Function ")?;
@@ -541,10 +582,6 @@ impl fmt::Display for Instruction {
         fmt.write_str(")")?;
         Ok(())
     }
-}
-
-fn new_reg() -> u16 {
-    random::<u16>()
 }
 
 fn is_binary_op(op: &str) -> bool {
