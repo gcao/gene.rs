@@ -1,7 +1,5 @@
 extern crate gene;
 
-use std::cell::RefCell;
-use std::rc::Rc;
 use std::collections::HashMap;
 use std::time::*;
 
@@ -14,18 +12,17 @@ struct Dummy {
     pos: usize,
     total_time: Duration,
     recent_start_time: Instant,
-    arr: [Rc<RefCell<String>>; 10],
-    map: HashMap<usize, Rc<RefCell<String>>>,
+    arr: [i64; 16],
+    map: HashMap<usize, i64>,
 }
 
 impl Dummy {
     pub fn new() -> Self {
-        let s = Rc::new(RefCell::new("test".to_string()));
         Dummy {
             pos: 0,
             total_time: Duration::new(0, 0),
             recent_start_time: Instant::now(),
-            arr: [s.clone(), s.clone(), s.clone(), s.clone(), s.clone(), s.clone(), s.clone(), s.clone(), s.clone(), s.clone()],
+            arr: [0; 16],
             map: HashMap::new(),
         }
     }
@@ -100,32 +97,31 @@ impl Dummy {
         self.report_end();
         println!("Report_start/report_end: {:6.3} ns", self.total_time.as_nanos() as f64 / 10.);
 
-        let s = Rc::new(RefCell::new("s".to_string()));
         let start = Instant::now();
-        self.arr[0] = s.clone();
-        self.arr[1] = s.clone();
-        self.arr[2] = s.clone();
-        self.arr[3] = s.clone();
-        self.arr[4] = s.clone();
-        self.arr[5] = s.clone();
-        self.arr[6] = s.clone();
-        self.arr[7] = s.clone();
-        self.arr[8] = s.clone();
-        self.arr[9] = s.clone();
+        self.arr[0] = 1;
+        self.arr[1] = 1;
+        self.arr[2] = 1;
+        self.arr[3] = 1;
+        self.arr[4] = 1;
+        self.arr[5] = 1;
+        self.arr[6] = 1;
+        self.arr[7] = 1;
+        self.arr[8] = 1;
+        self.arr[9] = 1;
         let time = start.elapsed();
         println!("Access array: {:6.3} ns", time.as_nanos() as f64 / 10.);
 
         let start = Instant::now();
-        self.map.insert(0, s.clone());
-        self.map.insert(1, s.clone());
-        self.map.insert(2, s.clone());
-        self.map.insert(3, s.clone());
-        self.map.insert(4, s.clone());
-        self.map.insert(5, s.clone());
-        self.map.insert(6, s.clone());
-        self.map.insert(7, s.clone());
-        self.map.insert(8, s.clone());
-        self.map.insert(9, s.clone());
+        self.map.insert(0, 1);
+        self.map.insert(1, 1);
+        self.map.insert(2, 1);
+        self.map.insert(3, 1);
+        self.map.insert(4, 1);
+        self.map.insert(5, 1);
+        self.map.insert(6, 1);
+        self.map.insert(7, 1);
+        self.map.insert(8, 1);
+        self.map.insert(9, 1);
         let time = start.elapsed();
         println!("Access map: {:6.3} ns", time.as_nanos() as f64 / 10.);
 
