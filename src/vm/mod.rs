@@ -80,7 +80,6 @@ impl VirtualMachine {
 
             // println!("{: <20} {: >5} {}", block.name, self.pos, instr);
             // dbg!(instr);
-
             match instr {
                 Instruction::Default(v) => {
                     benchmarker.default_time.report_start();
@@ -318,11 +317,9 @@ impl VirtualMachine {
 
                     let registers_temp = registers_.clone();
                     let registers = registers_temp.borrow();
-                    if registers.contains_key(&CALLER_REG) {
-                        let borrowed_ = registers.get(&CALLER_REG);
-                        let borrowed = borrowed_.borrow();
-                        let ret_addr = borrowed.downcast_ref::<Address>().unwrap();
-
+                    let borrowed_ = registers.get(&CALLER_REG);
+                    let borrowed = borrowed_.borrow();
+                    if let Some(ret_addr) = borrowed.downcast_ref::<Address>() {
                         block = self.code_manager.blocks[&ret_addr.block_id].clone();
                         self.pos = ret_addr.pos;
 
@@ -451,35 +448,44 @@ pub struct Registers {
     pub id: String,
     pub default: Rc<RefCell<dyn Any>>,
     pub context: Rc<RefCell<Context>>,
-    pub data: HashMap<u16, Rc<RefCell<dyn Any>>>,
-    // pub cache: [Rc<RefCell<dyn Any>>; 16],
-    // pub store: HashMap<usize, Vec<Rc<RefCell<dyn Any>>>>,
+    pub cache: [Rc<RefCell<dyn Any>>; 16],
+    pub store: HashMap<u16, Rc<RefCell<dyn Any>>>,
 }
 
 impl Registers {
     pub fn new(context: Rc<RefCell<Context>>) -> Self {
-        let data = HashMap::new();
+        let dummy = Rc::new(RefCell::new(0));
+
         Registers {
             id: new_uuidv4(),
-            default: Rc::new(RefCell::new(0)), // Put a dummy value
+            default: dummy.clone(),
             context,
-            data,
+            cache: [
+                dummy.clone(), dummy.clone(), dummy.clone(), dummy.clone(),
+                dummy.clone(), dummy.clone(), dummy.clone(), dummy.clone(),
+                dummy.clone(), dummy.clone(), dummy.clone(), dummy.clone(),
+                dummy.clone(), dummy.clone(), dummy.clone(), dummy.clone(),
+            ],
+            store: HashMap::new(),
         }
     }
 
     #[inline]
     pub fn insert(&mut self, key: u16, val: Rc<RefCell<dyn Any>>) {
-        self.data.insert(key, val);
-    }
-
-    #[inline]
-    pub fn contains_key(&self, key: &u16) -> bool {
-        self.data.contains_key(key)
+        if key < 16 {
+            self.cache[key as usize] = val;
+        } else {
+            self.store.insert(key, val);
+        }
     }
 
     #[inline]
     pub fn get(&self, key: &u16) -> Rc<RefCell<dyn Any>> {
-        self.data[key].clone()
+        if *key < 16 {
+            self.cache[*key as usize].clone()
+        } else {
+            self.store[key].clone()
+        }
     }
 }
 
