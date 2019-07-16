@@ -436,6 +436,7 @@ impl VirtualMachine {
         result
     }
 
+    #[inline]
     fn get_member(&self, registers: Rc<RefCell<Registers>>, name: String) -> Option<Rc<RefCell<dyn Any>>> {
         let registers_ = registers.borrow();
         let context = registers_.context.borrow();
