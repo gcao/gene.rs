@@ -1,0 +1,94 @@
+Testcase: fib24
+2019-07-16 14:13:29
+4b7d4a47
+117ff500 4b7d4a47
+
+============================
+Application log starts below
+vvvvvvvvvvvvvvvvvvvvvvvvvvvv
+
+               Increment struct property:     2.500 ns
+                Increment local variable:     2.700 ns
+                 Report_start/report_end:    28.200 ns
+                             Array write:   120.100 ns
+                              Array read:     7.500 ns
+                              Vec insert:  3758.500 ns
+                                Vec read:     5.700 ns
+                          HashMap insert:   803.400 ns
+                            HashMap read:    35.100 ns
+                         BTreeMap insert:   271.200 ns
+                           BTreeMap read:    82.300 ns
+IGNORE THIS: 40
+
+Block: (Block fibonacci
+    0 (GetMember n)
+    1 (CopyFromDefault 2)
+    2 (Default 2)
+    3 (2 < Default)
+    4 (JumpIfFalse 7)
+    5 (GetMember n)
+    6 (Jump 27)
+    7 (GetMember fibonacci)
+    8 (CopyFromDefault 2)
+    9 (CreateArguments 3)
+   10 (GetMember n)
+   11 (CopyFromDefault 4)
+   12 (Default 1)
+   13 (4 - Default)
+   14 (SetItem 3 0)
+   15 (Call 2 3)
+   16 (CopyFromDefault 2)
+   17 (GetMember fibonacci)
+   18 (CopyFromDefault 3)
+   19 (CreateArguments 4)
+   20 (GetMember n)
+   21 (CopyFromDefault 5)
+   22 (Default 2)
+   23 (5 - Default)
+   24 (SetItem 4 0)
+   25 (Call 3 4)
+   26 (2 + Default)
+   27 (CallEnd)
+)
+Block: (Block __default__
+    0 (Init)
+    1 (Function fibonacci 3b509a38-a05e-4132-a29c-e34b4f6580bc)
+    2 (GetMember fibonacci)
+    3 (CopyFromDefault 2)
+    4 (CreateArguments 3)
+    5 (Default 24)
+    6 (SetItem 3 0)
+    7 (Call 2 3)
+    8 (CallEnd)
+)
+<<< BENCHMARK BEGIN >>>
+
+               Total: 100.000%    0.84303175
+                Loop:  16.595%    0.13990025 /  2550833 =       55 ns
+                Call:  34.649%    0.29209923 /   150049 =     1947 ns
+           GetMember:  21.912%    0.18472178 /   525171 =      352 ns
+            BinaryOp:   8.438%    0.07113436 /   375121 =      190 ns
+             SetItem:   4.833%    0.04074042 /   150049 =      272 ns
+             Default:   4.156%    0.03503396 /   300098 =      117 ns
+             CallEnd:   4.026%    0.03393848 /   150050 =      226 ns
+     CopyFromDefault:   3.180%    0.02681115 /   525170 =       51 ns
+     CreateArguments:   1.492%    0.01257848 /   150049 =       84 ns
+         JumpIfFalse:   0.533%    0.00449167 /   150049 =       30 ns
+                Jump:   0.187%    0.00157878 /    75025 =       21 ns
+            Function:   0.000%    0.00000313 /        1 =     3126 ns
+                Init:   0.000%    0.00000006 /        1 =       60 ns
+                Save:   0.000%    0.00000000 /        0 =      NaN ns
+       CopyToDefault:   0.000%    0.00000000 /        0 =      NaN ns
+           DefMember:   0.000%    0.00000000 /        0 =      NaN ns
+           SetMember:   0.000%    0.00000000 /        0 =      NaN ns
+             GetItem:   0.000%    0.00000000 /        0 =      NaN ns
+
+<<<  BENCHMARK END  >>>
+
+
+Execution time: 0.843189 seconds
+Result: 46368
+
+real	0m1.436s
+user	0m1.276s
+sys	0m0.154s
