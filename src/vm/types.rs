@@ -44,17 +44,19 @@ impl Context {
         }
     }
 
+    #[inline]
     pub fn def_member(&mut self, name: String, value: Rc<RefCell<dyn Any>>, var_type: VarType) {
         match var_type {
             VarType::SCOPE => {
                 self.scope.borrow_mut().def_member(name, value);
             }
             VarType::NAMESPACE => {
-                self.scope.borrow_mut().def_member(name, value);
+                self.namespace.borrow_mut().def_member(name, value);
             }
         }
     }
 
+    #[inline]
     pub fn get_member(&self, name: String) -> Option<Rc<RefCell<dyn Any>>> {
         let result = self.scope.borrow().get_member(name.clone());
         if result.is_none() {
@@ -64,6 +66,7 @@ impl Context {
         }
     }
 
+    #[inline]
     pub fn set_member(&mut self, name: String, value: Rc<RefCell<dyn Any>>) {
         if self.scope.borrow().has_member(name.clone()) {
             self.scope.borrow_mut().set_member(name, value);
@@ -97,10 +100,12 @@ impl Namespace {
         }
     }
 
+    #[inline]
     pub fn def_member(&mut self, name: String, value: Rc<RefCell<dyn Any>>) {
         self.members.insert(name, value);
     }
 
+    #[inline]
     pub fn get_member(&self, name: String) -> Option<Rc<RefCell<dyn Any>>> {
         if self.members.contains_key(&name) {
             self.members.get(&name).cloned()
@@ -111,6 +116,7 @@ impl Namespace {
         }
     }
 
+    #[inline]
     pub fn set_member(&mut self, name: String, value: Rc<RefCell<dyn Any>>) {
         if self.members.contains_key(&name) {
             self.members.insert(name.clone(), value);
@@ -121,6 +127,7 @@ impl Namespace {
         }
     }
 
+    #[inline]
     pub fn has_member(&self, name: String) -> bool {
         if self.members.contains_key(&name) {
             true
@@ -153,10 +160,12 @@ impl Scope {
         }
     }
 
+    #[inline]
     pub fn def_member(&mut self, name: String, value: Rc<RefCell<dyn Any>>) {
         self.members.insert(name, value);
     }
 
+    #[inline]
     pub fn get_member(&self, name: String) -> Option<Rc<RefCell<dyn Any>>> {
         let value = self.members.get(&name);
         if value.is_none() && self.parent.is_some() {
@@ -173,6 +182,7 @@ impl Scope {
         }
     }
 
+    #[inline]
     pub fn set_member(&mut self, name: String, value: Rc<RefCell<dyn Any>>) {
         if self.members.contains_key(&name) {
             self.members.insert(name.clone(), value);
@@ -181,6 +191,7 @@ impl Scope {
         }
     }
 
+    #[inline]
     pub fn has_member(&self, name: String) -> bool {
         if self.members.contains_key(&name) {
             true
