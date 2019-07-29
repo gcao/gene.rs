@@ -614,3 +614,58 @@ fn normalize(gene: Gene) -> Gene {
         }
     }
 }
+
+// #[derive(Clone)]
+// pub struct CompilationUnit<'a> {
+//     pub parent: Option<&'a CompilationUnit<'a>>,
+//     pub children: Vec<CompilationUnit<'a>>,
+//     pub source: &'a Value,
+//     pub is_first: bool,
+//     pub is_last: bool,
+// }
+
+// impl<'a> CompilationUnit<'a> {
+//     pub fn new<'b>(parent: Option<&'a CompilationUnit>, source: &'a Value) -> Self {
+//         let mut result = Self {
+//             parent,
+//             children: Vec::new(),
+//             source,
+//             is_first: false,
+//             is_last: false,
+//         };
+
+//         result.process_children();
+//         result
+//     }
+
+//     pub fn root(source: &'a Value) -> Self {
+//         Self::new(None, source)
+//     }
+
+//     fn process_children(&'a mut self) {
+//         match self.source {
+//             Value::Array(ref arr) => {
+//                 for item in arr.iter() {
+//                     // self.children.push(Self::new(Some(self), item));
+//                 }
+//             }
+//             _ => {}
+//         }
+//     }
+
+//     pub fn to_instrs() -> Vec<Instruction> {
+//         Vec::new()
+//     }
+// }
+
+// pub struct RegisterManager {
+//     pub regs_in_use: Vec<u16>,
+// }
+
+// impl RegisterManager {
+//     pub fn new() -> Self {
+//         RegisterManager {
+//             regs_in_use: Vec::new(),
+//         }
+//     }
+// }
