@@ -1,0 +1,76 @@
+Testcase: fib24
+2019-07-29 10:59:23
+b57a5f4d
+3ef8bfd9 b57a5f4d
+
+============================
+Application log starts below
+vvvvvvvvvvvvvvvvvvvvvvvvvvvv
+
+Block: (Block fibonacci
+    0 (GetMember n)
+    1 (CopyFromDefault 2)
+    2 (Default 2)
+    3 (2 < Default)
+    4 (JumpIfFalse 7)
+    5 (GetMember n)
+    6 (Jump 27)
+    7 (GetMember fibonacci)
+    8 (CopyFromDefault 2)
+    9 (CreateArguments 3)
+   10 (GetMember n)
+   11 (CopyFromDefault 4)
+   12 (Default 1)
+   13 (4 - Default)
+   14 (SetItem 3 0)
+   15 (Call 2 3)
+   16 (CopyFromDefault 2)
+   17 (GetMember fibonacci)
+   18 (CopyFromDefault 3)
+   19 (CreateArguments 4)
+   20 (GetMember n)
+   21 (CopyFromDefault 5)
+   22 (Default 2)
+   23 (5 - Default)
+   24 (SetItem 4 0)
+   25 (Call 3 4)
+   26 (2 + Default)
+   27 (CallEnd)
+)
+Block: (Block __default__
+    0 (Init)
+    1 (Function fibonacci f43518f6-c740-4ae9-84b7-43b5c1dc6370)
+    2 (GetMember fibonacci)
+    3 (CopyFromDefault 2)
+    4 (CreateArguments 3)
+    5 (Default 24)
+    6 (SetItem 3 0)
+    7 (Call 2 3)
+    8 (CallEnd)
+)
+<<< BENCHMARK BEGIN >>>
+
+               Total: 100.000%    1.39278036
+                Loop:  39.818%    0.55457314 /  2550833 =      217 ns
+                Call:  22.315%    0.31079491 /   150049 =     2071 ns
+           GetMember:  15.821%    0.22035689 /   525171 =      420 ns
+            BinaryOp:   6.120%    0.08523646 /   375121 =      227 ns
+     CopyFromDefault:   3.652%    0.05086542 /   525170 =       97 ns
+             SetItem:   3.526%    0.04911329 /   150049 =      327 ns
+             Default:   3.520%    0.04902763 /   300098 =      163 ns
+             CallEnd:   2.795%    0.03893106 /   150050 =      259 ns
+     CreateArguments:   1.531%    0.02131991 /   150049 =      142 ns
+         JumpIfFalse:   0.655%    0.00912206 /   150049 =       61 ns
+                Jump:   0.246%    0.00343053 /    75025 =       46 ns
+                Init:   0.000%    0.00000544 /        1 =     5442 ns
+            Function:   0.000%    0.00000360 /        1 =     3602 ns
+
+<<<  BENCHMARK END  >>>
+
+
+Execution time: 1.392856 seconds
+Result: 46368
+
+real	0m1.999s
+user	0m1.842s
+sys	0m0.148s
