@@ -14,6 +14,9 @@ use super::utils::new_uuidv4;
 
 use super::benchmarker::Benchmarker;
 
+const CALLER_REG: u16 = 0;
+const CALLER_REGISTERS_REG: u16 = 1;
+
 pub struct VirtualMachine {
     registers_store: HashMap<String, Rc<RefCell<Registers>>>,
     pos: usize,
@@ -96,7 +99,7 @@ impl VirtualMachine {
                     self.pos += 1;
                     let registers_temp = registers_.clone();
                     let mut registers = registers_temp.borrow_mut();
-                    registers.insert(reg.clone(), Rc::new(RefCell::new(v.clone())));
+                    registers.insert(*reg, Rc::new(RefCell::new(v.clone())));
 
                     benchmarker.save_time.report_end();
                 }
@@ -122,7 +125,7 @@ impl VirtualMachine {
                     self.pos += 1;
                     let registers_temp = registers_.clone();
                     let mut registers = registers_temp.borrow_mut();
-                    registers.default = registers.data[to].clone();
+                    registers.default = registers.get(to);
 
                     benchmarker.copy_to_default_time.report_end();
                 }
@@ -229,7 +232,7 @@ impl VirtualMachine {
                     self.pos += 1;
                     let registers_temp = registers_.clone();
                     let mut registers = registers_temp.borrow_mut();
-                    let first = registers.data[first].clone();
+                    let first = registers.get(first);
                     let second = registers.default.clone();
                     let result = binary_op(op, first, second);
                     registers.default = result;
@@ -250,19 +253,15 @@ impl VirtualMachine {
 
                     self.pos += 1;
                     let function_temp;
+                    let registers_temp = registers_.clone();
+                    let mut registers = registers_temp.borrow_mut();
                     {
-                        let registers_temp = registers_.clone();
-                        let registers = registers_temp.borrow();
                         let mut context = registers.context.borrow_mut();
                         let function = Function::new(name.clone(), (*args).clone(), body_id.clone(), true, context.namespace.clone(), context.scope.clone());
                         function_temp = Rc::new(RefCell::new(function));
                         context.def_member(name.clone(), function_temp.clone(), VarType::NAMESPACE);
                     }
-                    {
-                        let registers_temp = registers_.clone();
-                        let mut registers = registers_temp.borrow_mut();
-                        registers.default = function_temp.clone();
-                    }
+                    registers.default = function_temp.clone();
 
                     benchmarker.function_time.report_end();
                 }
@@ -274,13 +273,15 @@ impl VirtualMachine {
 
                     let registers_temp = registers_.clone();
                     let registers = registers_temp.borrow();
-                    let borrowed = registers.data[target_reg].borrow();
+                    let borrowed_ = registers.get(target_reg);
+                    let borrowed = borrowed_.borrow();
                     let target = borrowed.downcast_ref::<Function>().unwrap();
 
                     let mut new_scope = Scope::new(target.parent_scope.clone());
 
                     {
-                        let args_ = registers.data[args_reg].borrow();
+                        let args_temp = registers.get(args_reg);
+                        let args_ = args_temp.borrow();
                         let args = args_.downcast_ref::<Vec<Rc<RefCell<Value>>>>().unwrap();
 
                         for matcher in target.args.data_matchers.iter() {
@@ -294,8 +295,8 @@ impl VirtualMachine {
                     let mut new_registers = Registers::new(Rc::new(RefCell::new(new_context)));
 
                     let ret_addr = Address::new(block.id.clone(), self.pos);
-                    new_registers.insert("caller".to_string(), Rc::new(RefCell::new(ret_addr)));
-                    new_registers.insert("caller_registers".to_string(), Rc::new(RefCell::new(registers.id.clone())));
+                    new_registers.insert(CALLER_REG, Rc::new(RefCell::new(ret_addr)));
+                    new_registers.insert(CALLER_REGISTERS_REG, Rc::new(RefCell::new(registers.id.clone())));
 
                     let id = new_registers.id.clone();
                     let registers = Rc::new(RefCell::new(new_registers));
@@ -313,14 +314,14 @@ impl VirtualMachine {
 
                     let registers_temp = registers_.clone();
                     let registers = registers_temp.borrow();
-                    if registers.data.contains_key("caller") {
-                        let borrowed = registers.data["caller"].borrow();
-                        let ret_addr = borrowed.downcast_ref::<Address>().unwrap();
-
+                    let borrowed_ = registers.get(&CALLER_REG);
+                    let borrowed = borrowed_.borrow();
+                    if let Some(ret_addr) = borrowed.downcast_ref::<Address>() {
                         block = self.code_manager.blocks[&ret_addr.block_id].clone();
                         self.pos = ret_addr.pos;
 
-                        let registers_id_borrowed = registers.data["caller_registers"].borrow();
+                        let borrowed_ = registers.get(&CALLER_REGISTERS_REG);
+                        let registers_id_borrowed = borrowed_.borrow();
                         let registers_id = registers_id_borrowed.downcast_ref::<String>().unwrap();
                         let caller_registers_temp = self.registers_store[registers_id].clone();
                         registers_ = caller_registers_temp.clone();
@@ -362,7 +363,8 @@ impl VirtualMachine {
                         let value_ = registers.default.borrow();
                         value = value_.downcast_ref::<Value>().unwrap().clone();
                     }
-                    let mut target_ = registers.data[target_reg].borrow_mut();
+                    let target_temp = registers.get(target_reg);
+                    let mut target_ = target_temp.borrow_mut();
                     if let Some(args) = target_.downcast_mut::<Vec<Rc<RefCell<Value>>>>() {
                         while *index >= args.len() {
                             args.push(Rc::new(RefCell::new(Value::Void)));
@@ -398,7 +400,8 @@ impl VirtualMachine {
                         let value_ = registers.default.borrow();
                         value = value_.downcast_ref::<Value>().unwrap().clone();
                     }
-                    let mut target_ = registers.data[target_reg].borrow_mut();
+                    let target_temp = registers.get(target_reg);
+                    let mut target_ = target_temp.borrow_mut();
                     if let Some(v) = target_.downcast_mut::<Value>() {
                         match v {
                             Value::Map(map) => {
@@ -430,6 +433,7 @@ impl VirtualMachine {
         result
     }
 
+    #[inline]
     fn get_member(&self, registers: Rc<RefCell<Registers>>, name: String) -> Option<Rc<RefCell<dyn Any>>> {
         let registers_ = registers.borrow();
         let context = registers_.context.borrow();
@@ -442,23 +446,45 @@ pub struct Registers {
     pub id: String,
     pub default: Rc<RefCell<dyn Any>>,
     pub context: Rc<RefCell<Context>>,
-    pub data: HashMap<String, Rc<RefCell<dyn Any>>>,
+    pub cache: [Rc<RefCell<dyn Any>>; 16],
+    pub store: HashMap<u16, Rc<RefCell<dyn Any>>>,
 }
 
 impl Registers {
     pub fn new(context: Rc<RefCell<Context>>) -> Self {
-        let data = HashMap::new();
+        let dummy = Rc::new(RefCell::new(0));
+
         Registers {
             id: new_uuidv4(),
-            default: Rc::new(RefCell::new(0)), // Put a dummy value
+            default: dummy.clone(),
             context,
-            data,
+            cache: [
+                dummy.clone(), dummy.clone(), dummy.clone(), dummy.clone(),
+                dummy.clone(), dummy.clone(), dummy.clone(), dummy.clone(),
+                dummy.clone(), dummy.clone(), dummy.clone(), dummy.clone(),
+                dummy.clone(), dummy.clone(), dummy.clone(), dummy.clone(),
+            ],
+            store: HashMap::new(),
         }
     }
 
-    pub fn insert(&mut self, key: String, val: Rc<RefCell<dyn Any>>) {
-        self.data.insert(key, val);
+    #[inline]
+    pub fn insert(&mut self, key: u16, val: Rc<RefCell<dyn Any>>) {
+        if key < 16 {
+            self.cache[key as usize] = val;
+        } else {
+            self.store.insert(key, val);
+        }
     }
+
+    #[inline]
+    pub fn get(&self, key: &u16) -> Rc<RefCell<dyn Any>> {
+        if *key < 16 {
+            self.cache[*key as usize].clone()
+        } else {
+            self.store[key].clone()
+        }
+     }
 }
 
 fn binary_op<'a>(
