@@ -73,7 +73,7 @@ impl Compiler {
         self.compile_(&mut block, ast);
         block.add_instr(Instruction::CallEnd);
 
-        println!("Block: {}", block);
+        println!("{}", block);
 
         let mut module = self.module.borrow_mut();
         module.set_default_block(Rc::new(block));
@@ -195,7 +195,7 @@ impl Compiler {
 
                 self.compile_statements(&mut body, &data[2..]);
                 body.add_instr(Instruction::CallEnd);
-                println!("Block: {}", body);
+                println!("{}", body);
 
                 let mut module = self.module.borrow_mut();
                 module.add_block(body_id.clone(), body);

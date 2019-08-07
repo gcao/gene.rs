@@ -8,7 +8,8 @@
 #[macro_use]
 pub mod utils;
 
-pub mod compiler;
 pub mod parser;
 pub mod types;
+pub mod compiler;
+pub mod compilable;
 pub mod vm;
