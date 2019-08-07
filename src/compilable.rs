@@ -21,13 +21,19 @@ impl Compiler {
   }
 
   pub fn compile(&mut self, value: Value) {
-    let mut tree = Tree::new(Compilable::Block);
-    let root_id = tree.root().id();
-
-    self.compile_(&tree.get_mut(root_id).unwrap(), value);
+    self.compile_(None, value);
   }
 
-  fn compile_(&mut self, node: &NodeMut<Compilable>, value: Value) {
+  fn compile_(&mut self, node: Option<&NodeMut<Compilable>>, value: Value) {
+    match value {
+      Value::Null => {
+        //
+      }
+      _ => unimplemented!()
+    }
+    if (node.is_none()) {
+    } else {
+    }
   }
 }
 
