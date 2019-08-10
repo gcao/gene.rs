@@ -86,7 +86,7 @@ impl fmt::Display for Value {
 pub struct Gene {
     pub kind: Rc<RefCell<Value>>,
     pub props: BTreeMap<String, Rc<RefCell<Value>>>,
-    pub data: Vec<Rc<RefCell<Value>>>,
+    pub data: Vec<Value>,
 }
 
 impl Gene {

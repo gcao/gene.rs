@@ -172,9 +172,9 @@ impl Compiler {
                 }
                 let second;
                 {
-                    second = data[1].borrow().clone();
+                    second = data[1].clone();
                 }
-                match *first.borrow_mut() {
+                match first {
                     Value::Symbol(ref name) => {
                         self.compile_(block, second.clone());
                         (*block).add_instr(Instruction::DefMember(name.clone()));
@@ -183,15 +183,15 @@ impl Compiler {
                 };
             }
             Value::Symbol(ref s) if s == "fn" => {
-                let name = data[0].borrow().to_string();
+                let name = data[0].to_string();
 
                 let mut body = Block::new(name.clone());
                 let body_id = body.id.clone();
 
                 self.reg_trackers.insert(body_id.clone(), Vec::new());
 
-                let borrowed = data[1].borrow();
-                let matcher =  Matcher::from(&*borrowed);
+                let borrowed = data[1].clone();
+                let matcher =  Matcher::from(&borrowed);
 
                 self.compile_statements(&mut body, &data[2..]);
                 body.add_instr(Instruction::CallEnd);
@@ -206,19 +206,19 @@ impl Compiler {
                 self.compile_if(block, data);
             }
             Value::Symbol(ref s) if s == "=" => {
-                let name = data[0].borrow().to_string();
-                let value = data[1].borrow().clone();
+                let name = data[0].to_string();
+                let value = data[1].clone();
                 self.compile_(block, value);
                 (*block).add_instr(Instruction::SetMember(name));
             }
             Value::Symbol(ref s) if is_binary_op(s) => {
-                let first = data[0].borrow().clone();
+                let first = data[0].clone();
                 self.compile_(block, first);
 
                 let first_reg = self.get_reg(block);
                 (*block).add_instr(Instruction::CopyFromDefault(first_reg));
 
-                let second = data[1].borrow().clone();
+                let second = data[1].clone();
                 self.compile_(block, second);
 
                 (*block).add_instr(Instruction::BinaryOp(s.to_string(), first_reg));
@@ -242,8 +242,7 @@ impl Compiler {
                 let args_reg = self.get_reg(block);
                 (*block).add_instr(Instruction::CreateArguments(args_reg));
                 for (i, item) in data.iter().enumerate() {
-                    let borrowed = item.borrow();
-                    self.compile_(block, (*borrowed).clone());
+                    self.compile_(block, item.clone());
                     (*block).add_instr(Instruction::SetItem(args_reg, i));
                 }
 
@@ -254,24 +253,22 @@ impl Compiler {
         };
     }
 
-    fn compile_statements(&mut self, block: &mut Block, stmts: &[Rc<RefCell<Value>>]) {
+    fn compile_statements(&mut self, block: &mut Block, stmts: &[Value]) {
         for item in stmts.iter().cloned() {
-            let borrowed = item.borrow().clone();
-            self.compile_(block, borrowed);
+            self.compile_(block, item);
         }
     }
 
-    fn compile_if(&mut self, block: &mut Block, mut data: Vec<Rc<RefCell<Value>>>) {
+    fn compile_if(&mut self, block: &mut Block, mut data: Vec<Value>) {
         let cond = data.remove(0);
-        let mut then_stmts = Vec::<Rc<RefCell<Value>>>::new();
-        let mut else_stmts = Vec::<Rc<RefCell<Value>>>::new();
+        let mut then_stmts = Vec::new();
+        let mut else_stmts = Vec::new();
         let mut is_else = false;
         for item in data.iter() {
             if is_else {
                 else_stmts.push(item.clone());
             } else {
-                let borrowed_item = item.borrow();
-                match *borrowed_item {
+                match item {
                     Value::Symbol(ref s) if s == "then" => (),
                     Value::Symbol(ref s) if s == "else" => {
                         is_else = true;
@@ -283,7 +280,7 @@ impl Compiler {
                 }
             }
         }
-        self.compile_(block, cond.borrow().clone());
+        self.compile_(block, cond.clone());
         let cond_jump_index = block.instructions.len();
         (*block).add_instr(Instruction::Dummy);
 
@@ -300,18 +297,18 @@ impl Compiler {
         mem::replace(&mut (*block).instructions[then_jump_index], Instruction::Jump(end_index as i16));
     }
 
-    fn compile_while(&mut self, block: &mut Block, mut data: Vec<Rc<RefCell<Value>>>) {
+    fn compile_while(&mut self, block: &mut Block, mut data: Vec<Value>) {
         let start_index = block.instructions.len();
 
         (*block).add_instr(Instruction::LoopStart);
 
         let cond = data.remove(0);
-        self.compile_(block, cond.borrow().clone());
+        self.compile_(block, cond);
         let jump_index = block.instructions.len();
         (*block).add_instr(Instruction::Dummy);
 
         for item in data.iter() {
-            self.compile_(block, item.borrow().clone());
+            self.compile_(block, item.clone());
         }
         (*block).add_instr(Instruction::Jump(start_index as i16));
         (*block).add_instr(Instruction::LoopEnd);
@@ -593,19 +590,19 @@ fn normalize(gene: Gene) -> Gene {
     if gene.data.is_empty() {
         gene
     } else {
-        let borrowed = gene.data[0].clone();
-        let first = borrowed.borrow_mut();
-        match *first {
+        let first = gene.data[0].clone();
+        match first {
             Value::Symbol(ref s) if is_binary_op(s) || s == "=" => {
                 let Gene {
                     kind,
-                    mut data,
                     props,
+                    mut data,
                 } = gene;
+                let borrowed = kind.borrow();
                 let new_kind = data.remove(0);
-                data.insert(0, kind);
+                data.insert(0, borrowed.clone());
                 Gene {
-                    kind: new_kind,
+                    kind: Rc::new(RefCell::new(new_kind)),
                     props,
                     data,
                 }

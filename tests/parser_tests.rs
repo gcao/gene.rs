@@ -169,7 +169,7 @@ fn test_read_gene() {
     }
     {
         let mut result = Gene::new(Value::Integer(1));
-        result.data.push(Rc::new(RefCell::new(Value::Integer(2))));
+        result.data.push(Value::Integer(2));
         assert_eq!(Parser::new("(1 2)").read(), Some(Ok(Value::Gene(result))));
     }
     {
@@ -177,7 +177,7 @@ fn test_read_gene() {
         result
             .props
             .insert("key".to_string(), Rc::new(RefCell::new(Value::Integer(2))));
-        result.data.push(Rc::new(RefCell::new(Value::Integer(3))));
+        result.data.push(Value::Integer(3));
         assert_eq!(
             Parser::new("(1 ^key 2 3)").read(),
             Some(Ok(Value::Gene(result)))
@@ -187,7 +187,7 @@ fn test_read_gene() {
         let mut result = Gene::new(Value::Integer(1));
         result
             .data
-            .push(Rc::new(RefCell::new(Value::Array(Vec::new()))));
+            .push(Value::Array(Vec::new()));
         assert_eq!(Parser::new("(1 [])").read(), Some(Ok(Value::Gene(result))));
     }
     {
@@ -198,7 +198,7 @@ fn test_read_gene() {
         );
         result
             .data
-            .push(Rc::new(RefCell::new(Value::Array(Vec::new()))));
+            .push(Value::Array(Vec::new()));
         assert_eq!(
             Parser::new("(1 ^key 123 [])").read(),
             Some(Ok(Value::Gene(result)))
@@ -212,21 +212,21 @@ fn test_quote() {
         let mut result = Gene::new(Value::Symbol("#QUOTE".to_string()));
         result
             .data
-            .push(Rc::new(RefCell::new(Value::Symbol("ab".to_string()))));
+            .push(Value::Symbol("ab".to_string()));
         assert_eq!(Parser::new("`ab").read(), Some(Ok(Value::Gene(result))));
     }
     {
         let mut result = Gene::new(Value::Symbol("#QUOTE".to_string()));
         result
             .data
-            .push(Rc::new(RefCell::new(Value::Boolean(true))));
+            .push(Value::Boolean(true));
         assert_eq!(Parser::new("`true").read(), Some(Ok(Value::Gene(result))));
     }
     {
         let mut result = Gene::new(Value::Symbol("#QUOTE".to_string()));
         result
             .data
-            .push(Rc::new(RefCell::new(Value::Array(Vec::new()))));
+            .push(Value::Array(Vec::new()));
         assert_eq!(Parser::new("`[]").read(), Some(Ok(Value::Gene(result))));
     }
 }
