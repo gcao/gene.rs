@@ -106,7 +106,7 @@ fn test_read_symbols() {
 
 #[test]
 fn test_read_array() {
-    assert_eq!(Parser::new("[]").read(), Some(Ok(Value::Array(vec![]))));
+    assert_eq!(Parser::new("[]").read(), Some(Ok(Value::Array(Vec::new()))));
     assert_eq!(
         Parser::new("[1]").read(),
         Some(Ok(Value::Array(vec![Value::Integer(1)])))
