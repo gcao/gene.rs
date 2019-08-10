@@ -116,19 +116,20 @@ pub enum CompilableData {
     /// literal
     String(String),
     Symbol(String),
-    Array(Vec<Value>),
+    Array(Vec<Value>), // literal values are included
     ArrayChild(u32),
-    Map(HashMap<String, Value>),
+    Map(HashMap<String, Value>), // literal values are included
     MapChild(String),
-    Gene(Value, HashMap<String, Value>, Vec<Value>),
-    GeneKind(GeneKind),
+    Gene(GeneKind, HashMap<String, Value>, Vec<Value>), // literal values are included
+    GeneKind, // the gene kind may have to be compiled, this is the indicator/parent for it
     GeneProp(String),
     GeneDataChild(u32),
     Block,
 }
 
 pub enum GeneKind {
-    Function,
+    Var,
     If,
-    Other,
+    Function,
+    Invocation,
 }

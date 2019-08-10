@@ -92,7 +92,7 @@ impl Compiler {
                 self.compile_map(block, m)
             }
             Value::Gene(v) => {
-                self.compile_gene(block, normalize(v));
+                self.compile_gene(block, normalize(*v));
             }
             Value::Stream(stmts) => {
                 for stmt in stmts {
@@ -164,7 +164,7 @@ impl Compiler {
             kind, data, ..
         } = gene;
 
-        match *kind {
+        match kind {
             Value::Symbol(ref s) if s == "var" => {
                 let first;
                 {
@@ -232,7 +232,7 @@ impl Compiler {
             }
             _ => {
                 // Invocation
-                self.compile_(block, *kind);
+                self.compile_(block, kind);
                 let target_reg = self.get_reg(block);
                 (*block).add_instr(Instruction::CopyFromDefault(target_reg));
 
@@ -599,9 +599,9 @@ fn normalize(gene: Gene) -> Gene {
                     props,
                 } = gene;
                 let new_kind = data.remove(0);
-                data.insert(0, *kind);
+                data.insert(0, kind);
                 Gene {
-                    kind: Box::new(new_kind.clone()),
+                    kind: new_kind.clone(),
                     props,
                     data,
                 }
