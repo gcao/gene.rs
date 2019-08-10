@@ -92,16 +92,19 @@ impl Compiler {
     fn compile_tree(&mut self, tree: &Tree<Compilable>) {
         let mut block = Block::new("__default__".to_string());
 
-        let root = tree.root();
-        for child in root.children() {
-            self.compile_node(&child, &mut block);
-        }
+        self.compile_node(&tree.root(), &mut block);
 
         self.module.set_default_block(Rc::new(block));
     }
 
     fn compile_node(&mut self, node: &NodeRef<Compilable>, block: &mut Block) {
-        match node.value().data {
+        match &node.value().data {
+            CompilableData::Block => {
+                for child in node.children() {
+                    self.compile_node(&child, block);
+                }
+            }
+
             CompilableData::Null => {
                 let parent = node.parent().unwrap();
                 let parent_value = parent.value();
@@ -132,19 +135,24 @@ impl Compiler {
                         let gp = parent.parent().unwrap();
                         let gp_value = gp.value();
                         let reg = gp_value.options["reg"].downcast_ref::<u16>().unwrap();
-                        block.add_instr(Instruction::Default(Value::Integer(v)));
+                        block.add_instr(Instruction::Default(Value::Integer(v.clone())));
                         block.add_instr(Instruction::SetItem(*reg, index));
                     }
                     CompilableData::Block => {
                         if node.next_sibling().is_none() {
                             // is last in the block
-                            block.add_instr(Instruction::Default(Value::Integer(v)));
+                            block.add_instr(Instruction::Default(Value::Integer(v.clone())));
                         } else {
                             // No need to generate any instruction for dead code
                         }
                     }
                     _ => unimplemented!()
                 }
+            }
+            CompilableData::Array(v) => {
+                (*block).add_instr(Instruction::Default(Value::Array(v.clone())));
+                // for child in node.children() {
+                // }
             }
             _ => unimplemented!()
         }
