@@ -69,7 +69,7 @@ impl<'a> Parser<'a> {
             self.next();
             let mut kind_is_set = false;
             let mut kind = Value::Void;
-            let mut props = BTreeMap::<String, Rc<RefCell<Value>>>::new();
+            let mut props = BTreeMap::new();
             let mut data = Vec::new();
             loop {
                 self.skip_whitespaces();
@@ -81,7 +81,7 @@ impl<'a> Parser<'a> {
                     let result = self.read_pair();
                     if result.is_some() {
                         let pair = result.unwrap().unwrap();
-                        props.insert(pair.key, Rc::new(RefCell::new(pair.val)));
+                        props.insert(pair.key, pair.val);
                     }
                 } else {
                     let result = self.read();

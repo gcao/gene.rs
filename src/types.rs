@@ -85,7 +85,7 @@ impl fmt::Display for Value {
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Gene {
     pub kind: Value,
-    pub props: BTreeMap<String, Rc<RefCell<Value>>>,
+    pub props: BTreeMap<String, Value>,
     pub data: Vec<Value>,
 }
 

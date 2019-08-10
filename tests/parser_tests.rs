@@ -176,7 +176,7 @@ fn test_read_gene() {
         let mut result = Gene::new(Value::Integer(1));
         result
             .props
-            .insert("key".to_string(), Rc::new(RefCell::new(Value::Integer(2))));
+            .insert("key".to_string(), Value::Integer(2));
         result.data.push(Value::Integer(3));
         assert_eq!(
             Parser::new("(1 ^key 2 3)").read(),
@@ -194,7 +194,7 @@ fn test_read_gene() {
         let mut result = Gene::new(Value::Integer(1));
         result.props.insert(
             "key".to_string(),
-            Rc::new(RefCell::new(Value::Integer(123))),
+            Value::Integer(123),
         );
         result
             .data
