@@ -84,15 +84,15 @@ impl fmt::Display for Value {
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Gene {
-    pub kind: Rc<RefCell<Value>>,
+    pub kind: Box<Value>,
     pub props: BTreeMap<String, Rc<RefCell<Value>>>,
-    pub data: Vec<Rc<RefCell<Value>>>,
+    pub data: Vec<Value>,
 }
 
 impl Gene {
     pub fn new(kind: Value) -> Self {
         Gene {
-            kind: Rc::new(RefCell::new(kind)),
+            kind: Box::new(kind),
             props: BTreeMap::new(),
             data: vec![],
         }
@@ -102,7 +102,7 @@ impl Gene {
 impl fmt::Display for Gene {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         fmt.write_str("(")?;
-        fmt.write_str(&self.kind.borrow().to_string())?;
+        fmt.write_str(&self.kind.to_string())?;
         fmt.write_str(" ...)")?;
         Ok(())
     }

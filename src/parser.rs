@@ -70,7 +70,7 @@ impl<'a> Parser<'a> {
             let mut kind_is_set = false;
             let mut kind = Value::Null;
             let mut props = BTreeMap::<String, Rc<RefCell<Value>>>::new();
-            let mut data = Vec::<Rc<RefCell<Value>>>::new();
+            let mut data = Vec::new();
             loop {
                 self.skip_whitespaces();
 
@@ -88,7 +88,7 @@ impl<'a> Parser<'a> {
                     if result.is_some() {
                         let val = result.unwrap().unwrap();
                         if kind_is_set {
-                            data.push(Rc::new(RefCell::new(val)));
+                            data.push(val);
                         } else {
                             kind_is_set = true;
                             kind = val;
@@ -97,7 +97,7 @@ impl<'a> Parser<'a> {
                 }
             }
             return Some(Ok(Value::Gene(Gene {
-                kind: Rc::new(RefCell::new(kind)),
+                kind: Box::new(kind),
                 props,
                 data,
             })));
@@ -161,7 +161,7 @@ impl<'a> Parser<'a> {
             self.next();
             let mut gene = Gene::new(Value::Symbol("#QUOTE".to_string()));
             gene.data
-                .push(Rc::new(RefCell::new(self.read().unwrap().unwrap())));
+                .push(self.read().unwrap().unwrap());
             return Some(Ok(Value::Gene(gene)));
         } else if is_symbol_head(ch) {
             return self.read_keyword_or_symbol();

@@ -2,6 +2,7 @@ extern crate ego_tree;
 
 use std::any::Any;
 use std::rc::Rc;
+use std::collections::{BTreeMap, HashMap};
 
 use ego_tree::{Tree, NodeRef, NodeMut};
 use ordered_float::OrderedFloat;
@@ -21,7 +22,7 @@ impl Compiler {
     }
 
     pub fn compile(&mut self, value: Value) {
-        let mut tree = Tree::new(Compilable::Block);
+        let mut tree = Tree::new(Compilable::new(CompilableData::Block));
 
         self.compile_(&mut tree.root_mut(), &value);
 
@@ -31,38 +32,45 @@ impl Compiler {
     fn compile_(&mut self, parent: &mut NodeMut<Compilable>, value: &Value) {
         match value {
             Value::Null => {
-                parent.append(Compilable::Null);
+                parent.append(Compilable::new(CompilableData::Null));
             }
             Value::Boolean(v) => {
-                parent.append(Compilable::Bool(*v));
+                parent.append(Compilable::new(CompilableData::Bool(*v)));
             }
             Value::Integer(v) => {
-                parent.append(Compilable::Int(*v));
+                parent.append(Compilable::new(CompilableData::Int(*v)));
             }
             Value::String(v) => {
-                parent.append(Compilable::String(v.to_string()));
+                parent.append(Compilable::new(CompilableData::String(v.to_string())));
             }
             Value::Symbol(v) => {
-                parent.append(Compilable::Symbol(v.to_string()));
+                parent.append(Compilable::new(CompilableData::Symbol(v.to_string())));
             }
             Value::Array(v) => {
-                let mut node = parent.append(Compilable::Array);
-                for item in v.iter() {
-                    self.compile_(&mut node, item);
-                }
+                let mut new_arr = Vec::new();
+                // TODO: add literal values to new_arr
+                let mut node = parent.append(Compilable::new(CompilableData::Array(new_arr)));
+                // TODO: compile non-literal items
+                // for item in v.iter() {
+                //     let mut node2 = parent.append(Compilable::new(CompilableData::ArrayChild(index)));
+                //     self.compile_(&mut node2, item);
+                // }
             }
             Value::Map(v) => {
-                let mut node = parent.append(Compilable::Map);
-                for (key, value) in v.iter() {
-                    let mut node2 = node.append(Compilable::KeyValue(key.to_string()));
-                    self.compile_(&mut node2, value);
-                }
+                // TODO: create map with literals then compile non-literal values and add to map
+                // let mut node = parent.append(Compilable::new(CompilableData::Map));
+                // for (key, value) in v.iter() {
+                //     let mut node2 = node.append(Compilable::new(CompilableData::MapChild(key.to_string())));
+                //     self.compile_(&mut node2, value);
+                // }
             }
             Value::Gene(v) => {
-                // let mut node = parent.append(Compilable::Gene(GeneType::Other));
-                // self.compile_(&mut node, v.kind);
+                // TODO: create Gene with literals then compile non-literal kind/prop/data
+                // let mut node = parent.append(Compilable::new(CompilableData::Gene));
+                // let mut kind_node = node.append(Compilable::new(CompilableData::GeneKind(GeneKind::Other)));
+                // self.compile_(&mut kind_node, v.kind);
                 // for (key, value) in v.props.iter() {
-                //     let mut node2 = node.append(Compilable::KeyValue(key.to_string()));
+                //     let mut node2 = node.append(Compilable::new(CompilableData::MapChild(key.to_string())));
                 //     self.compile_(&mut node2, value);
                 // }
                 // for item in v.data.iter() {
@@ -80,7 +88,21 @@ impl Compiler {
     }
 }
 
-pub enum Compilable {
+pub struct Compilable {
+    data: CompilableData,
+    options: HashMap<String, Box<dyn Any>>,
+}
+
+impl Compilable {
+    pub fn new(data: CompilableData) -> Self {
+        Compilable {
+            data,
+            options: HashMap:: new(),
+        }
+    }
+}
+
+pub enum CompilableData {
     /// literal
     Void,
     /// literal
@@ -94,22 +116,18 @@ pub enum Compilable {
     /// literal
     String(String),
     Symbol(String),
-    Array,
-    Map,
-    KeyValue(String),
-    Gene(GeneType),
+    Array(Vec<Value>),
+    ArrayChild(u32),
+    Map(HashMap<String, Value>),
+    MapChild(String),
+    Gene(Value, HashMap<String, Value>, Vec<Value>),
+    GeneKind(GeneKind),
+    GeneProp(String),
+    GeneDataChild(u32),
     Block,
 }
 
-impl Compilable {
-    pub fn set(&mut self, name: String, value: Box<dyn Any>) {
-        match self {
-            _ => unimplemented!()
-        }
-    }
-}
-
-pub enum GeneType {
+pub enum GeneKind {
     Function,
     If,
     Other,
