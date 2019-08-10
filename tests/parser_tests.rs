@@ -2,7 +2,7 @@
 extern crate gene;
 
 use std::cell::RefCell;
-use std::collections::BTreeMap;
+use std::collections::HashMap;
 use std::rc::Rc;
 
 use ordered_float::OrderedFloat;
@@ -121,7 +121,7 @@ fn test_read_array() {
 fn test_read_map() {
     assert_eq!(
         Parser::new("{}").read(),
-        Some(Ok(Value::Map(BTreeMap::new())))
+        Some(Ok(Value::Map(HashMap::new())))
     );
     {
         assert_eq!(

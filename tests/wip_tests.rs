@@ -8,7 +8,7 @@ extern crate ordered_float;
 extern crate gene;
 
 use ordered_float::OrderedFloat;
-use std::collections::BTreeMap;
+use std::collections::HashMap;
 
 use gene::compiler::Compiler;
 use gene::parser::Parser;

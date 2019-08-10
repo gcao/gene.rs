@@ -2,13 +2,13 @@ extern crate ordered_float;
 
 use std::clone::Clone;
 use std::cell::{RefCell, RefMut};
-use std::collections::BTreeMap;
+use std::collections::HashMap;
 use std::fmt;
 use std::rc::Rc;
 
 use ordered_float::OrderedFloat;
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum Value {
     Void, // Same as undefined, different from null, can be represented as ()
     Null, // Default value for any type, equivalent to false, 0, "", [], {}, (null) etc
@@ -18,7 +18,7 @@ pub enum Value {
     String(String),
     Symbol(String),
     Array(Vec<Value>),
-    Map(BTreeMap<String, Value>),
+    Map(HashMap<String, Value>),
     Gene(Box<Gene>),
     Stream(Vec<Value>),
 }
@@ -35,7 +35,7 @@ impl Clone for Value {
             Value::Symbol(symbol) => Value::Symbol(symbol.clone()),
             Value::Array(a) => Value::Array(a.to_vec()),
             Value::Map(m) => {
-                let mut new_map = BTreeMap::new();
+                let mut new_map = HashMap::new();
                 for (k, v) in m.iter() {
                     new_map.insert(k.to_string(), v.clone());
                 }
@@ -82,10 +82,10 @@ impl fmt::Display for Value {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Gene {
     pub kind: Value,
-    pub props: BTreeMap<String, Value>,
+    pub props: HashMap<String, Value>,
     pub data: Vec<Value>,
 }
 
@@ -93,7 +93,7 @@ impl Gene {
     pub fn new(kind: Value) -> Self {
         Gene {
             kind,
-            props: BTreeMap::new(),
+            props: HashMap::new(),
             data: Vec::new(),
         }
     }

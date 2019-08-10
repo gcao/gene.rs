@@ -3,7 +3,7 @@ pub mod types;
 use std::ptr;
 use std::any::Any;
 use std::cell::{Ref, RefCell, RefMut};
-use std::collections::{BTreeMap, HashMap};
+use std::collections::HashMap;
 use std::rc::Rc;
 use std::time::Instant;
 

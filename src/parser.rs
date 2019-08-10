@@ -1,7 +1,7 @@
 use std::str::CharIndices;
 
 use std::cell::{RefCell, RefMut};
-use std::collections::BTreeMap;
+use std::collections::HashMap;
 use std::rc::Rc;
 
 use ordered_float::OrderedFloat;
@@ -69,7 +69,7 @@ impl<'a> Parser<'a> {
             self.next();
             let mut kind_is_set = false;
             let mut kind = Value::Void;
-            let mut props = BTreeMap::new();
+            let mut props = HashMap::new();
             let mut data = Vec::new();
             loop {
                 self.skip_whitespaces();
@@ -120,7 +120,7 @@ impl<'a> Parser<'a> {
             return Some(Ok(Value::Array(arr)));
         } else if ch == '{' {
             self.next();
-            let mut map = BTreeMap::new();
+            let mut map = HashMap::new();
             loop {
                 self.skip_whitespaces();
 

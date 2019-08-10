@@ -2,7 +2,7 @@ extern crate ego_tree;
 
 use std::any::Any;
 use std::rc::Rc;
-use std::collections::{BTreeMap, HashMap};
+use std::collections::HashMap;
 
 use rand::prelude::random;
 
@@ -65,12 +65,16 @@ impl Compiler {
                 }
             }
             Value::Map(v) => {
-                // TODO: create map with literals then compile non-literal values and add to map
-                // let mut node = parent.append(Compilable::new(CompilableData::Map));
-                // for (key, value) in v.iter() {
-                //     let mut node2 = node.append(Compilable::new(CompilableData::MapChild(key.to_string())));
-                //     self.compile_(&mut node2, value);
-                // }
+                if v.is_literal() {
+                    let mut node = parent.append(Compilable::new(CompilableData::Map(v.clone())));
+                } else {
+                    // TODO: create map with literals then compile non-literal values and add to map
+                    // let mut node = parent.append(Compilable::new(CompilableData::Map));
+                    // for (key, value) in v.iter() {
+                    //     let mut node2 = node.append(Compilable::new(CompilableData::MapChild(key.to_string())));
+                    //     self.compile_(&mut node2, value);
+                    // }
+                }
             }
             Value::Gene(v) => {
                 // TODO: create Gene with literals then compile non-literal kind/prop/data

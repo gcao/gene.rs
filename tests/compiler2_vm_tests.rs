@@ -1,7 +1,7 @@
 #[macro_use]
 extern crate gene;
 
-use std::collections::BTreeMap;
+use std::collections::HashMap;
 
 use ordered_float::OrderedFloat;
 

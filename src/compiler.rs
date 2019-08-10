@@ -3,7 +3,7 @@ extern crate rand;
 use std::mem;
 use std::any::Any;
 use std::cell::{RefCell, RefMut};
-use std::collections::{BTreeMap, HashMap};
+use std::collections::HashMap;
 use std::fmt;
 use std::rc::Rc;
 
@@ -35,7 +35,7 @@ impl LiteralCheck for Vec<Value> {
     }
 }
 
-impl LiteralCheck for BTreeMap<String, Value> {
+impl LiteralCheck for HashMap<String, Value> {
     fn is_literal(&self) -> bool {
         false
     }
@@ -133,11 +133,11 @@ impl Compiler {
         }
     }
 
-    fn compile_map(&mut self, block: &mut Block, map: BTreeMap<String, Value>) {
+    fn compile_map(&mut self, block: &mut Block, map: HashMap<String, Value>) {
         if map.is_literal() {
             (*block).add_instr(Instruction::Default(Value::Map(map)));
         } else {
-            let mut map2 = BTreeMap::<String, Value>::new();
+            let mut map2 = HashMap::<String, Value>::new();
             for (key, value) in map.iter() {
                 if value.is_literal() {
                     map2.insert(key.clone(), value.clone());
