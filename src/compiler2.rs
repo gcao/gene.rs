@@ -4,20 +4,24 @@ use std::any::Any;
 use std::rc::Rc;
 use std::collections::{BTreeMap, HashMap};
 
+use rand::prelude::random;
+
 use ego_tree::{Tree, NodeRef, NodeMut};
 use ordered_float::OrderedFloat;
 
 use super::types::Value;
-use super::compiler::{Module, Block};
+use super::compiler::{Module, Block, Instruction, LiteralCheck};
 
 pub struct Compiler {
     pub module: Module,
+    reg_trackers: HashMap<String, Vec<u16>>,
 }
 
 impl Compiler {
     pub fn new() -> Self {
         Compiler {
             module: Module::new(),
+            reg_trackers: HashMap::new(),
         }
     }
 
@@ -47,14 +51,18 @@ impl Compiler {
                 parent.append(Compilable::new(CompilableData::Symbol(v.to_string())));
             }
             Value::Array(v) => {
-                let mut new_arr = Vec::new();
-                // TODO: add literal values to new_arr
-                let mut node = parent.append(Compilable::new(CompilableData::Array(new_arr)));
-                // TODO: compile non-literal items
-                // for item in v.iter() {
-                //     let mut node2 = parent.append(Compilable::new(CompilableData::ArrayChild(index)));
-                //     self.compile_(&mut node2, item);
-                // }
+                if v.is_literal() {
+                    let mut node = parent.append(Compilable::new(CompilableData::Array(v.clone())));
+                } else {
+                    let mut new_arr = Vec::new();
+                    // TODO: add literal values to new_arr
+                    let mut node = parent.append(Compilable::new(CompilableData::Array(new_arr)));
+                    // TODO: compile non-literal items
+                    // for item in v.iter() {
+                    //     let mut node2 = parent.append(Compilable::new(CompilableData::ArrayChild(index)));
+                    //     self.compile_(&mut node2, item);
+                    // }
+                }
             }
             Value::Map(v) => {
                 // TODO: create map with literals then compile non-literal values and add to map
@@ -84,7 +92,68 @@ impl Compiler {
     fn compile_tree(&mut self, tree: &Tree<Compilable>) {
         let mut block = Block::new("__default__".to_string());
 
+        let root = tree.root();
+        for child in root.children() {
+            self.compile_node(&child, &mut block);
+        }
+
         self.module.set_default_block(Rc::new(block));
+    }
+
+    fn compile_node(&mut self, node: &NodeRef<Compilable>, block: &mut Block) {
+        match node.value().data {
+            CompilableData::Null => {
+                let parent = node.parent().unwrap();
+                let parent_value = parent.value();
+                match parent_value.data {
+                    CompilableData::ArrayChild(index) => {
+                        let gp = parent.parent().unwrap();
+                        let gp_value = gp.value();
+                        let reg = gp_value.options["reg"].downcast_ref::<u16>().unwrap();
+                        block.add_instr(Instruction::Default(Value::Null));
+                        block.add_instr(Instruction::SetItem(*reg, index));
+                    }
+                    CompilableData::Block => {
+                        if node.next_sibling().is_none() {
+                            // is last in the block
+                            block.add_instr(Instruction::Default(Value::Null));
+                        } else {
+                            // No need to generate any instruction for dead code
+                        }
+                    }
+                    _ => unimplemented!()
+                }
+            }
+            CompilableData::Int(v) => {
+            }
+            _ => unimplemented!()
+        }
+    }
+
+    /// 1. find and return available register
+    /// 2. if all registers are occupied
+    fn get_reg(&mut self, block: &mut Block) -> u16 {
+        let trackers = self.reg_trackers.get_mut(&block.id).unwrap();
+        for i in 2..16 {
+            let mut available = true;
+            for tracker in trackers.iter() {
+                if *tracker == i as u16 {
+                    available = false;
+                }
+            }
+            if available {
+                trackers.push(i);
+                return i as u16;
+            }
+        }
+        16 + random::<u16>()
+    }
+
+    fn free_reg(&mut self, block: &mut Block, reg: u16) {
+        if reg < 16 {
+            let trackers = self.reg_trackers.get_mut(&block.id).unwrap();
+            trackers.retain(|&tracker| tracker != reg)
+        }
     }
 }
 
@@ -103,6 +172,7 @@ impl Compilable {
 }
 
 pub enum CompilableData {
+    Block,
     /// literal
     Void,
     /// literal
@@ -117,14 +187,13 @@ pub enum CompilableData {
     String(String),
     Symbol(String),
     Array(Vec<Value>), // literal values are included
-    ArrayChild(u32),
+    ArrayChild(usize),
     Map(HashMap<String, Value>), // literal values are included
     MapChild(String),
     Gene(GeneKind, HashMap<String, Value>, Vec<Value>), // literal values are included
     GeneKind, // the gene kind may have to be compiled, this is the indicator/parent for it
     GeneProp(String),
-    GeneDataChild(u32),
-    Block,
+    GeneDataChild(usize),
 }
 
 pub enum GeneKind {

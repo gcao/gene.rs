@@ -11,5 +11,5 @@ pub mod utils;
 pub mod compiler;
 pub mod parser;
 pub mod types;
-pub mod compilable;
+pub mod compiler2;
 pub mod vm;

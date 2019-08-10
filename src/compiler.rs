@@ -14,7 +14,7 @@ use super::types::Value;
 use super::vm::types::{Function, Matcher};
 use super::utils::new_uuidv4;
 
-trait LiteralCheck {
+pub trait LiteralCheck {
     fn is_literal(&self) -> bool;
 }
 
