@@ -68,7 +68,7 @@ impl<'a> Parser<'a> {
         if ch == '(' {
             self.next();
             let mut kind_is_set = false;
-            let mut kind = Value::Null;
+            let mut kind = Value::Void;
             let mut props = BTreeMap::<String, Rc<RefCell<Value>>>::new();
             let mut data = Vec::new();
             loop {
@@ -96,11 +96,11 @@ impl<'a> Parser<'a> {
                     }
                 }
             }
-            return Some(Ok(Value::Gene(Gene {
-                kind: Rc::new(RefCell::new(kind)),
+            return Some(Ok(Value::Gene(Box::new(Gene {
+                kind,
                 props,
                 data,
-            })));
+            }))));
         } else if ch == '[' {
             self.next();
             let mut arr: Vec<Value> = vec![];
@@ -162,7 +162,7 @@ impl<'a> Parser<'a> {
             let mut gene = Gene::new(Value::Symbol("#QUOTE".to_string()));
             gene.data
                 .push(self.read().unwrap().unwrap());
-            return Some(Ok(Value::Gene(gene)));
+            return Some(Ok(Value::Gene(Box::new(gene))));
         } else if is_symbol_head(ch) {
             return self.read_keyword_or_symbol();
         } else {

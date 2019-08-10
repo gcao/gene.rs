@@ -92,7 +92,7 @@ impl Compiler {
                 self.compile_map(block, m)
             }
             Value::Gene(v) => {
-                self.compile_gene(block, normalize(v));
+                self.compile_gene(block, normalize(*v));
             }
             Value::Stream(stmts) => {
                 for stmt in stmts {
@@ -164,7 +164,7 @@ impl Compiler {
             kind, data, ..
         } = gene;
 
-        match *kind.borrow() {
+        match kind {
             Value::Symbol(ref s) if s == "var" => {
                 let first;
                 {
@@ -232,8 +232,7 @@ impl Compiler {
             }
             _ => {
                 // Invocation
-                let borrowed_kind = kind.borrow().clone();
-                self.compile_(block, borrowed_kind);
+                self.compile_(block, kind);
                 let target_reg = self.get_reg(block);
                 (*block).add_instr(Instruction::CopyFromDefault(target_reg));
 
@@ -598,11 +597,10 @@ fn normalize(gene: Gene) -> Gene {
                     props,
                     mut data,
                 } = gene;
-                let borrowed = kind.borrow();
                 let new_kind = data.remove(0);
-                data.insert(0, borrowed.clone());
+                data.insert(0, kind.clone());
                 Gene {
-                    kind: Rc::new(RefCell::new(new_kind)),
+                    kind: new_kind,
                     props,
                     data,
                 }

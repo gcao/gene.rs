@@ -161,16 +161,16 @@ fn test_read_map() {
 fn test_read_gene() {
     assert_eq!(
         Parser::new("()").read(),
-        Some(Ok(Value::Gene(Gene::new(Value::Null))))
+        Some(Ok(Value::Gene(Box::new(Gene::new(Value::Void)))))
     );
     {
         let result = Gene::new(Value::Integer(1));
-        assert_eq!(Parser::new("(1)").read(), Some(Ok(Value::Gene(result))));
+        assert_eq!(Parser::new("(1)").read(), Some(Ok(Value::Gene(Box::new(result)))));
     }
     {
         let mut result = Gene::new(Value::Integer(1));
         result.data.push(Value::Integer(2));
-        assert_eq!(Parser::new("(1 2)").read(), Some(Ok(Value::Gene(result))));
+        assert_eq!(Parser::new("(1 2)").read(), Some(Ok(Value::Gene(Box::new(result)))));
     }
     {
         let mut result = Gene::new(Value::Integer(1));
@@ -180,7 +180,7 @@ fn test_read_gene() {
         result.data.push(Value::Integer(3));
         assert_eq!(
             Parser::new("(1 ^key 2 3)").read(),
-            Some(Ok(Value::Gene(result)))
+            Some(Ok(Value::Gene(Box::new(result))))
         );
     }
     {
@@ -188,7 +188,7 @@ fn test_read_gene() {
         result
             .data
             .push(Value::Array(Vec::new()));
-        assert_eq!(Parser::new("(1 [])").read(), Some(Ok(Value::Gene(result))));
+        assert_eq!(Parser::new("(1 [])").read(), Some(Ok(Value::Gene(Box::new(result)))));
     }
     {
         let mut result = Gene::new(Value::Integer(1));
@@ -201,7 +201,7 @@ fn test_read_gene() {
             .push(Value::Array(Vec::new()));
         assert_eq!(
             Parser::new("(1 ^key 123 [])").read(),
-            Some(Ok(Value::Gene(result)))
+            Some(Ok(Value::Gene(Box::new(result))))
         );
     }
 }
@@ -213,21 +213,21 @@ fn test_quote() {
         result
             .data
             .push(Value::Symbol("ab".to_string()));
-        assert_eq!(Parser::new("`ab").read(), Some(Ok(Value::Gene(result))));
+        assert_eq!(Parser::new("`ab").read(), Some(Ok(Value::Gene(Box::new(result)))));
     }
     {
         let mut result = Gene::new(Value::Symbol("#QUOTE".to_string()));
         result
             .data
             .push(Value::Boolean(true));
-        assert_eq!(Parser::new("`true").read(), Some(Ok(Value::Gene(result))));
+        assert_eq!(Parser::new("`true").read(), Some(Ok(Value::Gene(Box::new(result)))));
     }
     {
         let mut result = Gene::new(Value::Symbol("#QUOTE".to_string()));
         result
             .data
             .push(Value::Array(Vec::new()));
-        assert_eq!(Parser::new("`[]").read(), Some(Ok(Value::Gene(result))));
+        assert_eq!(Parser::new("`[]").read(), Some(Ok(Value::Gene(Box::new(result)))));
     }
 }
 
