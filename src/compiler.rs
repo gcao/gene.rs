@@ -385,7 +385,7 @@ pub struct Block {
 
 impl Block {
     pub fn new(name: String) -> Self {
-        let instructions = Vec::new;
+        let instructions = Vec::new();
         Block {
             id: new_uuidv4(),
             name,

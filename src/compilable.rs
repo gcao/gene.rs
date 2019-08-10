@@ -11,7 +11,7 @@ use super::types::Value;
 use super::compiler::{Module, Block};
 
 pub struct Compiler {
-    module: Module,
+    pub module: Module,
 }
 
 impl Compiler {
