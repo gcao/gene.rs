@@ -103,7 +103,7 @@ impl<'a> Parser<'a> {
             }))));
         } else if ch == '[' {
             self.next();
-            let mut arr: Vec<Value> = vec![];
+            let mut arr: Vec<Value> = Vec::new();
             loop {
                 self.skip_whitespaces();
 

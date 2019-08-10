@@ -94,7 +94,7 @@ impl Gene {
         Gene {
             kind: kind,
             props: BTreeMap::new(),
-            data: vec![],
+            data: Vec::new(),
         }
     }
 }
