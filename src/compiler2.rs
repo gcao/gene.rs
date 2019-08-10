@@ -28,12 +28,12 @@ impl Compiler {
     pub fn compile(&mut self, value: Value) {
         let mut tree = Tree::new(Compilable::new(CompilableData::Block));
 
-        self.compile_(&mut tree.root_mut(), &value);
+        self.translate(&mut tree.root_mut(), &value);
 
         self.compile_tree(&tree)
     }
 
-    fn compile_(&mut self, parent: &mut NodeMut<Compilable>, value: &Value) {
+    fn translate(&mut self, parent: &mut NodeMut<Compilable>, value: &Value) {
         match value {
             Value::Null => {
                 parent.append(Compilable::new(CompilableData::Null));
@@ -125,6 +125,26 @@ impl Compiler {
                 }
             }
             CompilableData::Int(v) => {
+                let parent = node.parent().unwrap();
+                let parent_value = parent.value();
+                match parent_value.data {
+                    CompilableData::ArrayChild(index) => {
+                        let gp = parent.parent().unwrap();
+                        let gp_value = gp.value();
+                        let reg = gp_value.options["reg"].downcast_ref::<u16>().unwrap();
+                        block.add_instr(Instruction::Default(Value::Integer(v)));
+                        block.add_instr(Instruction::SetItem(*reg, index));
+                    }
+                    CompilableData::Block => {
+                        if node.next_sibling().is_none() {
+                            // is last in the block
+                            block.add_instr(Instruction::Default(Value::Integer(v)));
+                        } else {
+                            // No need to generate any instruction for dead code
+                        }
+                    }
+                    _ => unimplemented!()
+                }
             }
             _ => unimplemented!()
         }
