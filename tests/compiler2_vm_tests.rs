@@ -34,4 +34,27 @@ fn test_basic_stmts() {
         let result = borrowed.downcast_ref::<Value>().unwrap();
         assert_eq!(*result, Value::Array(Vec::new()));
     }
+    {
+        let mut parser = Parser::new("[1]");
+        let parsed = parser.parse();
+        let mut compiler = Compiler::new();
+        compiler.compile(parsed.unwrap());
+        let module = compiler.module;
+        let result_temp = VirtualMachine::new().load_module(&module);
+        let borrowed = result_temp.borrow();
+        let result = borrowed.downcast_ref::<Value>().unwrap();
+        assert_eq!(*result, Value::Array(vec![Value::Integer(1)]));
+    }
+    {
+        let mut parser = Parser::new("{}");
+        let parsed = parser.parse();
+        let mut compiler = Compiler::new();
+        compiler.compile(parsed.unwrap());
+        let module = compiler.module;
+        let result_temp = VirtualMachine::new().load_module(&module);
+        dbg!(module.get_default_block());
+        let borrowed = result_temp.borrow();
+        let result = borrowed.downcast_ref::<Value>().unwrap();
+        assert_eq!(*result, Value::Map(HashMap::new()));
+    }
 }

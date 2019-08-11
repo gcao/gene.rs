@@ -158,6 +158,11 @@ impl Compiler {
                 // for child in node.children() {
                 // }
             }
+            CompilableData::Map(v) => {
+                (*block).add_instr(Instruction::Default(Value::Map(v.clone())));
+                // for child in node.children() {
+                // }
+            }
             _ => unimplemented!()
         }
     }

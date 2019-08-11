@@ -37,7 +37,7 @@ impl LiteralCheck for Vec<Value> {
 
 impl LiteralCheck for HashMap<String, Value> {
     fn is_literal(&self) -> bool {
-        false
+        self.values().all(LiteralCheck::is_literal)
     }
 }
 impl LiteralCheck for Gene {
