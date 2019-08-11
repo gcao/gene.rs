@@ -28,7 +28,16 @@ impl Compiler {
     pub fn compile(&mut self, value: Value) {
         let mut tree = Tree::new(Compilable::new(CompilableData::Block));
 
-        self.translate(&mut tree.root_mut(), &value);
+        match value {
+            Value::Stream(v) => {
+                for item in v {
+                    self.translate(&mut tree.root_mut(), &item);
+                }
+            }
+            _ => {
+                self.translate(&mut tree.root_mut(), &value);
+            }
+        }
 
         self.compile_tree(&tree)
     }
@@ -108,7 +117,6 @@ impl Compiler {
                     self.compile_node(&child, block);
                 }
             }
-
             CompilableData::Null => {
                 let parent = node.parent().unwrap();
                 let parent_value = parent.value();
