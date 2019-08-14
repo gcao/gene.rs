@@ -120,7 +120,7 @@ impl VirtualMachine {
 
                 Instruction::GetMember(name) => {
                     self.pos += 1;
-                    let value = self.get_member(registers_.clone(), name.clone()).unwrap();
+                    let value = self.get_member(registers_.clone(), name).unwrap();
                     let registers_temp = registers_.clone();
                     let mut registers = registers_temp.borrow_mut();
                     registers.default = value;
@@ -343,7 +343,7 @@ impl VirtualMachine {
     }
 
     #[inline]
-    fn get_member(&self, registers: Rc<RefCell<Registers>>, name: String) -> Option<Rc<RefCell<dyn Any>>> {
+    fn get_member(&self, registers: Rc<RefCell<Registers>>, name: &str) -> Option<Rc<RefCell<dyn Any>>> {
         let registers_ = registers.borrow();
         let context = registers_.context.borrow();
         context.get_member(name)
