@@ -57,8 +57,8 @@ impl Context {
     }
 
     #[inline]
-    pub fn get_member(&self, name: String) -> Option<Rc<RefCell<dyn Any>>> {
-        let result = self.scope.borrow().get_member(name.clone());
+    pub fn get_member(&self, name: &str) -> Option<Rc<RefCell<dyn Any>>> {
+        let result = self.scope.borrow().get_member(name);
         if result.is_none() {
             self.namespace.borrow().get_member(name)
         } else {
@@ -106,9 +106,9 @@ impl Namespace {
     }
 
     #[inline]
-    pub fn get_member(&self, name: String) -> Option<Rc<RefCell<dyn Any>>> {
-        if self.members.contains_key(&name) {
-            self.members.get(&name).cloned()
+    pub fn get_member(&self, name: &str) -> Option<Rc<RefCell<dyn Any>>> {
+        if self.members.contains_key(name) {
+            self.members.get(name).cloned()
         } else if self.parent.is_some() {
             self.parent.clone().unwrap().borrow().get_member(name)
         } else {
@@ -166,8 +166,8 @@ impl Scope {
     }
 
     #[inline]
-    pub fn get_member(&self, name: String) -> Option<Rc<RefCell<dyn Any>>> {
-        let value = self.members.get(&name);
+    pub fn get_member(&self, name: &str) -> Option<Rc<RefCell<dyn Any>>> {
+        let value = self.members.get(name);
         if value.is_none() && self.parent.is_some() {
             let parent_ = self.parent.clone().unwrap();
             let parent = parent_.borrow();
