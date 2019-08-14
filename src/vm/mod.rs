@@ -244,7 +244,7 @@ impl VirtualMachine {
                         let borrowed_ = registers.get(&CALLER_REGISTERS_REG);
                         let registers_id_borrowed = borrowed_.borrow();
                         let registers_id = registers_id_borrowed.downcast_ref::<String>().unwrap();
-                        let mut caller_registers = self.registers_store.find(registers_id);
+                        let caller_registers = self.registers_store.find(registers_id);
 
                         // Save returned value in caller's default register
                         caller_registers.borrow_mut().default = registers.default.clone();
@@ -413,14 +413,15 @@ impl RegistersStore {
         }
     }
 
+    #[inline]
     pub fn get(&mut self, context: Rc<RefCell<Context>>) -> Rc<RefCell<Registers>> {
         if self.freed.len() > 0 {
             let id = self.freed.pop().unwrap();
+            let registers = self.cache.get(&id).unwrap();
             {
-                let registers = self.cache.get(&id).unwrap();
                 registers.borrow_mut().reset();
             }
-            self.cache[&id].clone()
+            registers.clone()
         } else {
             let registers = Registers::new(context.clone());
             let id = registers.id.clone();
@@ -430,10 +431,12 @@ impl RegistersStore {
         }
     }
 
+    #[inline]
     pub fn find(&self, id: &str) -> Rc<RefCell<Registers>> {
         self.cache[id].clone()
     }
 
+    #[inline]
     pub fn free(&mut self, id: &str) {
         self.freed.push(id.to_string());
     }
