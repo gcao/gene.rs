@@ -9,7 +9,7 @@ use rand::prelude::random;
 use ego_tree::{Tree, NodeRef, NodeMut};
 use ordered_float::OrderedFloat;
 
-use super::types::Value;
+use super::types::{Value, Gene};
 use super::compiler::{Module, Block, Instruction, LiteralCheck};
 
 pub struct Compiler {
@@ -85,7 +85,21 @@ impl Compiler {
                     // }
                 }
             }
-            Value::Gene(v) => {
+            Value::Gene(box Gene{kind, props, data}) => {
+                match kind {
+                    Value::Symbol(s) if s == "var" => {
+                        let name = data[0].clone();
+                        match name {
+                            Value::Symbol(name) => {
+                                let mut node = parent.append(Compilable::new(CompilableData::Var(name)));
+                                let value = data[1].clone();
+                                self.translate(&mut node, &value);
+                            }
+                            _ => unimplemented!()
+                        }
+                    }
+                    _ => unimplemented!()
+                }
                 // TODO: create Gene with literals then compile non-literal kind/prop/data
                 // let mut node = parent.append(Compilable::new(CompilableData::Gene));
                 // let mut kind_node = node.append(Compilable::new(CompilableData::GeneKind(GeneKind::Other)));
@@ -158,8 +172,13 @@ impl Compiler {
                             // No need to generate any instruction for dead code
                         }
                     }
-                    _ => unimplemented!()
+                    _ => {
+                        block.add_instr(Instruction::Default(Value::Integer(v.clone())));
+                    }
                 }
+            }
+            CompilableData::Symbol(s) => {
+                (*block).add_instr(Instruction::GetMember(s.to_string()));
             }
             CompilableData::Array(v) => {
                 (*block).add_instr(Instruction::Default(Value::Array(v.clone())));
@@ -170,6 +189,10 @@ impl Compiler {
                 (*block).add_instr(Instruction::Default(Value::Map(v.clone())));
                 // for child in node.children() {
                 // }
+            }
+            CompilableData::Var(name) => {
+                self.compile_node(&node.first_child().unwrap(), block);
+                (*block).add_instr(Instruction::DefMember(name.clone()));
             }
             _ => unimplemented!()
         }
@@ -239,6 +262,7 @@ pub enum CompilableData {
     GeneKind, // the gene kind may have to be compiled, this is the indicator/parent for it
     GeneProp(String),
     GeneDataChild(usize),
+    Var(String),
 }
 
 pub enum GeneKind {
