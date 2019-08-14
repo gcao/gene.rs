@@ -149,7 +149,7 @@ impl VirtualMachine {
                     benchmarker.op_start("GetMember");
 
                     self.pos += 1;
-                    let value = self.get_member(registers_.clone(), name.clone()).unwrap();
+                    let value = self.get_member(registers_.clone(), name).unwrap();
                     let registers_temp = registers_.clone();
                     let mut registers = registers_temp.borrow_mut();
                     registers.default = value;
@@ -161,13 +161,13 @@ impl VirtualMachine {
                     benchmarker.op_start("SetMember");
 
                     self.pos += 1;
-                    let registers_temp = registers_.clone();
-                    let registers = registers_temp.borrow();
-                    let value = registers.default.clone();
+                    let value;
                     {
-                        let mut context = registers.context.borrow_mut();
-                        context.set_member(name.clone(), value);
+                        let registers_temp = registers_.clone();
+                        let registers = registers_temp.borrow();
+                        value = registers.default.clone();
                     }
+                    self.set_member(registers_.clone(), name.clone(), value);
 
                     benchmarker.op_end();
                 }
@@ -434,10 +434,37 @@ impl VirtualMachine {
     }
 
     #[inline]
-    fn get_member(&self, registers: Rc<RefCell<Registers>>, name: String) -> Option<Rc<RefCell<dyn Any>>> {
+    fn get_member(&self, registers: Rc<RefCell<Registers>>, name: &str) -> Option<Rc<RefCell<dyn Any>>> {
         let registers_ = registers.borrow();
         let context = registers_.context.borrow();
         context.get_member(name)
+        // let mut registers_ = registers.borrow_mut();
+        // let found;
+        // {
+        //     found = registers_.members_cache.get(&name);
+        // }
+        // if found.is_some() {
+        //     Some(found.unwrap().clone())
+        // } else {
+        //     let value;
+        //     {
+        //         let context = registers_.context.borrow();
+        //         value = context.get_member(name.clone()).unwrap().clone();
+        //     }
+        //     registers_.members_cache.insert(name, value.clone());
+        //     Some(value)
+        // }
+    }
+
+    #[inline]
+    fn set_member(&self, registers: Rc<RefCell<Registers>>, name: String, value: Rc<RefCell<dyn Any>>) {
+        let registers_ = registers.borrow();
+        // let mut registers_ = registers.borrow_mut();
+        {
+            let mut context = registers_.context.borrow_mut();
+            context.set_member(name.clone(), value.clone());
+        }
+        // registers_.members_cache.insert(name, value);
     }
 }
 
@@ -448,6 +475,7 @@ pub struct Registers {
     pub context: Rc<RefCell<Context>>,
     pub cache: [Rc<RefCell<dyn Any>>; 16],
     pub store: HashMap<u16, Rc<RefCell<dyn Any>>>,
+    // pub members_cache: HashMap<String, Rc<RefCell<dyn Any>>>,
 }
 
 impl Registers {
@@ -465,6 +493,7 @@ impl Registers {
                 dummy.clone(), dummy.clone(), dummy.clone(), dummy.clone(),
             ],
             store: HashMap::new(),
+            // members_cache: HashMap::new(),
         }
     }
 
