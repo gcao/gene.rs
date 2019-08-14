@@ -15,14 +15,14 @@ use super::utils::new_uuidv4;
 const CALLER_REG: u16 = 0;
 const CALLER_REGISTERS_REG: u16 = 1;
 
-pub struct VirtualMachine {
-    registers_store: HashMap<String, Rc<RefCell<Registers>>>,
+pub struct VirtualMachine<'a> {
+    registers_store: HashMap<String, Rc<RefCell<&'a Registers>>>,
     pos: usize,
     // app: Application,
     code_manager: CodeManager,
 }
 
-impl VirtualMachine {
+impl<'a> VirtualMachine<'a> {
     pub fn new() -> Self {
         VirtualMachine {
             registers_store: HashMap::new(),
@@ -46,8 +46,11 @@ impl VirtualMachine {
     pub fn process(&mut self, mut block: Rc<Block>) -> Rc<RefCell<dyn Any>> {
         let start_time = Instant::now();
 
+        let registers_cache = RegistersStore::new();
+
         let root_context = Context::root();
-        let registers_temp = Registers::new(Rc::new(RefCell::new(root_context)));
+        // let registers_temp = Registers::new(Rc::new(RefCell::new(root_context)));
+        let registers_temp = registers_cache.get(Rc::new(RefCell::new(root_context)));
         let id = registers_temp.id.clone();
         let mut registers_ = Rc::new(RefCell::new(registers_temp));
         self.registers_store.insert(id, registers_.clone());
@@ -223,7 +226,8 @@ impl VirtualMachine {
 
                     let new_namespace = Namespace::new(target.parent_namespace.clone());
                     let new_context = Context::new(Rc::new(RefCell::new(new_namespace)), Rc::new(RefCell::new(new_scope)), None);
-                    let mut new_registers = Registers::new(Rc::new(RefCell::new(new_context)));
+                    // let mut new_registers = Registers::new(Rc::new(RefCell::new(new_context)));
+                    let mut new_registers = registers_cache.get(Rc::new(RefCell::new(new_context)));
 
                     let ret_addr = Address::new(block.id.clone(), self.pos);
                     new_registers.insert(CALLER_REG, Rc::new(RefCell::new(ret_addr)));
@@ -406,6 +410,9 @@ impl Registers {
         }
     }
 
+    pub fn reset(&mut self) {
+    }
+
     #[inline]
     pub fn insert(&mut self, key: u16, val: Rc<RefCell<dyn Any>>) {
         if key < 16 {
@@ -423,6 +430,38 @@ impl Registers {
             self.store[key].clone()
         }
      }
+}
+
+pub struct RegistersStore {
+    cache: HashMap<String, Registers>,
+    freed: Vec<String>,
+}
+
+impl RegistersStore {
+    pub fn new() -> Self {
+        RegistersStore {
+            cache: HashMap::new(),
+            freed: Vec::new(),
+        }
+    }
+
+    pub fn get(&mut self, context: Rc<RefCell<Context>>) -> &Registers {
+        if self.freed.len() > 0 {
+            let id = self.freed.pop().unwrap();
+            let mut registers = self.cache.get_mut(&id).unwrap();
+            registers.reset();
+            registers
+        } else {
+            let registers = Registers::new(context.clone());
+            let id = registers.id.clone();
+            self.cache.insert(id.clone(), registers);
+            &self.cache[&id]
+        }
+    }
+
+    pub fn free(&mut self, id: &str) {
+        self.freed.push(id.to_string());
+    }
 }
 
 fn binary_op<'a>(
