@@ -48,7 +48,6 @@ impl VirtualMachine {
 
         let root_context = Context::root();
         let mut registers_ = self.registers_store.get(Rc::new(RefCell::new(root_context)));
-        let id = registers_.borrow().id.clone();
 
         self.pos = 0;
         let mut break_from_loop = false;
@@ -221,7 +220,8 @@ impl VirtualMachine {
 
                     let new_namespace = Namespace::new(target.parent_namespace.clone());
                     let new_context = Context::new(Rc::new(RefCell::new(new_namespace)), Rc::new(RefCell::new(new_scope)), None);
-                    let mut new_registers_ = self.registers_store.get(Rc::new(RefCell::new(new_context)));
+                    let new_registers_ = self.registers_store.get(Rc::new(RefCell::new(new_context)));
+                    registers_ = new_registers_.clone();
                     let mut new_registers = new_registers_.borrow_mut();
 
                     let ret_addr = Address::new(block.id.clone(), self.pos);
@@ -245,6 +245,9 @@ impl VirtualMachine {
                         let registers_id_borrowed = borrowed_.borrow();
                         let registers_id = registers_id_borrowed.downcast_ref::<String>().unwrap();
                         let caller_registers = self.registers_store.find(registers_id);
+                        // TODO: debug this to see why it causes tests to fail
+                        // self.registers_store.free(&registers.id);
+                        registers_ = caller_registers.clone();
 
                         // Save returned value in caller's default register
                         caller_registers.borrow_mut().default = registers.default.clone();
