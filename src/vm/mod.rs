@@ -18,7 +18,7 @@ const CALLER_REG: u16 = 0;
 const CALLER_REGISTERS_REG: u16 = 1;
 
 pub struct VirtualMachine {
-    registers_store: HashMap<String, Rc<RefCell<Registers>>>,
+    registers_store: RegistersStore,
     pos: usize,
     // app: Application,
     code_manager: CodeManager,
@@ -27,7 +27,7 @@ pub struct VirtualMachine {
 impl VirtualMachine {
     pub fn new() -> Self {
         VirtualMachine {
-            registers_store: HashMap::new(),
+            registers_store: RegistersStore::new(),
             pos: 0,
             // app: Application::new(),
             code_manager: CodeManager::new(),
@@ -49,10 +49,7 @@ impl VirtualMachine {
         let start_time = Instant::now();
 
         let root_context = Context::root();
-        let registers_temp = Registers::new(Rc::new(RefCell::new(root_context)));
-        let id = registers_temp.id.clone();
-        let mut registers_ = Rc::new(RefCell::new(registers_temp));
-        self.registers_store.insert(id, registers_.clone());
+        let mut registers_ = self.registers_store.get(Rc::new(RefCell::new(root_context)));
 
         self.pos = 0;
         let mut break_from_loop = false;
@@ -292,16 +289,13 @@ impl VirtualMachine {
 
                     let new_namespace = Namespace::new(target.parent_namespace.clone());
                     let new_context = Context::new(Rc::new(RefCell::new(new_namespace)), Rc::new(RefCell::new(new_scope)), None);
-                    let mut new_registers = Registers::new(Rc::new(RefCell::new(new_context)));
+                    let new_registers_ = self.registers_store.get(Rc::new(RefCell::new(new_context)));
+                    registers_ = new_registers_.clone();
+                    let mut new_registers = new_registers_.borrow_mut();
 
                     let ret_addr = Address::new(block.id.clone(), self.pos);
                     new_registers.insert(CALLER_REG, Rc::new(RefCell::new(ret_addr)));
                     new_registers.insert(CALLER_REGISTERS_REG, Rc::new(RefCell::new(registers.id.clone())));
-
-                    let id = new_registers.id.clone();
-                    let registers = Rc::new(RefCell::new(new_registers));
-                    registers_ = registers.clone();
-                    self.registers_store.insert(id, registers);
 
                     block = self.code_manager.blocks[&target.body].clone();
                     self.pos = 0;
@@ -323,12 +317,12 @@ impl VirtualMachine {
                         let borrowed_ = registers.get(&CALLER_REGISTERS_REG);
                         let registers_id_borrowed = borrowed_.borrow();
                         let registers_id = registers_id_borrowed.downcast_ref::<String>().unwrap();
-                        let caller_registers_temp = self.registers_store[registers_id].clone();
-                        registers_ = caller_registers_temp.clone();
+                        let caller_registers = self.registers_store.find(registers_id);
+                        self.registers_store.free(&registers.id);
+                        registers_ = caller_registers.clone();
 
-                        let mut caller_registers = caller_registers_temp.borrow_mut();
                         // Save returned value in caller's default register
-                        caller_registers.default = registers.default.clone();
+                        caller_registers.borrow_mut().default = registers.default.clone();
                     } else {
                         self.pos += 1;
                     }
@@ -438,33 +432,13 @@ impl VirtualMachine {
         let registers_ = registers.borrow();
         let context = registers_.context.borrow();
         context.get_member(name)
-        // let mut registers_ = registers.borrow_mut();
-        // let found;
-        // {
-        //     found = registers_.members_cache.get(&name);
-        // }
-        // if found.is_some() {
-        //     Some(found.unwrap().clone())
-        // } else {
-        //     let value;
-        //     {
-        //         let context = registers_.context.borrow();
-        //         value = context.get_member(name.clone()).unwrap().clone();
-        //     }
-        //     registers_.members_cache.insert(name, value.clone());
-        //     Some(value)
-        // }
     }
 
     #[inline]
     fn set_member(&self, registers: Rc<RefCell<Registers>>, name: String, value: Rc<RefCell<dyn Any>>) {
         let registers_ = registers.borrow();
-        // let mut registers_ = registers.borrow_mut();
-        {
-            let mut context = registers_.context.borrow_mut();
-            context.set_member(name.clone(), value.clone());
-        }
-        // registers_.members_cache.insert(name, value);
+        let mut context = registers_.context.borrow_mut();
+        context.set_member(name.clone(), value.clone());
     }
 }
 
@@ -498,6 +472,10 @@ impl Registers {
     }
 
     #[inline]
+    pub fn reset(&mut self) {
+    }
+
+    #[inline]
     pub fn insert(&mut self, key: u16, val: Rc<RefCell<dyn Any>>) {
         if key < 16 {
             self.cache[key as usize] = val;
@@ -514,6 +492,49 @@ impl Registers {
             self.store[key].clone()
         }
      }
+}
+
+pub struct RegistersStore {
+    cache: HashMap<String, Rc<RefCell<Registers>>>,
+    freed: Vec<String>,
+}
+
+impl RegistersStore {
+    pub fn new() -> Self {
+        RegistersStore {
+            cache: HashMap::new(),
+            freed: Vec::new(),
+        }
+    }
+
+    #[inline]
+    pub fn get(&mut self, context: Rc<RefCell<Context>>) -> Rc<RefCell<Registers>> {
+        if self.freed.len() > 0 {
+            let id = self.freed.pop().unwrap();
+            let registers = self.cache.get(&id).unwrap();
+            {
+                registers.borrow_mut().reset();
+                registers.borrow_mut().context = context;
+            }
+            registers.clone()
+        } else {
+            let registers = Registers::new(context.clone());
+            let id = registers.id.clone();
+            let wrapped = Rc::new(RefCell::new(registers));
+            self.cache.insert(id.clone(), wrapped.clone());
+            wrapped
+        }
+    }
+
+    #[inline]
+    pub fn find(&self, id: &str) -> Rc<RefCell<Registers>> {
+        self.cache[id].clone()
+    }
+
+    #[inline]
+    pub fn free(&mut self, id: &str) {
+        self.freed.push(id.to_string());
+    }
 }
 
 fn binary_op<'a>(
