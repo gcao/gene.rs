@@ -245,8 +245,7 @@ impl VirtualMachine {
                         let registers_id_borrowed = borrowed_.borrow();
                         let registers_id = registers_id_borrowed.downcast_ref::<String>().unwrap();
                         let caller_registers = self.registers_store.find(registers_id);
-                        // TODO: debug this to see why it causes tests to fail
-                        // self.registers_store.free(&registers.id);
+                        self.registers_store.free(&registers.id);
                         registers_ = caller_registers.clone();
 
                         // Save returned value in caller's default register
@@ -381,6 +380,7 @@ impl Registers {
         }
     }
 
+    #[inline]
     pub fn reset(&mut self) {
     }
 
@@ -423,6 +423,7 @@ impl RegistersStore {
             let registers = self.cache.get(&id).unwrap();
             {
                 registers.borrow_mut().reset();
+                registers.borrow_mut().context = context;
             }
             registers.clone()
         } else {
