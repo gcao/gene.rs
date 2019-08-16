@@ -172,10 +172,9 @@ impl Scope {
             let parent_ = self.parent.clone().unwrap();
             let parent = parent_.borrow();
             let v = parent.get_member(name);
-            if v.is_some() {
-                Some(v.unwrap().clone())
-            } else {
-                None
+            match v {
+                Some(value) => Some(value.clone()),
+                None => None,
             }
         } else {
             value.cloned()
