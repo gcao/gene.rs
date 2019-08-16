@@ -12,9 +12,6 @@ use super::compiler::{Block, Instruction, Module};
 use super::types::Value;
 use super::utils::new_uuidv4;
 
-const CALLER_REG: u16 = 0;
-const CALLER_REGISTERS_REG: u16 = 1;
-
 pub struct VirtualMachine {
     registers_store: RegistersStore,
     pos: usize,
@@ -276,45 +273,40 @@ impl VirtualMachine {
                         let new_registers = self.registers_store.get(Rc::new(RefCell::new(new_context)));
 
                         let ret_addr = Address::new(block.id.clone(), self.pos);
-                        new_registers.insert(CALLER_REG, Rc::new(RefCell::new(ret_addr)));
-                        new_registers.insert(CALLER_REGISTERS_REG, Rc::new(RefCell::new(registers_id.clone())));
+                        new_registers.caller = Some(ret_addr);
+                        new_registers.caller_registers = registers_id.clone();
 
                         registers_id = new_registers.id.clone();
                         block = self.code_manager.blocks[&target.body].clone();
                         self.pos = 0;
                     }
                     Instruction::CallEnd => {
-                        let caller_addr;
+                        let mut is_top_level = true;
+                        let old_registers_id = registers_id;
+
                         {
                             let registers = self.registers_store.find(registers_id);
-                            caller_addr = registers.get(&CALLER_REG);
-                        }
-                        let borrowed = caller_addr.borrow();
-                        if let Some(ret_addr) = borrowed.downcast_ref::<Address>() {
-                            block = self.code_manager.blocks[&ret_addr.block_id].clone();
-                            self.pos = ret_addr.pos;
+                            let caller = registers.caller.as_ref();
+                            if caller.is_some() {
+                                is_top_level = false; 
 
-                            let caller_reg;
-                            let value;
-                            let old_registers_id = registers_id;
-                            {
-                                let registers = self.registers_store.find(registers_id);
-                                let caller_reg_ = registers.get(&CALLER_REGISTERS_REG);
-                                caller_reg = caller_reg_.borrow().downcast_ref::<usize>().unwrap().clone();
-                                value = registers.default.clone();
-                            }
-                            {
-                                let caller_registers = self.registers_store.find(caller_reg);
+                                let ret_addr = caller.unwrap();
+                                block = self.code_manager.blocks[&ret_addr.block_id].clone();
+                                self.pos = ret_addr.pos;
 
+                                let value = registers.default.clone();
+                                let caller_reg_id = registers.caller_registers;
+                                let caller_registers = self.registers_store.find(caller_reg_id);
                                 // Save returned value in caller's default register
                                 caller_registers.default = value;
 
-                                registers_id = caller_registers.id;
+                                registers_id = caller_reg_id;
                             }
-                            {
-                                self.registers_store.free(old_registers_id);
-                            }
-                        } else {
+                        }
+
+                        self.registers_store.free(old_registers_id);
+
+                        if is_top_level {
                             self.pos += 1;
                         }
                     }
@@ -338,6 +330,8 @@ impl VirtualMachine {
 #[derive(Debug)]
 pub struct Registers {
     pub id: usize,
+    pub caller: Option<Address>,
+    pub caller_registers: usize,
     pub default: Rc<RefCell<dyn Any>>,
     pub context: Rc<RefCell<Context>>,
     pub cache: [Rc<RefCell<dyn Any>>; 16],
@@ -351,6 +345,8 @@ impl Registers {
 
         Registers {
             id,
+            caller: None,
+            caller_registers: 0,
             default: dummy.clone(),
             context,
             cache: [
@@ -538,6 +534,7 @@ fn binary_op<'a>(
     }
 }
 
+#[derive(Debug)]
 pub struct Address {
     pub block_id: String,
     pub pos: usize,
