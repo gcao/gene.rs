@@ -14,9 +14,6 @@ use super::utils::new_uuidv4;
 
 use super::benchmarker::Benchmarker;
 
-const CALLER_REG: u16 = 0;
-const CALLER_REGISTERS_REG: u16 = 1;
-
 pub struct VirtualMachine {
     registers_store: RegistersStore,
     pos: usize,
@@ -48,8 +45,12 @@ impl VirtualMachine {
     pub fn process(&mut self, mut block: Rc<Block>) -> Rc<RefCell<dyn Any>> {
         let start_time = Instant::now();
 
-        let root_context = Context::root();
-        let mut registers_ = self.registers_store.get(Rc::new(RefCell::new(root_context)));
+        let mut registers_id;
+        {
+            let root_context = Context::root();
+            let registers = self.registers_store.get(Rc::new(RefCell::new(root_context)));
+            registers_id = registers.id;
+        }
 
         self.pos = 0;
         let mut break_from_loop = false;
@@ -57,368 +58,356 @@ impl VirtualMachine {
         let mut benchmarker = Benchmarker::new();
         benchmarker.loop_start();
 
-        while self.pos < block.instructions.len() {
-            let instr = &block.instructions[self.pos];
+        // Use two level loop to separate instructions that change registers and those that don't
+        // TODO: clean up and document logic
+        'outer: while self.pos < block.instructions.len() {
+            let mut instr = &block.instructions[self.pos];
+            let mut immature_break = false;
 
-            // Handle break from loop
-            if break_from_loop {
-                self.pos += 1;
-                match instr {
-                    Instruction::LoopEnd => {
-                        break_from_loop = false;
+            {
+                let mut registers = self.registers_store.find(registers_id);
+
+                while self.pos < block.instructions.len() {
+                    benchmarker.report_loop();
+
+                    instr = &block.instructions[self.pos];
+
+                    // Handle break from loop
+                    if break_from_loop {
+                        self.pos += 1;
+                        match instr {
+                            Instruction::LoopEnd => {
+                                break_from_loop = false;
+                            }
+                            _ => {
+                                continue;
+                            }
+                        }
                     }
-                    _ => {
-                        continue;
+
+                    match instr {
+                        Instruction::Default(v) => {
+                            benchmarker.default_time.report_start();
+
+                            self.pos += 1;
+                            registers.default = Rc::new(RefCell::new(v.clone()));
+
+                            benchmarker.default_time.report_end();
+                        }
+                        Instruction::Save(reg, v) => {
+                            benchmarker.save_time.report_start();
+
+                            self.pos += 1;
+                            registers.insert(*reg, Rc::new(RefCell::new(v.clone())));
+
+                            benchmarker.save_time.report_end();
+                        }
+                        Instruction::CopyFromDefault(to) => {
+                            benchmarker.copy_from_default_time.report_start();
+
+                            self.pos += 1;
+                            let default;
+                            {
+                                default = registers.default.clone();
+                            }
+                            registers.insert(to.clone(), default);
+
+                            benchmarker.copy_from_default_time.report_end();
+                        }
+                        Instruction::CopyToDefault(to) => {
+                            benchmarker.copy_to_default_time.report_start();
+
+                            self.pos += 1;
+                            registers.default = registers.get(to);
+
+                            benchmarker.copy_to_default_time.report_end();
+                        }
+                        Instruction::DefMember(name) => {
+                            benchmarker.def_member_time.report_start();
+
+                            self.pos += 1;
+                            let value = registers.default.clone();
+                            {
+                                let mut context = registers.context.borrow_mut();
+                                context.def_member(name.clone(), value, VarType::SCOPE);
+                            }
+
+                            benchmarker.def_member_time.report_end();
+                        }
+                        Instruction::GetMember(name) => {
+                            benchmarker.get_member_time.report_start();
+
+                            self.pos += 1;
+                            let value = registers.get_member(name).unwrap();
+                            registers.default = value;
+
+                            benchmarker.get_member_time.report_end();
+                        }
+                        Instruction::SetMember(name) => {
+                            benchmarker.set_member_time.report_start();
+
+                            self.pos += 1;
+                            let value;
+                            {
+                                value = registers.default.clone();
+                            }
+                            registers.set_member(name.clone(), value);
+
+                            benchmarker.set_member_time.report_end();
+                        }
+                        Instruction::Jump(pos) => {
+                            benchmarker.jump_time.report_start();
+
+                            self.pos = *pos as usize;
+
+                            benchmarker.jump_time.report_end();
+                        }
+                        Instruction::JumpIfFalse(pos) => {
+                            benchmarker.jump_if_false_time.report_start();
+
+                            let value_ = registers.default.borrow();
+                            let value = value_.downcast_ref::<Value>().unwrap();
+                            match value {
+                                Value::Boolean(b) => {
+                                    if *b {
+                                        self.pos += 1;
+                                    } else {
+                                        self.pos = *pos as usize;
+                                    }
+                                }
+                                _ => unimplemented!()
+                            }
+
+                            benchmarker.jump_if_false_time.report_end();
+                        }
+                        Instruction::Break => {
+                            // benchmarker.break_time.report_start();
+
+                            self.pos += 1;
+                            break_from_loop = true;
+
+                            // benchmarker.break_time.report_end();
+                        }
+                        Instruction::LoopStart => {
+                            // benchmarker.loop_start_time.report_start();
+
+                            self.pos += 1;
+
+                            // benchmarker.loop_start_time.report_end();
+                        }
+                        Instruction::LoopEnd => {
+                            // benchmarker.loop_end_time.report_start();
+
+                            self.pos += 1;
+
+                            // benchmarker.loop_end_time.report_end();
+                        }
+                        Instruction::BinaryOp(op, first) => {
+                            benchmarker.binary_op_time.report_start();
+
+                            self.pos += 1;
+                            let first = registers.get(first);
+                            let second = registers.default.clone();
+                            let result = binary_op(op, first, second);
+                            registers.default = result;
+
+                            benchmarker.binary_op_time.report_end();
+                        }
+                        Instruction::Init => {
+                            benchmarker.init_time.report_start();
+
+                            self.pos += 1;
+
+                            benchmarker.init_time.report_end();
+                        }
+                        Instruction::Function(name, args, body_id) => {
+                            benchmarker.function_time.report_start();
+
+                            self.pos += 1;
+                            let function_temp;
+                            {
+                                let mut context = registers.context.borrow_mut();
+                                let function = Function::new(name.clone(), (*args).clone(), body_id.clone(), true, context.namespace.clone(), context.scope.clone());
+                                function_temp = Rc::new(RefCell::new(function));
+                                context.def_member(name.clone(), function_temp.clone(), VarType::NAMESPACE);
+                            }
+                            registers.default = function_temp.clone();
+
+                            benchmarker.function_time.report_end();
+                        }
+                        Instruction::Call(target_reg, args_reg, _options) => {
+                            immature_break = true;
+                            break;
+                        }
+                        Instruction::CallEnd => {
+                            immature_break = true;
+                            break;
+                        }
+                        Instruction::CreateArguments(reg) => {
+                            benchmarker.create_arguments_time.report_start();
+
+                            self.pos += 1;
+                            let data = Vec::<Rc<RefCell<Value>>>::new();
+                            registers.insert(reg.clone(), Rc::new(RefCell::new(data)));
+
+                            benchmarker.create_arguments_time.report_end();
+                        }
+                        Instruction::SetItem(target_reg, index) => {
+                            benchmarker.set_item_time.report_start();
+
+                            self.pos += 1;
+
+                            let value;
+
+                            {
+                                let value_ = registers.default.borrow();
+                                value = value_.downcast_ref::<Value>().unwrap().clone();
+                            }
+                            let target_temp = registers.get(target_reg);
+                            let mut target_ = target_temp.borrow_mut();
+                            if let Some(args) = target_.downcast_mut::<Vec<Rc<RefCell<Value>>>>() {
+                                while *index >= args.len() {
+                                    args.push(Rc::new(RefCell::new(Value::Void)));
+                                }
+                                args[*index] = Rc::new(RefCell::new(value));
+                            } else if let Some(args) = target_.downcast_mut::<Value>() {
+                                match args {
+                                    Value::Array(arr) => {
+                                        while *index >= arr.len() {
+                                            arr.push(Value::Void);
+                                        }
+                                        arr[*index] = value.clone();
+                                    }
+                                    _ => unimplemented!()
+                                }
+                            } else {
+                                unimplemented!();
+                            }
+
+                            benchmarker.set_item_time.report_end();
+                        }
+                        Instruction::SetProp(target_reg, key) => {
+                            // benchmarker.set_prop.report_start();
+
+                            self.pos += 1;
+
+                            let value;
+
+                            {
+                                let value_ = registers.default.borrow();
+                                value = value_.downcast_ref::<Value>().unwrap().clone();
+                            }
+                            let target_temp = registers.get(target_reg);
+                            let mut target_ = target_temp.borrow_mut();
+                            if let Some(v) = target_.downcast_mut::<Value>() {
+                                match v {
+                                    Value::Map(map) => {
+                                        map.insert(key.clone(), value);
+                                    }
+                                    _ => unimplemented!()
+                                }
+                            } else {
+                                unimplemented!();
+                            }
+
+                            // benchmarker.set_prop.report_end();
+                        }
+                        _ => unimplemented!()
                     }
                 }
             }
 
-            benchmarker.report_loop();
+            if immature_break {
+                match instr {
+                    Instruction::Call(target_reg, args_reg, _options) => {
+                        benchmarker.call_time.report_start();
 
-            // println!("{: <20} {: >5} {}", block.name, self.pos, instr);
-            // dbg!(instr);
-
-            match instr {
-                Instruction::Default(v) => {
-                    benchmarker.default_time.report_start();
-
-                    self.pos += 1;
-                    let registers_temp = registers_.clone();
-                    let mut registers = registers_temp.borrow_mut();
-                    registers.default = Rc::new(RefCell::new(v.clone()));
-
-                    benchmarker.default_time.report_end();
-                }
-
-                Instruction::Save(reg, v) => {
-                    benchmarker.save_time.report_start();
-
-                    self.pos += 1;
-                    let registers_temp = registers_.clone();
-                    let mut registers = registers_temp.borrow_mut();
-                    registers.insert(*reg, Rc::new(RefCell::new(v.clone())));
-
-                    benchmarker.save_time.report_end();
-                }
-
-                Instruction::CopyFromDefault(to) => {
-                    benchmarker.copy_from_default_time.report_start();
-
-                    self.pos += 1;
-                    let registers_temp = registers_.clone();
-                    let mut registers = registers_temp.borrow_mut();
-                    let default;
-                    {
-                        default = registers.default.clone();
-                    }
-                    registers.insert(to.clone(), default);
-
-                    benchmarker.copy_from_default_time.report_end();
-                }
-
-                Instruction::CopyToDefault(to) => {
-                    benchmarker.copy_to_default_time.report_start();
-
-                    self.pos += 1;
-                    let registers_temp = registers_.clone();
-                    let mut registers = registers_temp.borrow_mut();
-                    registers.default = registers.get(to);
-
-                    benchmarker.copy_to_default_time.report_end();
-                }
-
-                Instruction::DefMember(name) => {
-                    benchmarker.def_member_time.report_start();
-
-                    self.pos += 1;
-                    let registers_temp = registers_.clone();
-                    let registers = registers_temp.borrow();
-                    let value = registers.default.clone();
-                    {
-                        let mut context = registers.context.borrow_mut();
-                        context.def_member(name.clone(), value, VarType::SCOPE);
-                    }
-
-                    benchmarker.def_member_time.report_end();
-                }
-
-                Instruction::GetMember(name) => {
-                    benchmarker.get_member_time.report_start();
-
-                    self.pos += 1;
-                    let value = self.get_member(registers_.clone(), name).unwrap();
-                    let registers_temp = registers_.clone();
-                    let mut registers = registers_temp.borrow_mut();
-                    registers.default = value;
-
-                    benchmarker.get_member_time.report_end();
-                }
-
-                Instruction::SetMember(name) => {
-                    benchmarker.set_member_time.report_start();
-
-                    self.pos += 1;
-                    let value;
-                    {
-                        let registers_temp = registers_.clone();
-                        let registers = registers_temp.borrow();
-                        value = registers.default.clone();
-                    }
-                    self.set_member(registers_.clone(), name.clone(), value);
-
-                    benchmarker.set_member_time.report_end();
-                }
-
-                Instruction::Jump(pos) => {
-                    benchmarker.jump_time.report_start();
-
-                    self.pos = *pos as usize;
-
-                    benchmarker.jump_time.report_end();
-                }
-
-                Instruction::JumpIfFalse(pos) => {
-                    benchmarker.jump_if_false_time.report_start();
-
-                    let registers_temp = registers_.clone();
-                    let registers = registers_temp.borrow();
-                    let value_ = registers.default.borrow();
-                    let value = value_.downcast_ref::<Value>().unwrap();
-                    match value {
-                        Value::Boolean(b) => {
-                            if *b {
-                                self.pos += 1;
-                            } else {
-                                self.pos = *pos as usize;
-                            }
-                        }
-                        _ => unimplemented!()
-                    }
-
-                    benchmarker.jump_if_false_time.report_end();
-                }
-
-                Instruction::Break => {
-                    // benchmarker.break_time.report_start();
-
-                    self.pos += 1;
-                    break_from_loop = true;
-
-                    // benchmarker.break_time.report_end();
-                }
-
-                Instruction::LoopStart => {
-                    // benchmarker.default_time.report_start();
-
-                    self.pos += 1;
-
-                    // benchmarker.default_time.report_end();
-                }
-
-                Instruction::LoopEnd => {
-                    // benchmarker.default_time.report_start();
-
-                    self.pos += 1;
-
-                    // benchmarker.default_time.report_end();
-                }
-
-                Instruction::BinaryOp(op, first) => {
-                    benchmarker.binary_op_time.report_start();
-
-                    self.pos += 1;
-                    let registers_temp = registers_.clone();
-                    let mut registers = registers_temp.borrow_mut();
-                    let first = registers.get(first);
-                    let second = registers.default.clone();
-                    let result = binary_op(op, first, second);
-                    registers.default = result;
-
-                    benchmarker.binary_op_time.report_end();
-                }
-
-                Instruction::Init => {
-                    benchmarker.init_time.report_start();
-
-                    self.pos += 1;
-
-                    benchmarker.init_time.report_end();
-                }
-
-                Instruction::Function(name, args, body_id) => {
-                    benchmarker.function_time.report_start();
-
-                    self.pos += 1;
-                    let function_temp;
-                    let registers_temp = registers_.clone();
-                    let mut registers = registers_temp.borrow_mut();
-                    {
-                        let mut context = registers.context.borrow_mut();
-                        let function = Function::new(name.clone(), (*args).clone(), body_id.clone(), true, context.namespace.clone(), context.scope.clone());
-                        function_temp = Rc::new(RefCell::new(function));
-                        context.def_member(name.clone(), function_temp.clone(), VarType::NAMESPACE);
-                    }
-                    registers.default = function_temp.clone();
-
-                    benchmarker.function_time.report_end();
-                }
-
-                Instruction::Call(target_reg, args_reg, _options) => {
-                    benchmarker.call_time.report_start();
-
-                    self.pos += 1;
-
-                    let registers_temp = registers_.clone();
-                    let registers = registers_temp.borrow();
-                    let borrowed_ = registers.get(target_reg);
-                    let borrowed = borrowed_.borrow();
-                    let target = borrowed.downcast_ref::<Function>().unwrap();
-
-                    let mut new_scope = Scope::new(target.parent_scope.clone());
-
-                    {
-                        let args_temp = registers.get(args_reg);
-                        let args_ = args_temp.borrow();
-                        let args = args_.downcast_ref::<Vec<Rc<RefCell<Value>>>>().unwrap();
-
-                        for matcher in target.args.data_matchers.iter() {
-                            let arg_value = args[matcher.index].clone();
-                            new_scope.def_member(matcher.name.clone(), arg_value);
-                        }
-                    }
-
-                    let new_namespace = Namespace::new(target.parent_namespace.clone());
-                    let new_context = Context::new(Rc::new(RefCell::new(new_namespace)), Rc::new(RefCell::new(new_scope)), None);
-                    let new_registers_ = self.registers_store.get(Rc::new(RefCell::new(new_context)));
-                    registers_ = new_registers_.clone();
-                    let mut new_registers = new_registers_.borrow_mut();
-
-                    let ret_addr = Address::new(block.id.clone(), self.pos);
-                    new_registers.insert(CALLER_REG, Rc::new(RefCell::new(ret_addr)));
-                    new_registers.insert(CALLER_REGISTERS_REG, Rc::new(RefCell::new(registers.id.clone())));
-
-                    block = self.code_manager.blocks[&target.body].clone();
-                    self.pos = 0;
-
-                    benchmarker.call_time.report_end();
-                }
-
-                Instruction::CallEnd => {
-                    benchmarker.call_end_time.report_start();
-
-                    let registers_temp = registers_.clone();
-                    let registers = registers_temp.borrow();
-                    let borrowed_ = registers.get(&CALLER_REG);
-                    let borrowed = borrowed_.borrow();
-                    if let Some(ret_addr) = borrowed.downcast_ref::<Address>() {
-                        block = self.code_manager.blocks[&ret_addr.block_id].clone();
-                        self.pos = ret_addr.pos;
-
-                        let borrowed_ = registers.get(&CALLER_REGISTERS_REG);
-                        let registers_id_borrowed = borrowed_.borrow();
-                        let registers_id = registers_id_borrowed.downcast_ref::<String>().unwrap();
-                        let caller_registers = self.registers_store.find(registers_id);
-                        self.registers_store.free(&registers.id);
-                        registers_ = caller_registers.clone();
-
-                        // Save returned value in caller's default register
-                        caller_registers.borrow_mut().default = registers.default.clone();
-                    } else {
                         self.pos += 1;
-                    }
 
-                    benchmarker.call_end_time.report_end();
-                }
+                        let borrowed_;
+                        let borrowed;
+                        let target;
+                        let new_context;
 
-                Instruction::CreateArguments(reg) => {
-                    benchmarker.create_arguments_time.report_start();
+                        {
+                            let mut registers = self.registers_store.find(registers_id);
+                            borrowed_ = registers.get(target_reg);
+                            borrowed = borrowed_.borrow();
+                            target = borrowed.downcast_ref::<Function>().unwrap();
 
-                    self.pos += 1;
-                    let registers_temp = registers_.clone();
-                    let mut registers = registers_temp.borrow_mut();
-                    let data = Vec::<Rc<RefCell<Value>>>::new();
-                    registers.insert(reg.clone(), Rc::new(RefCell::new(data)));
+                            let mut new_scope = Scope::new(target.parent_scope.clone());
 
-                    benchmarker.create_arguments_time.report_end();
-                }
+                            {
+                                let args_temp = registers.get(args_reg);
+                                let args_ = args_temp.borrow();
+                                let args = args_.downcast_ref::<Vec<Rc<RefCell<Value>>>>().unwrap();
 
-                Instruction::GetItem(_reg, _index) => unimplemented!(),
-
-                Instruction::SetItem(target_reg, index) => {
-                    benchmarker.set_item_time.report_start();
-
-                    self.pos += 1;
-
-                    let value;
-
-                    let registers_temp = registers_.clone();
-                    let registers = registers_temp.borrow();
-                    {
-                        let value_ = registers.default.borrow();
-                        value = value_.downcast_ref::<Value>().unwrap().clone();
-                    }
-                    let target_temp = registers.get(target_reg);
-                    let mut target_ = target_temp.borrow_mut();
-                    if let Some(args) = target_.downcast_mut::<Vec<Rc<RefCell<Value>>>>() {
-                        while *index >= args.len() {
-                            args.push(Rc::new(RefCell::new(Value::Void)));
-                        }
-                        args[*index] = Rc::new(RefCell::new(value));
-                    } else if let Some(args) = target_.downcast_mut::<Value>() {
-                        match args {
-                            Value::Array(arr) => {
-                                while *index >= arr.len() {
-                                    arr.push(Value::Void);
+                                for matcher in target.args.data_matchers.iter() {
+                                    let arg_value = args[matcher.index].clone();
+                                    new_scope.def_member(matcher.name.clone(), arg_value);
                                 }
-                                arr[*index] = value.clone();
                             }
-                            _ => unimplemented!()
+
+                            let new_namespace = Namespace::new(target.parent_namespace.clone());
+                            new_context = Context::new(Rc::new(RefCell::new(new_namespace)), Rc::new(RefCell::new(new_scope)), None);
                         }
-                    } else {
-                        unimplemented!();
+                        let new_registers = self.registers_store.get(Rc::new(RefCell::new(new_context)));
+
+                        let ret_addr = Address::new(block.id.clone(), self.pos);
+                        new_registers.caller = Some(ret_addr);
+                        new_registers.caller_registers = registers_id.clone();
+
+                        registers_id = new_registers.id.clone();
+                        block = self.code_manager.blocks[&target.body].clone();
+                        self.pos = 0;
+
+                        benchmarker.call_time.report_end();
                     }
+                    Instruction::CallEnd => {
+                        benchmarker.call_end_time.report_start();
 
-                    benchmarker.set_item_time.report_end();
-                }
+                        let mut is_top_level = true;
+                        let old_registers_id = registers_id;
 
-                Instruction::SetProp(target_reg, key) => {
-                    // benchmarker.default_time.report_start();
+                        {
+                            let registers = self.registers_store.find(registers_id);
+                            let caller = registers.caller.as_ref();
+                            if caller.is_some() {
+                                is_top_level = false; 
 
-                    self.pos += 1;
+                                let ret_addr = caller.unwrap();
+                                block = self.code_manager.blocks[&ret_addr.block_id].clone();
+                                self.pos = ret_addr.pos;
 
-                    let value;
+                                let value = registers.default.clone();
+                                let caller_reg_id = registers.caller_registers;
+                                let caller_registers = self.registers_store.find(caller_reg_id);
+                                // Save returned value in caller's default register
+                                caller_registers.default = value;
 
-                    let registers_temp = registers_.clone();
-                    let registers = registers_temp.borrow();
-                    {
-                        let value_ = registers.default.borrow();
-                        value = value_.downcast_ref::<Value>().unwrap().clone();
-                    }
-                    let target_temp = registers.get(target_reg);
-                    let mut target_ = target_temp.borrow_mut();
-                    if let Some(v) = target_.downcast_mut::<Value>() {
-                        match v {
-                            Value::Map(map) => {
-                                map.insert(key.clone(), value);
+                                registers_id = caller_reg_id;
                             }
-                            _ => unimplemented!()
                         }
-                    } else {
-                        unimplemented!();
+
+                        self.registers_store.free(old_registers_id);
+
+                        if is_top_level {
+                            self.pos += 1;
+                        }
+
+                        benchmarker.call_end_time.report_end();
                     }
-
-                    // benchmarker.default_time.report_end();
+                    _ => unimplemented!()
                 }
-
-                Instruction::Dummy => unimplemented!(),
+            } else {
+                break;
             }
         }
 
         benchmarker.loop_end();
         println!("{}", benchmarker);
-        // dbg!(benchmarker);
 
-        let registers = registers_.borrow();
+        let registers = self.registers_store.find(registers_id);
         let result = registers.default.clone();
         // dbg!(result.borrow().downcast_ref::<Value>().unwrap());
 
@@ -426,25 +415,13 @@ impl VirtualMachine {
 
         result
     }
-
-    #[inline]
-    fn get_member(&self, registers: Rc<RefCell<Registers>>, name: &str) -> Option<Rc<RefCell<dyn Any>>> {
-        let registers_ = registers.borrow();
-        let context = registers_.context.borrow();
-        context.get_member(name)
-    }
-
-    #[inline]
-    fn set_member(&self, registers: Rc<RefCell<Registers>>, name: String, value: Rc<RefCell<dyn Any>>) {
-        let registers_ = registers.borrow();
-        let mut context = registers_.context.borrow_mut();
-        context.set_member(name.clone(), value.clone());
-    }
 }
 
 #[derive(Debug)]
 pub struct Registers {
-    pub id: String,
+    pub id: usize,
+    pub caller: Option<Address>,
+    pub caller_registers: usize,
     pub default: Rc<RefCell<dyn Any>>,
     pub context: Rc<RefCell<Context>>,
     pub cache: [Rc<RefCell<dyn Any>>; 16],
@@ -453,11 +430,13 @@ pub struct Registers {
 }
 
 impl Registers {
-    pub fn new(context: Rc<RefCell<Context>>) -> Self {
+    pub fn new(id: usize, context: Rc<RefCell<Context>>) -> Self {
         let dummy = Rc::new(RefCell::new(0));
 
         Registers {
-            id: new_uuidv4(),
+            id,
+            caller: None,
+            caller_registers: 0,
             default: dummy.clone(),
             context,
             cache: [
@@ -492,48 +471,88 @@ impl Registers {
             self.store[key].clone()
         }
      }
+
+    #[inline]
+    fn get_member(&self, name: &str) -> Option<Rc<RefCell<dyn Any>>> {
+        let context = self.context.borrow();
+        context.get_member(name)
+    }
+
+    #[inline]
+    fn set_member(&mut self, name: String, value: Rc<RefCell<dyn Any>>) {
+        let mut context = self.context.borrow_mut();
+        context.set_member(name.clone(), value.clone());
+    }
 }
 
 pub struct RegistersStore {
-    cache: HashMap<String, Rc<RefCell<Registers>>>,
-    freed: Vec<String>,
+    cache: [Registers; 32],
+    store: HashMap<usize, Registers>,
+    freed: Vec<usize>,
+    next: usize,
 }
 
 impl RegistersStore {
     pub fn new() -> Self {
+        let dummy = Rc::new(RefCell::new(Context::root()));
         RegistersStore {
-            cache: HashMap::new(),
+            cache: [
+                Registers::new(0,  dummy.clone()), Registers::new(1,  dummy.clone()), Registers::new(2,  dummy.clone()), Registers::new(3,  dummy.clone()),
+                Registers::new(4,  dummy.clone()), Registers::new(5,  dummy.clone()), Registers::new(6,  dummy.clone()), Registers::new(7,  dummy.clone()),
+                Registers::new(8,  dummy.clone()), Registers::new(9,  dummy.clone()), Registers::new(10, dummy.clone()), Registers::new(11, dummy.clone()),
+                Registers::new(12, dummy.clone()), Registers::new(13, dummy.clone()), Registers::new(14, dummy.clone()), Registers::new(15, dummy.clone()),
+                Registers::new(16, dummy.clone()), Registers::new(17, dummy.clone()), Registers::new(18, dummy.clone()), Registers::new(19, dummy.clone()),
+                Registers::new(20, dummy.clone()), Registers::new(21, dummy.clone()), Registers::new(22, dummy.clone()), Registers::new(23, dummy.clone()),
+                Registers::new(24, dummy.clone()), Registers::new(25, dummy.clone()), Registers::new(26, dummy.clone()), Registers::new(27, dummy.clone()),
+                Registers::new(28, dummy.clone()), Registers::new(29, dummy.clone()), Registers::new(30, dummy.clone()), Registers::new(31, dummy.clone()),
+            ],
+            store: HashMap::new(),
             freed: Vec::new(),
+            next: 0,
         }
     }
 
     #[inline]
-    pub fn get(&mut self, context: Rc<RefCell<Context>>) -> Rc<RefCell<Registers>> {
+    pub fn get(&mut self, context: Rc<RefCell<Context>>) -> &mut Registers {
         if self.freed.len() > 0 {
             let id = self.freed.pop().unwrap();
-            let registers = self.cache.get(&id).unwrap();
-            {
-                registers.borrow_mut().reset();
-                registers.borrow_mut().context = context;
+            let mut registers: &mut Registers;
+            if id < 32 {
+                registers = &mut self.cache[id];
+            } else {
+                registers = self.store.get_mut(&id).unwrap();
             }
-            registers.clone()
+            {
+                registers.reset();
+                registers.context = context;
+            }
+            registers
+        } else if self.next < 32 {
+            let mut registers = &mut self.cache[self.next];
+            self.next += 1;
+            registers.context = context;
+            registers
         } else {
-            let registers = Registers::new(context.clone());
-            let id = registers.id.clone();
-            let wrapped = Rc::new(RefCell::new(registers));
-            self.cache.insert(id.clone(), wrapped.clone());
-            wrapped
+            let id = self.next;
+            let registers = Registers::new(id, context);
+            self.store.insert(self.next, registers);
+            self.next += 1;
+            self.store.get_mut(&id).unwrap()
         }
     }
 
     #[inline]
-    pub fn find(&self, id: &str) -> Rc<RefCell<Registers>> {
-        self.cache[id].clone()
+    pub fn find(&mut self, id: usize) -> &mut Registers {
+        if id < 32 {
+            &mut self.cache[id]
+        } else {
+            self.store.get_mut(&id).unwrap()
+        }
     }
 
     #[inline]
-    pub fn free(&mut self, id: &str) {
-        self.freed.push(id.to_string());
+    pub fn free(&mut self, id: usize) {
+        self.freed.push(id);
     }
 }
 
@@ -605,6 +624,7 @@ fn binary_op<'a>(
     }
 }
 
+#[derive(Debug)]
 pub struct Address {
     pub block_id: String,
     pub pos: usize,
