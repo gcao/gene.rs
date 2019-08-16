@@ -107,7 +107,7 @@ impl VirtualMachine {
 
                 Instruction::GetMember(name) => {
                     self.pos += 1;
-                    let value = self.get_member(registers, name).unwrap();
+                    let value = registers.get_member(name).unwrap();
                     registers.default = value;
                 }
 
@@ -117,7 +117,7 @@ impl VirtualMachine {
                     {
                         value = registers.default.clone();
                     }
-                    self.set_member(registers, name.clone(), value);
+                    registers.set_member(name.clone(), value);
                 }
 
                 Instruction::Jump(pos) => {
@@ -220,10 +220,11 @@ impl VirtualMachine {
                         let registers_id = registers_id_borrowed.downcast_ref::<usize>().unwrap();
                         {
                             let caller_registers = self.registers_store.find(*registers_id);
-                            registers = caller_registers;
 
                             // Save returned value in caller's default register
                             caller_registers.default = registers.default.clone();
+
+                            registers = caller_registers;
                         }
                         {
                             self.registers_store.free(registers.id);
@@ -306,18 +307,6 @@ impl VirtualMachine {
 
         result
     }
-
-    #[inline]
-    fn get_member(&self, registers: &Registers, name: &str) -> Option<Rc<RefCell<dyn Any>>> {
-        let context = registers.context.borrow();
-        context.get_member(name)
-    }
-
-    #[inline]
-    fn set_member(&self, registers: &mut Registers, name: String, value: Rc<RefCell<dyn Any>>) {
-        let mut context = registers.context.borrow_mut();
-        context.set_member(name.clone(), value.clone());
-    }
 }
 
 #[derive(Debug)]
@@ -370,6 +359,18 @@ impl Registers {
             self.store[key].clone()
         }
      }
+
+    #[inline]
+    fn get_member(&self, name: &str) -> Option<Rc<RefCell<dyn Any>>> {
+        let context = self.context.borrow();
+        context.get_member(name)
+    }
+
+    #[inline]
+    fn set_member(&mut self, name: String, value: Rc<RefCell<dyn Any>>) {
+        let mut context = self.context.borrow_mut();
+        context.set_member(name.clone(), value.clone());
+    }
 }
 
 pub struct RegistersStore {
