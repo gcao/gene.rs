@@ -52,12 +52,13 @@ impl VirtualMachine {
 
         self.pos = 0;
         let mut break_from_loop = false;
+        let mut immature_break;
 
         // Use two level loop to separate instructions that change registers and those that don't
         // TODO: clean up and document logic
         while self.pos < block.instructions.len() {
             let mut instr = &block.instructions[self.pos];
-            let mut immature_break = false;
+            immature_break = false;
 
             {
                 let mut registers = self.registers_store.find(registers_id);
