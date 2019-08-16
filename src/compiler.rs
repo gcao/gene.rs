@@ -324,7 +324,7 @@ impl Compiler {
     /// 2. if all registers are occupied
     fn get_reg(&mut self, block: &mut Block) -> u16 {
         let trackers = self.reg_trackers.get_mut(&block.id).unwrap();
-        for i in 2..16 {
+        for i in 0..16 {
             let mut available = true;
             for tracker in trackers.iter() {
                 if *tracker == i as u16 {
