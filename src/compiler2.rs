@@ -3,6 +3,7 @@ extern crate ego_tree;
 use std::any::Any;
 use std::rc::Rc;
 use std::collections::HashMap;
+use std::mem;
 
 use rand::prelude::random;
 
@@ -10,7 +11,7 @@ use ego_tree::{Tree, NodeRef, NodeMut};
 use ordered_float::OrderedFloat;
 
 use super::types::{Value, Gene};
-use super::compiler::{Module, Block, Instruction, LiteralCheck};
+use super::compiler::{Module, Block, Instruction, LiteralCheck, is_binary_op};
 
 pub struct Compiler {
     pub module: Module,
@@ -95,17 +96,19 @@ impl Compiler {
                     // }
                 }
             }
-            Value::Gene(box Gene{kind, props, data}) => {
+            Value::Gene(box v) => {
+                let Gene{ kind, props, data } = v.normalize();
                 match kind {
-                    Value::Symbol(s) if s == "var" => {
-                        let name = data[0].clone();
-                        match name {
-                            Value::Symbol(name) => {
-                                let mut node = parent.append(Compilable::new(CompilableData::Var(name)));
-                                let value = data[1].clone();
-                                self.translate(&mut node, &value);
-                            }
-                            _ => unimplemented!()
+                    Value::Symbol(ref s) if is_binary_op(s) => {
+                        let mut node = parent.append(Compilable::new(CompilableData::BinaryOp(s.clone())));
+                        self.translate(&mut node, &data[0]);
+                        self.translate(&mut node, &data[1]);
+                    }
+                    Value::Symbol(ref s) if s == "var" => {
+                        if let Value::Symbol(name) = &data[0] {
+                            let mut node = parent.append(Compilable::new(CompilableData::Var(name.clone())));
+                            let value = data[1].clone();
+                            self.translate(&mut node, &value);
                         }
                     }
                     _ => unimplemented!()
@@ -239,6 +242,17 @@ impl Compiler {
                 self.compile_node(&node.first_child().unwrap(), block);
                 (*block).add_instr(Instruction::DefMember(name.clone()));
             }
+            CompilableData::BinaryOp(op) => {
+                let first = node.first_child().unwrap();
+                self.compile_node(&first, block);
+                let first_reg = self.get_reg(block);
+                (*block).add_instr(Instruction::CopyFromDefault(first_reg));
+
+                let second = first.next_sibling().unwrap();
+                self.compile_node(&second, block);
+
+                (*block).add_instr(Instruction::BinaryOp(op.clone(), first_reg));
+            }
             _ => unimplemented!()
         }
     }
@@ -316,6 +330,7 @@ pub enum CompilableData {
     GeneProp(String),
     GeneDataChild(usize),
     Var(String),
+    BinaryOp(String),
 }
 
 pub enum GeneKind {
@@ -323,4 +338,36 @@ pub enum GeneKind {
     If,
     Function,
     Invocation,
+}
+
+trait Normalize {
+    fn normalize(&self) -> Gene;
+}
+
+impl Normalize for Gene {
+    fn normalize(&self) -> Gene {
+        match self.data[0] {
+            Value::Symbol(ref s) if is_binary_op(s) => {
+                let kind = self.data[0].clone();
+                let mut data = vec![self.kind.clone()];
+                for (i, item) in self.data.iter().enumerate() {
+                    if i > 0 {
+                        data.push(item.clone());
+                    }
+                }
+                Gene {
+                    kind,
+                    props: self.props.clone(),
+                    data,
+                }
+            }
+            _ => {
+                Gene{
+                    kind:  self.kind.clone(),
+                    props: self.props.clone(),
+                    data:  self.data.clone(),
+                }
+            }
+        }
+    }
 }

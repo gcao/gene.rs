@@ -580,7 +580,7 @@ impl fmt::Display for Instruction {
     }
 }
 
-fn is_binary_op(op: &str) -> bool {
+pub fn is_binary_op(op: &str) -> bool {
     let binary_ops = vec!["+", "-", "*", "/", "<", "<=", ">", ">=", "=="];
     binary_ops.contains(&op)
 }
