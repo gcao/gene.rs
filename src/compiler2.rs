@@ -61,16 +61,26 @@ impl Compiler {
             }
             Value::Array(v) => {
                 if v.is_literal() {
-                    let mut node = parent.append(Compilable::new(CompilableData::Array(v.clone())));
+                    parent.append(Compilable::new(CompilableData::Array(v.clone())));
                 } else {
                     let mut new_arr = Vec::new();
-                    // TODO: add literal values to new_arr
+                    // add literal values to new_arr
+                    for (i, item) in v.iter().enumerate() {
+                        if item.is_literal() {
+                            new_arr.insert(i, item.clone());
+                        } else {
+                            new_arr.insert(i, Value::Void);
+                            // TODO: compile non-literal items
+                        }
+                    }
                     let mut node = parent.append(Compilable::new(CompilableData::Array(new_arr)));
-                    // TODO: compile non-literal items
-                    // for item in v.iter() {
-                    //     let mut node2 = parent.append(Compilable::new(CompilableData::ArrayChild(index)));
-                    //     self.compile_(&mut node2, item);
-                    // }
+                    // compile non-literal items
+                    for (i, item) in v.iter().enumerate() {
+                        if !item.is_literal() {
+                            let mut node2 = node.append(Compilable::new(CompilableData::ArrayChild(i)));
+                            self.translate(&mut node2, item);
+                        }
+                    }
                 }
             }
             Value::Map(v) => {
@@ -118,6 +128,8 @@ impl Compiler {
 
     fn compile_tree(&mut self, tree: &Tree<Compilable>) {
         let mut block = Block::new("__default__".to_string());
+
+        self.reg_trackers.insert(block.id.clone(), Vec::new());
 
         self.compile_node(&tree.root(), &mut block);
 
@@ -181,9 +193,18 @@ impl Compiler {
                 (*block).add_instr(Instruction::GetMember(s.to_string()));
             }
             CompilableData::Array(v) => {
-                (*block).add_instr(Instruction::Default(Value::Array(v.clone())));
-                // for child in node.children() {
-                // }
+                let reg = self.get_reg(block);
+                (*block).add_instr(Instruction::Save(reg, Value::Array(v.clone())));
+                for child in node.children() {
+                    match child.value().data {
+                        CompilableData::ArrayChild(i) => {
+                            self.compile_node(&child.first_child().unwrap(), block);
+                            (*block).add_instr(Instruction::SetItem(reg, i));
+                        }
+                        _ => unimplemented!()
+                    }
+                }
+                (*block).add_instr(Instruction::CopyToDefault(reg));
             }
             CompilableData::Map(v) => {
                 (*block).add_instr(Instruction::Default(Value::Map(v.clone())));
@@ -222,6 +243,14 @@ impl Compiler {
             let trackers = self.reg_trackers.get_mut(&block.id).unwrap();
             trackers.retain(|&tracker| tracker != reg)
         }
+    }
+}
+
+pub struct NodeWrapper<'a>(&'a mut NodeRef<'a, Compilable>);
+
+impl<'a> NodeWrapper<'a> {
+    pub fn use_member(&mut self, name: &str) -> bool {
+        true
     }
 }
 
