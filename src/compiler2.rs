@@ -189,6 +189,30 @@ impl Compiler {
                     }
                 }
             }
+            CompilableData::String(v) => {
+                let parent = node.parent().unwrap();
+                let parent_value = parent.value();
+                match parent_value.data {
+                    CompilableData::ArrayChild(index) => {
+                        let gp = parent.parent().unwrap();
+                        let gp_value = gp.value();
+                        let reg = gp_value.options["reg"].downcast_ref::<u16>().unwrap();
+                        block.add_instr(Instruction::Default(Value::String(v.clone())));
+                        block.add_instr(Instruction::SetItem(*reg, index));
+                    }
+                    CompilableData::Block => {
+                        if node.next_sibling().is_none() {
+                            // is last in the block
+                            block.add_instr(Instruction::Default(Value::String(v.clone())));
+                        } else {
+                            // No need to generate any instruction for dead code
+                        }
+                    }
+                    _ => {
+                        block.add_instr(Instruction::Default(Value::String(v.clone())));
+                    }
+                }
+            }
             CompilableData::Symbol(s) => {
                 (*block).add_instr(Instruction::GetMember(s.to_string()));
             }
