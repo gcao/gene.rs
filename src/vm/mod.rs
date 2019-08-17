@@ -467,6 +467,7 @@ impl RegistersStore {
     }
 }
 
+#[inline]
 fn binary_op<'a>(
     op: &'a str,
     first: Rc<RefCell<dyn Any>>,
