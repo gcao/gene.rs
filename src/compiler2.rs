@@ -104,6 +104,14 @@ impl Compiler {
                         self.translate(&mut node, &data[0]);
                         self.translate(&mut node, &data[1]);
                     }
+                    Value::Symbol(ref s) if s == "=" => {
+                        if let Value::Symbol(name) = &data[0] {
+                            let mut node = parent.append(Compilable::new(CompilableData::Assignment(name.clone())));
+                            self.translate(&mut node, &data[1]);
+                        } else {
+                            unimplemented!();
+                        }
+                    }
                     Value::Symbol(ref s) if s == "var" => {
                         if let Value::Symbol(name) = &data[0] {
                             let mut node = parent.append(Compilable::new(CompilableData::Var(name.clone())));
@@ -111,6 +119,33 @@ impl Compiler {
                             self.translate(&mut node, &value);
                         }
                     }
+                    // Value::Symbol(ref s) if s == "if" => {
+                    //     let cond = &data[0];
+                    //     let mut then_stmts = Vec::new();
+                    //     let mut else_stmts = Vec::new();
+                    //     let mut is_else = false;
+                    //     for (i, item) in data.iter().enumerate() {
+                    //         if i == 0 {
+                    //             continue;
+                    //         }
+
+                    //         if is_else {
+                    //             else_stmts.push(item.clone());
+                    //         } else {
+                    //             match item {
+                    //                 Value::Symbol(ref s) if s == "then" => (),
+                    //                 Value::Symbol(ref s) if s == "else" => {
+                    //                     is_else = true;
+                    //                 }
+                    //                 _ => {
+                    //                     then_stmts.push(item.clone());
+                    //                 }
+
+                    //             }
+                    //         }
+                    //     }
+                    //     // TODO
+                    // }
                     _ => unimplemented!()
                 }
                 // TODO: create Gene with literals then compile non-literal kind/prop/data
@@ -253,6 +288,10 @@ impl Compiler {
 
                 (*block).add_instr(Instruction::BinaryOp(op.clone(), first_reg));
             }
+            CompilableData::Assignment(name) => {
+                self.compile_node(&node.first_child().unwrap(), block);
+                (*block).add_instr(Instruction::SetMember(name.clone()));
+            }
             _ => unimplemented!()
         }
     }
@@ -331,6 +370,7 @@ pub enum CompilableData {
     GeneDataChild(usize),
     Var(String),
     BinaryOp(String),
+    Assignment(String),
 }
 
 pub enum GeneKind {
@@ -347,7 +387,7 @@ trait Normalize {
 impl Normalize for Gene {
     fn normalize(&self) -> Gene {
         match self.data[0] {
-            Value::Symbol(ref s) if is_binary_op(s) => {
+            Value::Symbol(ref s) if is_binary_op(s) || s == "=" => {
                 let kind = self.data[0].clone();
                 let mut data = vec![self.kind.clone()];
                 for (i, item) in self.data.iter().enumerate() {
