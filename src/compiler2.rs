@@ -143,7 +143,24 @@ impl Compiler {
                                 }
                             }
                         }
-                        // TODO
+                        let mut if_node = parent.append(Compilable::new(CompilableData::If));
+                        {
+                            let mut if_pair = if_node.append(Compilable::new(CompilableData::IfPair));
+                            let mut if_cond = if_pair.append(Compilable::new(CompilableData::IfPairCondition));
+                            self.translate(&mut if_cond, cond);
+                            let mut if_then = if_pair.append(Compilable::new(CompilableData::IfPairThen));
+                            let mut if_then_stmts = if_then.append(Compilable::new(CompilableData::Statements));
+                            for stmt in then_stmts {
+                                self.translate(&mut if_then_stmts, &stmt);
+                            }
+                        }
+                        {
+                            let mut if_else = if_node.append(Compilable::new(CompilableData::IfElse));
+                            let mut if_else_stmts = if_else.append(Compilable::new(CompilableData::Statements));
+                            for stmt in else_stmts {
+                                self.translate(&mut if_else_stmts, &stmt);
+                            }
+                        }
                     }
                     _ => unimplemented!()
                 }
@@ -291,6 +308,8 @@ impl Compiler {
                 self.compile_node(&node.first_child().unwrap(), block);
                 (*block).add_instr(Instruction::SetMember(name.clone()));
             }
+            CompilableData::If => {
+            }
             _ => unimplemented!()
         }
     }
@@ -329,33 +348,33 @@ impl<'a> NodeWrapper<'a> {
         true
     }
 
-    /// @return Start position in the compiled block
-    /// Same as count of all previous code's generated instruction
-    pub fn start_pos(&mut self) -> usize {
-        if let Some(mut prev) = self.0.prev_sibling() {
-            let mut wrapper = NodeWrapper(&mut prev);
-            wrapper.start_pos() + wrapper.instr_count() 
-        } else if let Some(mut parent) = self.0.parent() {
-            NodeWrapper(&mut parent).start_pos()
-        } else {
-            0
-        }
-    }
+    // /// @return Start position in the compiled block
+    // /// Same as count of all previous code's generated instruction
+    // pub fn start_pos(&mut self) -> usize {
+    //     if let Some(mut prev) = self.0.prev_sibling() {
+    //         let mut wrapper = NodeWrapper(&mut prev);
+    //         wrapper.start_pos() + wrapper.instr_count() 
+    //     } else if let Some(mut parent) = self.0.parent() {
+    //         NodeWrapper(&mut parent).start_pos()
+    //     } else {
+    //         0
+    //     }
+    // }
 
-    pub fn end_pos(&mut self) -> usize {
-        self.start_pos() + self.instr_count()
-    }
+    // pub fn end_pos(&mut self) -> usize {
+    //     self.start_pos() + self.instr_count()
+    // }
 
-    pub fn instr_count(&self) -> usize {
-        0
-    }
+    // pub fn instr_count(&self) -> usize {
+    //     0
+    // }
 }
 
 pub struct Compilable {
     pub data: CompilableData,
     pub options: HashMap<String, Box<dyn Any>>,
-    pub start_pos: Option<usize>,
-    pub instr_count: Option<usize>,
+    // pub start_pos: Option<usize>,
+    // pub instr_count: Option<usize>,
 }
 
 impl Compilable {
@@ -363,14 +382,15 @@ impl Compilable {
         Compilable {
             data,
             options: HashMap:: new(),
-            start_pos: None,
-            instr_count: None,
+            // start_pos: None,
+            // instr_count: None,
         }
     }
 }
 
 pub enum CompilableData {
     Block,
+    Statements,
     /// literal
     Void,
     /// literal
