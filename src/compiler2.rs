@@ -154,7 +154,7 @@ impl Compiler {
                                 self.translate(&mut if_then_stmts, &stmt);
                             }
                         }
-                        {
+                        if else_stmts.len() > 0 {
                             let mut if_else = if_node.append(Compilable::new(CompilableData::IfElse));
                             let mut if_else_stmts = if_else.append(Compilable::new(CompilableData::Statements));
                             for stmt in else_stmts {
@@ -191,6 +191,7 @@ impl Compiler {
     }
 
     fn compile_node(&mut self, node: &NodeRef<Compilable>, block: &mut Block) {
+        dbg!(node.value().data.clone());
         match &node.value().data {
             CompilableData::Block => {
                 for child in node.children() {
@@ -218,6 +219,9 @@ impl Compiler {
                     }
                     _ => unimplemented!()
                 }
+            }
+            CompilableData::Bool(v) => {
+                block.add_instr(Instruction::Default(Value::Boolean(v.clone())));
             }
             CompilableData::Int(v) => {
                 let parent = node.parent().unwrap();
@@ -309,6 +313,47 @@ impl Compiler {
                 (*block).add_instr(Instruction::SetMember(name.clone()));
             }
             CompilableData::If => {
+                let start_pos = block.len();
+                let pair_node = node.first_child().unwrap();
+                self.compile_node(&pair_node, block);
+
+                let else_pos = block.len();
+                if let Some(else_node) = pair_node.next_sibling() {
+                    self.compile_node(&else_node, block);
+                }
+
+                let end_pos = block.len();
+
+                for i in start_pos..end_pos {
+                    let instr = &block.instructions[i];
+                    match instr {
+                        Instruction::JumpToElse => {
+                            mem::replace(&mut (*block).instructions[i], Instruction::JumpIfFalse(else_pos as i16));
+                        }
+                        Instruction::JumpToNextStatement => {
+                            mem::replace(&mut (*block).instructions[i], Instruction::Jump(end_pos as i16));
+                        }
+                        _ => ()
+                    }
+                }
+            }
+            CompilableData::IfPair => {
+                let cond_node = node.first_child().unwrap();
+                self.compile_node(&cond_node, block);
+                (*block).add_instr(Instruction::JumpToElse);
+
+                let then_node = cond_node.next_sibling().unwrap();
+                self.compile_node(&then_node, block);
+                (*block).add_instr(Instruction::JumpToNextStatement);
+            }
+            CompilableData::IfPairCondition | CompilableData::IfPairThen | CompilableData::IfElse => {
+                let cond_node = node.first_child().unwrap();
+                self.compile_node(&cond_node, block);
+            }
+            CompilableData::Statements => {
+                for node in node.children() {
+                    self.compile_node(&node, block);
+                }
             }
             _ => unimplemented!()
         }
@@ -388,6 +433,7 @@ impl Compilable {
     }
 }
 
+#[derive(Clone, Debug)]
 pub enum CompilableData {
     Block,
     Statements,
@@ -422,6 +468,7 @@ pub enum CompilableData {
     IfElse,
 }
 
+#[derive(Clone, Debug)]
 pub enum GeneKind {
     Var,
     If,

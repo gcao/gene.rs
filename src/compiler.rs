@@ -396,6 +396,10 @@ impl Block {
     pub fn add_instr(&mut self, instr: Instruction) {
         self.instructions.push(instr);
     }
+
+    pub fn len(&self) -> usize {
+        self.instructions.len()
+    }
 }
 
 impl fmt::Display for Block {
@@ -449,6 +453,11 @@ pub enum Instruction {
 
     Jump(i16),
     JumpIfFalse(i16),
+    /// Below are pseudo instructions that should be replaced with other jump instructions
+    /// before sent to the VM to execute.
+    JumpToElse,
+    JumpToNextStatement,
+
     Break,
     LoopStart,
     LoopEnd,
@@ -571,9 +580,9 @@ impl fmt::Display for Instruction {
                 fmt.write_str("CreateArguments ")?;
                 fmt.write_str(&reg.to_string())?;
             }
-            // _ => {
-            //     fmt.write_str("???")?;
-            // }
+            _ => {
+                fmt.write_str("???")?;
+            }
         }
         fmt.write_str(")")?;
         Ok(())
