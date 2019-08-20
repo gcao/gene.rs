@@ -86,7 +86,7 @@ impl Compiler {
             }
             Value::Map(v) => {
                 if v.is_literal() {
-                    let mut node = parent.append(Compilable::new(CompilableData::Map(v.clone())));
+                    parent.append(Compilable::new(CompilableData::Map(v.clone())));
                 } else {
                     // TODO: create map with literals then compile non-literal values and add to map
                     // let mut node = parent.append(Compilable::new(CompilableData::Map));
@@ -119,33 +119,32 @@ impl Compiler {
                             self.translate(&mut node, &value);
                         }
                     }
-                    // Value::Symbol(ref s) if s == "if" => {
-                    //     let cond = &data[0];
-                    //     let mut then_stmts = Vec::new();
-                    //     let mut else_stmts = Vec::new();
-                    //     let mut is_else = false;
-                    //     for (i, item) in data.iter().enumerate() {
-                    //         if i == 0 {
-                    //             continue;
-                    //         }
+                    Value::Symbol(ref s) if s == "if" => {
+                        let cond = &data[0];
+                        let mut then_stmts = Vec::new();
+                        let mut else_stmts = Vec::new();
+                        let mut is_else = false;
+                        for (i, item) in data.iter().enumerate() {
+                            if i == 0 {
+                                continue;
+                            }
 
-                    //         if is_else {
-                    //             else_stmts.push(item.clone());
-                    //         } else {
-                    //             match item {
-                    //                 Value::Symbol(ref s) if s == "then" => (),
-                    //                 Value::Symbol(ref s) if s == "else" => {
-                    //                     is_else = true;
-                    //                 }
-                    //                 _ => {
-                    //                     then_stmts.push(item.clone());
-                    //                 }
-
-                    //             }
-                    //         }
-                    //     }
-                    //     // TODO
-                    // }
+                            if is_else {
+                                else_stmts.push(item.clone());
+                            } else {
+                                match item {
+                                    Value::Symbol(ref s) if s == "then" => (),
+                                    Value::Symbol(ref s) if s == "else" => {
+                                        is_else = true;
+                                    }
+                                    _ => {
+                                        then_stmts.push(item.clone());
+                                    }
+                                }
+                            }
+                        }
+                        // TODO
+                    }
                     _ => unimplemented!()
                 }
                 // TODO: create Gene with literals then compile non-literal kind/prop/data
@@ -329,11 +328,34 @@ impl<'a> NodeWrapper<'a> {
     pub fn use_member(&mut self, name: &str) -> bool {
         true
     }
+
+    /// @return Start position in the compiled block
+    /// Same as count of all previous code's generated instruction
+    pub fn start_pos(&mut self) -> usize {
+        if let Some(mut prev) = self.0.prev_sibling() {
+            let mut wrapper = NodeWrapper(&mut prev);
+            wrapper.start_pos() + wrapper.instr_count() 
+        } else if let Some(mut parent) = self.0.parent() {
+            NodeWrapper(&mut parent).start_pos()
+        } else {
+            0
+        }
+    }
+
+    pub fn end_pos(&mut self) -> usize {
+        self.start_pos() + self.instr_count()
+    }
+
+    pub fn instr_count(&self) -> usize {
+        0
+    }
 }
 
 pub struct Compilable {
-    data: CompilableData,
-    options: HashMap<String, Box<dyn Any>>,
+    pub data: CompilableData,
+    pub options: HashMap<String, Box<dyn Any>>,
+    pub start_pos: Option<usize>,
+    pub instr_count: Option<usize>,
 }
 
 impl Compilable {
@@ -341,6 +363,8 @@ impl Compilable {
         Compilable {
             data,
             options: HashMap:: new(),
+            start_pos: None,
+            instr_count: None,
         }
     }
 }
@@ -371,6 +395,11 @@ pub enum CompilableData {
     Var(String),
     BinaryOp(String),
     Assignment(String),
+    If,
+    IfPair,
+    IfPairCondition,
+    IfPairThen,
+    IfElse,
 }
 
 pub enum GeneKind {

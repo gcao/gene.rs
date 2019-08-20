@@ -211,18 +211,18 @@ fn test_assignments() {
 
 #[test]
 fn test_ifs() {
-    // {
-    //     let mut parser = Parser::new("
-    //         (if true 1 else 2)
-    //     ");
-    //     let parsed = parser.parse();
-    //     let mut compiler = Compiler::new();
-    //     compiler.compile(parsed.unwrap());
-    //     let module = compiler.module;
-    //     dbg!(module.get_default_block());
-    //     let result_temp = VirtualMachine::new().load_module(&module);
-    //     let borrowed = result_temp.borrow();
-    //     let result = borrowed.downcast_ref::<Value>().unwrap();
-    //     assert_eq!(*result, Value::Integer(1));
-    // }
+    {
+        let mut parser = Parser::new("
+            (if true 1 else 2)
+        ");
+        let parsed = parser.parse();
+        let mut compiler = Compiler::new();
+        compiler.compile(parsed.unwrap());
+        let module = compiler.module;
+        dbg!(module.get_default_block());
+        let result_temp = VirtualMachine::new().load_module(&module);
+        let borrowed = result_temp.borrow();
+        let result = borrowed.downcast_ref::<Value>().unwrap();
+        assert_eq!(*result, Value::Integer(1));
+    }
 }
