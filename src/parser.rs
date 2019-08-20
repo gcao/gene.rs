@@ -43,10 +43,10 @@ impl<'a> Parser<'a> {
 
         loop {
             let item = self.read();
-            if item.is_none() {
-                break;
+            if let Some(value) = item {
+                result.push(value.unwrap());
             } else {
-                result.push(item.unwrap().unwrap());
+                break;
             }
         }
 
@@ -79,14 +79,14 @@ impl<'a> Parser<'a> {
                     break;
                 } else if self.chr.unwrap() == '^' {
                     let result = self.read_pair();
-                    if result.is_some() {
-                        let pair = result.unwrap().unwrap();
+                    if let Some(v) = result {
+                        let pair = v.unwrap();
                         props.insert(pair.key, pair.val);
                     }
                 } else {
                     let result = self.read();
-                    if result.is_some() {
-                        let val = result.unwrap().unwrap();
+                    if let Some(v) = result {
+                        let val = v.unwrap();
                         if kind_is_set {
                             data.push(val);
                         } else {
@@ -112,8 +112,8 @@ impl<'a> Parser<'a> {
                     break;
                 } else {
                     let val = self.read();
-                    if val.is_some() {
-                        arr.push(val.unwrap().unwrap());
+                    if let Some(v) = val {
+                        arr.push(v.unwrap());
                     }
                 }
             }
@@ -129,8 +129,8 @@ impl<'a> Parser<'a> {
                     break;
                 } else {
                     let result = self.read_pair();
-                    if result.is_some() {
-                        let pair = result.unwrap().unwrap();
+                    if let Some(v) = result {
+                        let pair = v.unwrap();
                         map.insert(pair.key, pair.val);
                     }
                 }
@@ -217,8 +217,8 @@ impl<'a> Parser<'a> {
 
         let mut s = String::from("");
         let word = self.read_word();
-        if word.is_some() {
-            s.push_str(&word.unwrap().unwrap());
+        if let Some(v) = word {
+            s.push_str(&v.unwrap());
         }
 
         if is_escape {
