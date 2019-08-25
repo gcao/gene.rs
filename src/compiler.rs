@@ -76,7 +76,7 @@ impl Compiler {
         println!("{}", block);
 
         let mut module = self.module.borrow_mut();
-        module.set_default_block(Rc::new(block));
+        module.set_default_block(block);
         self.module.clone()
     }
 
@@ -198,7 +198,7 @@ impl Compiler {
                 println!("{}", body);
 
                 let mut module = self.module.borrow_mut();
-                module.add_block(body_id.clone(), body);
+                module.add_block(body);
 
                 (*block).add_instr(Instruction::Function(name, matcher, body_id));
             }
@@ -361,9 +361,9 @@ impl Module {
         }
     }
 
-    pub fn set_default_block(&mut self, block: Rc<Block>) {
+    pub fn set_default_block(&mut self, block: Block) {
         self.default_block_id = block.id.clone();
-        self.blocks.insert(block.id.clone(), block.clone());
+        self.blocks.insert(block.id.clone(), Rc::new(block));
     }
 
     pub fn get_default_block(&self) -> Rc<Block> {
@@ -371,8 +371,8 @@ impl Module {
         block.clone()
     }
 
-    pub fn add_block(&mut self, id: String, block: Block) {
-        self.blocks.insert(id, Rc::new(block));
+    pub fn add_block(&mut self, block: Block) {
+        self.blocks.insert(block.id.clone(), Rc::new(block));
     }
 }
 

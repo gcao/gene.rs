@@ -11,6 +11,7 @@ use ego_tree::{Tree, NodeRef, NodeMut};
 use ordered_float::OrderedFloat;
 
 use super::types::{Value, Gene};
+use super::vm::types::{Function, Matcher};
 use super::compiler::{Module, Block, Instruction, LiteralCheck, is_binary_op};
 
 pub struct Compiler {
@@ -28,23 +29,18 @@ impl Compiler {
 
     pub fn compile(&mut self, value: Value) {
         let mut tree = Tree::new(Compilable::new(CompilableData::Block));
-
-        match value {
-            Value::Stream(v) => {
-                for item in v {
-                    self.translate(&mut tree.root_mut(), &item);
-                }
-            }
-            _ => {
-                self.translate(&mut tree.root_mut(), &value);
-            }
-        }
-
-        self.compile_tree(&tree)
+        self.translate(&mut tree.root_mut(), &value);
+        let block = self.compile_tree(&tree, "__default__".to_string());
+        self.module.set_default_block(block);
     }
 
     fn translate(&mut self, parent: &mut NodeMut<Compilable>, value: &Value) {
         match value {
+            Value::Stream(v) => {
+                for item in v {
+                    self.translate(parent, &item);
+                }
+            }
             Value::Null => {
                 parent.append(Compilable::new(CompilableData::Null));
             }
@@ -71,7 +67,6 @@ impl Compiler {
                             new_arr.insert(i, item.clone());
                         } else {
                             new_arr.insert(i, Value::Void);
-                            // TODO: compile non-literal items
                         }
                     }
                     let mut node = parent.append(Compilable::new(CompilableData::Array(new_arr)));
@@ -119,6 +114,24 @@ impl Compiler {
                             self.translate(&mut node, &value);
                         }
                     }
+                    Value::Symbol(ref s) if s == "fn" => {
+                        let name = data[0].to_string();
+
+                        let borrowed = data[1].clone();
+                        let matcher =  Matcher::from(&borrowed);
+
+                        let mut tree = Tree::new(Compilable::new(CompilableData::Block));
+                        let mut stmts = Vec::new();
+                        for i in 2..data.len() {
+                            stmts.push(data[i].clone());
+                        }
+                        self.translate(&mut tree.root_mut(), &Value::Stream(stmts));
+                        let body = self.compile_tree(&tree, name.clone());
+                        let body_id = body.id.clone();
+                        self.module.add_block(body);
+
+                        parent.append(Compilable::new(CompilableData::Function(name, matcher, body_id)));
+                    }
                     Value::Symbol(ref s) if s == "if" => {
                         let cond = &data[0];
                         let mut then_stmts = Vec::new();
@@ -162,6 +175,35 @@ impl Compiler {
                             }
                         }
                     }
+                    Value::Symbol(s) => {
+                        let mut node = parent.append(Compilable::new(CompilableData::Invocation));
+                        node.append(Compilable::new(CompilableData::Symbol(s.to_string())));
+
+                        if data.len() == 0 {
+                            // TODO: optimization
+                            node.append(Compilable::new(CompilableData::InvocationArguments(data.clone())));
+                        } else if data.is_literal() {
+                            node.append(Compilable::new(CompilableData::InvocationArguments(data.clone())));
+                        } else {
+                            let mut new_arr = Vec::new();
+                            // add literal values to new_arr
+                            for (i, item) in data.iter().enumerate() {
+                                if item.is_literal() {
+                                    new_arr.insert(i, item.clone());
+                                } else {
+                                    new_arr.insert(i, Value::Void);
+                                }
+                            }
+                            let mut node = node.append(Compilable::new(CompilableData::InvocationArguments(data.clone())));
+                            // compile non-literal items
+                            for (i, item) in data.iter().enumerate() {
+                                if !item.is_literal() {
+                                    let mut node2 = node.append(Compilable::new(CompilableData::ArrayChild(i)));
+                                    self.translate(&mut node2, item);
+                                }
+                            }
+                        }
+                    }
                     _ => unimplemented!()
                 }
                 // TODO: create Gene with literals then compile non-literal kind/prop/data
@@ -180,14 +222,15 @@ impl Compiler {
         }
     }
 
-    fn compile_tree(&mut self, tree: &Tree<Compilable>) {
-        let mut block = Block::new("__default__".to_string());
+    fn compile_tree(&mut self, tree: &Tree<Compilable>, name: String) -> Block {
+        let mut block = Block::new(name);
 
         self.reg_trackers.insert(block.id.clone(), Vec::new());
 
         self.compile_node(&tree.root(), &mut block);
+        println!("{}", block);
 
-        self.module.set_default_block(Rc::new(block));
+        block
     }
 
     fn compile_node(&mut self, node: &NodeRef<Compilable>, block: &mut Block) {
@@ -197,6 +240,7 @@ impl Compiler {
                 for child in node.children() {
                     self.compile_node(&child, block);
                 }
+                block.add_instr(Instruction::CallEnd);
             }
             CompilableData::Null => {
                 let parent = node.parent().unwrap();
@@ -355,6 +399,36 @@ impl Compiler {
                     self.compile_node(&node, block);
                 }
             }
+            CompilableData::Function(name, matcher, body) => {
+                (*block).add_instr(Instruction::Function(name.to_string(), matcher.clone(), body.to_string()));
+            }
+            CompilableData::Invocation => {
+                let target_node = node.first_child().unwrap();
+                self.compile_node(&target_node, block);
+                let target_reg = self.get_reg(block);
+                (*block).add_instr(Instruction::CopyFromDefault(target_reg));
+
+                let args_node = target_node.next_sibling().unwrap();
+                self.compile_node(&args_node, block);
+                let args_reg = self.get_reg(block);
+                (*block).add_instr(Instruction::CopyFromDefault(args_reg));
+
+                (*block).add_instr(Instruction::Call(target_reg, args_reg, HashMap::new()));
+            }
+            CompilableData::InvocationArguments(v) => {
+                let reg = self.get_reg(block);
+                (*block).add_instr(Instruction::CreateArguments(reg));
+                for child in node.children() {
+                    match child.value().data {
+                        CompilableData::ArrayChild(i) => {
+                            self.compile_node(&child.first_child().unwrap(), block);
+                            (*block).add_instr(Instruction::SetItem(reg, i));
+                        }
+                        _ => unimplemented!()
+                    }
+                }
+                (*block).add_instr(Instruction::CopyToDefault(reg));
+            }
             _ => unimplemented!()
         }
     }
@@ -363,7 +437,7 @@ impl Compiler {
     /// 2. if all registers are occupied
     fn get_reg(&mut self, block: &mut Block) -> u16 {
         let trackers = self.reg_trackers.get_mut(&block.id).unwrap();
-        for i in 2..16 {
+        for i in 0..16 {
             let mut available = true;
             for tracker in trackers.iter() {
                 if *tracker == i as u16 {
@@ -435,6 +509,7 @@ impl Compilable {
 
 #[derive(Clone, Debug)]
 pub enum CompilableData {
+    /// Block(name: String, is_default: bool)
     Block,
     Statements,
     /// literal
@@ -466,6 +541,9 @@ pub enum CompilableData {
     IfPairCondition,
     IfPairThen,
     IfElse,
+    Function(String, Matcher, String),
+    Invocation,
+    InvocationArguments(Vec<Value>),
 }
 
 #[derive(Clone, Debug)]
@@ -482,6 +560,14 @@ trait Normalize {
 
 impl Normalize for Gene {
     fn normalize(&self) -> Gene {
+        if self.data.is_empty() {
+            return Gene{
+                kind:  self.kind.clone(),
+                props: self.props.clone(),
+                data:  self.data.clone(),
+            }
+        }
+
         match self.data[0] {
             Value::Symbol(ref s) if is_binary_op(s) || s == "=" => {
                 let kind = self.data[0].clone();

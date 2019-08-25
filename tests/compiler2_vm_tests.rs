@@ -226,3 +226,22 @@ fn test_ifs() {
         assert_eq!(*result, Value::Integer(1));
     }
 }
+
+#[test]
+fn test_functions() {
+    {
+        let mut parser = Parser::new("
+            (fn f _ 1)
+            (f)
+        ");
+        let parsed = parser.parse();
+        let mut compiler = Compiler::new();
+        compiler.compile(parsed.unwrap());
+        let module = compiler.module;
+        dbg!(module.get_default_block());
+        let result_temp = VirtualMachine::new().load_module(&module);
+        let borrowed = result_temp.borrow();
+        let result = borrowed.downcast_ref::<Value>().unwrap();
+        assert_eq!(*result, Value::Integer(1));
+    }
+}
