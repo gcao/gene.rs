@@ -234,7 +234,7 @@ impl Compiler {
     }
 
     fn compile_node(&mut self, node: &NodeRef<Compilable>, block: &mut Block) {
-        dbg!(node.value().data.clone());
+        // dbg!(node.value().data.clone());
         match &node.value().data {
             CompilableData::Block => {
                 for child in node.children() {
