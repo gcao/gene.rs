@@ -179,12 +179,12 @@ impl Compiler {
                         let mut node = parent.append(Compilable::new(CompilableData::Invocation));
                         node.append(Compilable::new(CompilableData::Symbol(s.to_string())));
 
-                        if data.len() == 0 {
-                            // TODO: optimization
-                            node.append(Compilable::new(CompilableData::InvocationArguments(data.clone())));
-                        } else if data.is_literal() {
-                            node.append(Compilable::new(CompilableData::InvocationArguments(data.clone())));
-                        } else {
+                        // if data.len() == 0 {
+                        //     // TODO: optimization
+                        //     node.append(Compilable::new(CompilableData::InvocationArguments(data.clone())));
+                        // } else if data.is_literal() {
+                        //     node.append(Compilable::new(CompilableData::InvocationArguments(data.clone())));
+                        // } else {
                             let mut new_arr = Vec::new();
                             // add literal values to new_arr
                             for (i, item) in data.iter().enumerate() {
@@ -194,15 +194,15 @@ impl Compiler {
                                     new_arr.insert(i, Value::Void);
                                 }
                             }
-                            let mut node = node.append(Compilable::new(CompilableData::InvocationArguments(data.clone())));
+                            let mut node = node.append(Compilable::new(CompilableData::InvocationArguments(new_arr)));
                             // compile non-literal items
                             for (i, item) in data.iter().enumerate() {
-                                if !item.is_literal() {
+                                // if !item.is_literal() {
                                     let mut node2 = node.append(Compilable::new(CompilableData::ArrayChild(i)));
                                     self.translate(&mut node2, item);
-                                }
+                                // }
                             }
-                        }
+                        // }
                     }
                     _ => unimplemented!()
                 }
@@ -268,52 +268,54 @@ impl Compiler {
                 block.add_instr(Instruction::Default(Value::Boolean(v.clone())));
             }
             CompilableData::Int(v) => {
-                let parent = node.parent().unwrap();
-                let parent_value = parent.value();
-                match parent_value.data {
-                    CompilableData::ArrayChild(index) => {
-                        let gp = parent.parent().unwrap();
-                        let gp_value = gp.value();
-                        let reg = gp_value.options["reg"].downcast_ref::<u16>().unwrap();
-                        block.add_instr(Instruction::Default(Value::Integer(v.clone())));
-                        block.add_instr(Instruction::SetItem(*reg, index));
-                    }
-                    CompilableData::Block => {
-                        if node.next_sibling().is_none() {
-                            // is last in the block
-                            block.add_instr(Instruction::Default(Value::Integer(v.clone())));
-                        } else {
-                            // No need to generate any instruction for dead code
-                        }
-                    }
-                    _ => {
-                        block.add_instr(Instruction::Default(Value::Integer(v.clone())));
-                    }
-                }
+                block.add_instr(Instruction::Default(Value::Integer(v.clone())));
+                // let parent = node.parent().unwrap();
+                // let parent_value = parent.value();
+                // match parent_value.data {
+                //     CompilableData::ArrayChild(index) => {
+                //         let gp = parent.parent().unwrap();
+                //         let gp_value = gp.value();
+                //         let reg = gp_value.options["reg"].downcast_ref::<u16>().unwrap();
+                //         block.add_instr(Instruction::Default(Value::Integer(v.clone())));
+                //         block.add_instr(Instruction::SetItem(*reg, index));
+                //     }
+                //     CompilableData::Block => {
+                //         if node.next_sibling().is_none() {
+                //             // is last in the block
+                //             block.add_instr(Instruction::Default(Value::Integer(v.clone())));
+                //         } else {
+                //             // No need to generate any instruction for dead code
+                //         }
+                //     }
+                //     _ => {
+                //         block.add_instr(Instruction::Default(Value::Integer(v.clone())));
+                //     }
+                // }
             }
             CompilableData::String(v) => {
-                let parent = node.parent().unwrap();
-                let parent_value = parent.value();
-                match parent_value.data {
-                    CompilableData::ArrayChild(index) => {
-                        let gp = parent.parent().unwrap();
-                        let gp_value = gp.value();
-                        let reg = gp_value.options["reg"].downcast_ref::<u16>().unwrap();
-                        block.add_instr(Instruction::Default(Value::String(v.clone())));
-                        block.add_instr(Instruction::SetItem(*reg, index));
-                    }
-                    CompilableData::Block => {
-                        if node.next_sibling().is_none() {
-                            // is last in the block
-                            block.add_instr(Instruction::Default(Value::String(v.clone())));
-                        } else {
-                            // No need to generate any instruction for dead code
-                        }
-                    }
-                    _ => {
-                        block.add_instr(Instruction::Default(Value::String(v.clone())));
-                    }
-                }
+                block.add_instr(Instruction::Default(Value::String(v.clone())));
+                // let parent = node.parent().unwrap();
+                // let parent_value = parent.value();
+                // match parent_value.data {
+                //     CompilableData::ArrayChild(index) => {
+                //         let gp = parent.parent().unwrap();
+                //         let gp_value = gp.value();
+                //         let reg = gp_value.options["reg"].downcast_ref::<u16>().unwrap();
+                //         block.add_instr(Instruction::Default(Value::String(v.clone())));
+                //         block.add_instr(Instruction::SetItem(*reg, index));
+                //     }
+                //     CompilableData::Block => {
+                //         if node.next_sibling().is_none() {
+                //             // is last in the block
+                //             block.add_instr(Instruction::Default(Value::String(v.clone())));
+                //         } else {
+                //             // No need to generate any instruction for dead code
+                //         }
+                //     }
+                //     _ => {
+                //         block.add_instr(Instruction::Default(Value::String(v.clone())));
+                //     }
+                // }
             }
             CompilableData::Symbol(s) => {
                 (*block).add_instr(Instruction::GetMember(s.to_string()));
@@ -509,7 +511,6 @@ impl Compilable {
 
 #[derive(Clone, Debug)]
 pub enum CompilableData {
-    /// Block(name: String, is_default: bool)
     Block,
     Statements,
     /// literal

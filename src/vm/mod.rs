@@ -186,7 +186,6 @@ impl VirtualMachine {
                             self.pos += 1;
 
                             let value;
-
                             {
                                 let value_ = registers.default.borrow();
                                 value = value_.downcast_ref::<Value>().unwrap().clone();
