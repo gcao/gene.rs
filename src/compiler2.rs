@@ -178,6 +178,15 @@ impl Compiler {
                             }
                         }
                     }
+                    Value::Symbol(ref s) if s == "break" => {
+                        parent.append(Compilable::new(CompilableData::Break));
+                    }
+                    Value::Symbol(ref s) if s == "while" => {
+                        let mut node = parent.append(Compilable::new(CompilableData::While));
+                        for stmt in data {
+                            self.translate(&mut node, &stmt);
+                        }
+                    }
                     Value::Symbol(s) => {
                         let mut node = parent.append(Compilable::new(CompilableData::Invocation));
                         node.append(Compilable::new(CompilableData::Symbol(s.to_string())));
@@ -207,7 +216,35 @@ impl Compiler {
                             }
                         // }
                     }
-                    _ => unimplemented!()
+                    _ => {
+                        let mut node = parent.append(Compilable::new(CompilableData::Invocation));
+                        self.translate(&mut node, &kind);
+
+                        // if data.len() == 0 {
+                        //     // TODO: optimization
+                        //     node.append(Compilable::new(CompilableData::InvocationArguments(data.clone())));
+                        // } else if data.is_literal() {
+                        //     node.append(Compilable::new(CompilableData::InvocationArguments(data.clone())));
+                        // } else {
+                            let mut new_arr = Vec::new();
+                            // add literal values to new_arr
+                            for (i, item) in data.iter().enumerate() {
+                                if item.is_literal() {
+                                    new_arr.insert(i, item.clone());
+                                } else {
+                                    new_arr.insert(i, Value::Void);
+                                }
+                            }
+                            let mut node = node.append(Compilable::new(CompilableData::InvocationArguments(new_arr)));
+                            // compile non-literal items
+                            for (i, item) in data.iter().enumerate() {
+                                // if !item.is_literal() {
+                                    let mut node2 = node.append(Compilable::new(CompilableData::ArrayChild(i)));
+                                    self.translate(&mut node2, item);
+                                // }
+                            }
+                        // }
+                    }
                 }
                 // TODO: create Gene with literals then compile non-literal kind/prop/data
                 // let mut node = parent.append(Compilable::new(CompilableData::Gene));
@@ -448,6 +485,29 @@ impl Compiler {
                 }
                 (*block).add_instr(Instruction::CopyToDefault(reg));
             }
+            CompilableData::While => {
+                let start_pos = block.len();
+                let cond_node = node.first_child().unwrap();
+                self.compile_node(&cond_node, block);
+
+                let jump_pos = block.len();
+                (*block).add_instr(Instruction::JumpToElse);
+
+                let mut sibling = cond_node.next_sibling();
+                while sibling.is_some() {
+                    let sibling_node = sibling.unwrap();
+                    self.compile_node(&sibling_node, block);
+                    sibling = sibling_node.next_sibling();
+                }
+
+                (*block).add_instr(Instruction::Jump(start_pos as i16));
+
+                let end_pos = block.len();
+                mem::replace(&mut (*block).instructions[jump_pos], Instruction::JumpIfFalse(end_pos as i16));
+            }
+            CompilableData::Break => {
+                (*block).add_instr(Instruction::Break);
+            }
             _ => unimplemented!()
         }
     }
@@ -491,7 +551,7 @@ impl<'a> NodeWrapper<'a> {
     // pub fn start_pos(&mut self) -> usize {
     //     if let Some(mut prev) = self.0.prev_sibling() {
     //         let mut wrapper = NodeWrapper(&mut prev);
-    //         wrapper.start_pos() + wrapper.instr_count() 
+    //         wrapper.start_pos() + wrapper.instr_count()
     //     } else if let Some(mut parent) = self.0.parent() {
     //         NodeWrapper(&mut parent).start_pos()
     //     } else {
@@ -562,6 +622,8 @@ pub enum CompilableData {
     Function(String, Matcher, String),
     Invocation,
     InvocationArguments(Vec<Value>),
+    While,
+    Break,
 }
 
 #[derive(Clone, Debug)]
