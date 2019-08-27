@@ -170,7 +170,7 @@ impl Compiler {
                                 self.translate(&mut if_then_stmts, &stmt);
                             }
                         }
-                        if else_stmts.is_empty() {
+                        if !else_stmts.is_empty() {
                             let mut if_else = if_node.append(Compilable::new(CompilableData::IfElse));
                             let mut if_else_stmts = if_else.append(Compilable::new(CompilableData::Statements));
                             for stmt in else_stmts {
