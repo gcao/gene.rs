@@ -50,6 +50,9 @@ impl Compiler {
             Value::Integer(v) => {
                 parent.append(Compilable::new(CompilableData::Int(*v)));
             }
+            Value::Float(v) => {
+                parent.append(Compilable::new(CompilableData::Float(*v)));
+            }
             Value::String(v) => {
                 parent.append(Compilable::new(CompilableData::String(v.to_string())));
             }
@@ -291,6 +294,9 @@ impl Compiler {
                 //         block.add_instr(Instruction::Default(Value::Integer(v.clone())));
                 //     }
                 // }
+            }
+            CompilableData::Float(v) => {
+                block.add_instr(Instruction::Default(Value::Float(*v)));
             }
             CompilableData::String(v) => {
                 block.add_instr(Instruction::Default(Value::String(v.clone())));
