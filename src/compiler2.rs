@@ -380,13 +380,13 @@ impl Compiler {
             CompilableData::Map(v) => {
                 (*block).add_instr(Instruction::Default(Value::Map(v.clone())));
                 let reg = self.get_reg(block);
-                (*block).add_instr(Instruction::CopyFromDefault(reg.clone()));
+                (*block).add_instr(Instruction::CopyFromDefault(reg));
                 for child in node.children() {
                     match &child.value().data {
                         CompilableData::MapChild(key) => {
                             let value_node = child.first_child().unwrap();
                             self.compile_node(&value_node, block);
-                            (*block).add_instr(Instruction::SetProp(reg.clone(), key.clone()));
+                            (*block).add_instr(Instruction::SetProp(reg, key.clone()));
                         }
                         _ => unimplemented!()
                     }
