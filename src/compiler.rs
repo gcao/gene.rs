@@ -35,7 +35,7 @@ impl LiteralCheck for Vec<Value> {
     }
 }
 
-impl LiteralCheck for HashMap<String, Value> {
+impl<S: ::std::hash::BuildHasher> LiteralCheck for HashMap<String, Value, S> {
     fn is_literal(&self) -> bool {
         self.values().all(LiteralCheck::is_literal)
     }
@@ -399,6 +399,10 @@ impl Block {
 
     pub fn len(&self) -> usize {
         self.instructions.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 }
 

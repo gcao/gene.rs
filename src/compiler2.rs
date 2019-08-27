@@ -92,7 +92,7 @@ impl Compiler {
                 }
             }
             Value::Gene(box v) => {
-                let Gene{ kind, props, data } = v.normalize();
+                let Gene{ kind, data, .. } = v.normalize();
                 match kind {
                     Value::Symbol(ref s) if is_binary_op(s) => {
                         let mut node = parent.append(Compilable::new(CompilableData::BinaryOp(s.clone())));
@@ -122,8 +122,8 @@ impl Compiler {
 
                         let mut tree = Tree::new(Compilable::new(CompilableData::Block));
                         let mut stmts = Vec::new();
-                        for i in 2..data.len() {
-                            stmts.push(data[i].clone());
+                        for item in data.iter().skip(2) {
+                            stmts.push(item.clone());
                         }
                         self.translate(&mut tree.root_mut(), &Value::Stream(stmts));
                         let body = self.compile_tree(&tree, name.clone());
@@ -167,7 +167,7 @@ impl Compiler {
                                 self.translate(&mut if_then_stmts, &stmt);
                             }
                         }
-                        if else_stmts.len() > 0 {
+                        if else_stmts.is_empty() {
                             let mut if_else = if_node.append(Compilable::new(CompilableData::IfElse));
                             let mut if_else_stmts = if_else.append(Compilable::new(CompilableData::Statements));
                             for stmt in else_stmts {
@@ -265,10 +265,10 @@ impl Compiler {
                 }
             }
             CompilableData::Bool(v) => {
-                block.add_instr(Instruction::Default(Value::Boolean(v.clone())));
+                block.add_instr(Instruction::Default(Value::Boolean(*v)));
             }
             CompilableData::Int(v) => {
-                block.add_instr(Instruction::Default(Value::Integer(v.clone())));
+                block.add_instr(Instruction::Default(Value::Integer(*v)));
                 // let parent = node.parent().unwrap();
                 // let parent_value = parent.value();
                 // match parent_value.data {
@@ -417,7 +417,7 @@ impl Compiler {
 
                 (*block).add_instr(Instruction::Call(target_reg, args_reg, HashMap::new()));
             }
-            CompilableData::InvocationArguments(v) => {
+            CompilableData::InvocationArguments(_v) => {
                 let reg = self.get_reg(block);
                 (*block).add_instr(Instruction::CreateArguments(reg));
                 for child in node.children() {
