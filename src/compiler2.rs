@@ -87,11 +87,11 @@ impl Compiler {
                     parent.append(Compilable::new(CompilableData::Map(v.clone())));
                 } else {
                     // TODO: create map with literals then compile non-literal values and add to map
-                    // let mut node = parent.append(Compilable::new(CompilableData::Map));
-                    // for (key, value) in v.iter() {
-                    //     let mut node2 = node.append(Compilable::new(CompilableData::MapChild(key.to_string())));
-                    //     self.compile_(&mut node2, value);
-                    // }
+                    let mut map_node = parent.append(Compilable::new(CompilableData::Map(HashMap::new())));
+                    for (key, value) in v.iter() {
+                        let mut key_node = map_node.append(Compilable::new(CompilableData::MapChild(key.to_string())));
+                        self.translate(&mut key_node, value);
+                    }
                 }
             }
             Value::Gene(box v) => {
@@ -342,8 +342,19 @@ impl Compiler {
             }
             CompilableData::Map(v) => {
                 (*block).add_instr(Instruction::Default(Value::Map(v.clone())));
-                // for child in node.children() {
-                // }
+                let reg = self.get_reg(block);
+                (*block).add_instr(Instruction::CopyFromDefault(reg.clone()));
+                for child in node.children() {
+                    match &child.value().data {
+                        CompilableData::MapChild(key) => {
+                            let value_node = child.first_child().unwrap();
+                            self.compile_node(&value_node, block);
+                            (*block).add_instr(Instruction::SetProp(reg.clone(), key.clone()));
+                        }
+                        _ => unimplemented!()
+                    }
+                }
+                (*block).add_instr(Instruction::CopyToDefault(reg));
             }
             CompilableData::Var(name) => {
                 self.compile_node(&node.first_child().unwrap(), block);
