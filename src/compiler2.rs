@@ -1,6 +1,7 @@
 extern crate ego_tree;
 
 use std::any::Any;
+use std::cell::RefCell;
 use std::rc::Rc;
 use std::collections::HashMap;
 use std::mem;
@@ -287,82 +288,19 @@ impl Compiler {
                 block.add_instr(Instruction::CallEnd);
             }
             CompilableData::Null => {
-                let parent = node.parent().unwrap();
-                let parent_value = parent.value();
-                match parent_value.data {
-                    CompilableData::ArrayChild(index) => {
-                        let gp = parent.parent().unwrap();
-                        let gp_value = gp.value();
-                        let reg = gp_value.options["reg"].downcast_ref::<u16>().unwrap();
-                        block.add_instr(Instruction::Default(Value::Null));
-                        block.add_instr(Instruction::SetItem(*reg, index));
-                    }
-                    CompilableData::Block => {
-                        if node.next_sibling().is_none() {
-                            // is last in the block
-                            block.add_instr(Instruction::Default(Value::Null));
-                        } else {
-                            // No need to generate any instruction for dead code
-                        }
-                    }
-                    _ => unimplemented!()
-                }
+                block.add_instr(Instruction::Default(Value::Null));
             }
             CompilableData::Bool(v) => {
                 block.add_instr(Instruction::Default(Value::Boolean(*v)));
             }
             CompilableData::Int(v) => {
                 block.add_instr(Instruction::Default(Value::Integer(*v)));
-                // let parent = node.parent().unwrap();
-                // let parent_value = parent.value();
-                // match parent_value.data {
-                //     CompilableData::ArrayChild(index) => {
-                //         let gp = parent.parent().unwrap();
-                //         let gp_value = gp.value();
-                //         let reg = gp_value.options["reg"].downcast_ref::<u16>().unwrap();
-                //         block.add_instr(Instruction::Default(Value::Integer(v.clone())));
-                //         block.add_instr(Instruction::SetItem(*reg, index));
-                //     }
-                //     CompilableData::Block => {
-                //         if node.next_sibling().is_none() {
-                //             // is last in the block
-                //             block.add_instr(Instruction::Default(Value::Integer(v.clone())));
-                //         } else {
-                //             // No need to generate any instruction for dead code
-                //         }
-                //     }
-                //     _ => {
-                //         block.add_instr(Instruction::Default(Value::Integer(v.clone())));
-                //     }
-                // }
             }
             CompilableData::Float(v) => {
                 block.add_instr(Instruction::Default(Value::Float(*v)));
             }
             CompilableData::String(v) => {
                 block.add_instr(Instruction::Default(Value::String(v.clone())));
-                // let parent = node.parent().unwrap();
-                // let parent_value = parent.value();
-                // match parent_value.data {
-                //     CompilableData::ArrayChild(index) => {
-                //         let gp = parent.parent().unwrap();
-                //         let gp_value = gp.value();
-                //         let reg = gp_value.options["reg"].downcast_ref::<u16>().unwrap();
-                //         block.add_instr(Instruction::Default(Value::String(v.clone())));
-                //         block.add_instr(Instruction::SetItem(*reg, index));
-                //     }
-                //     CompilableData::Block => {
-                //         if node.next_sibling().is_none() {
-                //             // is last in the block
-                //             block.add_instr(Instruction::Default(Value::String(v.clone())));
-                //         } else {
-                //             // No need to generate any instruction for dead code
-                //         }
-                //     }
-                //     _ => {
-                //         block.add_instr(Instruction::Default(Value::String(v.clone())));
-                //     }
-                // }
             }
             CompilableData::Symbol(s) => {
                 (*block).add_instr(Instruction::GetMember(s.to_string()));
@@ -470,16 +408,15 @@ impl Compiler {
 
                 if let Some(args_node) = target_node.next_sibling() {
                     let args_reg = self.get_reg(block);
-                    // args_node.value().options.insert("reg".to_string(), Box::new(args_reg));
+                    args_node.value().set_u16("reg", args_reg);
                     self.compile_node(&args_node, block);
-                    (*block).add_instr(Instruction::CopyFromDefault(args_reg));
                     (*block).add_instr(Instruction::Call(target_reg, Some(args_reg), HashMap::new()));
                 } else {
                     (*block).add_instr(Instruction::Call(target_reg, None, HashMap::new()));
                 }
             }
             CompilableData::InvocationArguments(_v) => {
-                let reg = self.get_reg(block);
+                let reg = node.value().get_u16("reg");
                 (*block).add_instr(Instruction::CreateArguments(reg));
                 for child in node.children() {
                     match child.value().data {
@@ -490,7 +427,6 @@ impl Compiler {
                         _ => unimplemented!()
                     }
                 }
-                (*block).add_instr(Instruction::CopyToDefault(reg));
             }
             CompilableData::While => {
                 let start_pos = block.len();
@@ -577,7 +513,7 @@ impl<'a> NodeWrapper<'a> {
 
 pub struct Compilable {
     pub data: CompilableData,
-    pub options: HashMap<String, Box<dyn Any>>,
+    pub options: RefCell<HashMap<String, Box<dyn Any>>>,
     // pub start_pos: Option<usize>,
     // pub instr_count: Option<usize>,
 }
@@ -586,10 +522,22 @@ impl Compilable {
     pub fn new(data: CompilableData) -> Self {
         Compilable {
             data,
-            options: HashMap:: new(),
+            options: RefCell::new(HashMap::new()),
             // start_pos: None,
             // instr_count: None,
         }
+    }
+
+    pub fn get_u16(&self, name: &str) -> u16 {
+        let borrowed = self.options.borrow();
+        *borrowed[name].downcast_ref::<u16>().unwrap()
+    }
+    pub fn set_u16(&self, name: &str, value: u16) {
+        self.set(name, Box::new(value));
+    }
+
+    pub fn set(&self, name: &str, value: Box<dyn Any>) {
+        self.options.borrow_mut().insert(name.to_string(), value);
     }
 }
 
