@@ -318,6 +318,7 @@ impl Compiler {
                     }
                 }
                 (*block).add_instr(Instruction::CopyToDefault(reg));
+                self.free_reg(block, reg);
             }
             CompilableData::Map(v) => {
                 (*block).add_instr(Instruction::Default(Value::Map(v.clone())));
@@ -334,6 +335,7 @@ impl Compiler {
                     }
                 }
                 (*block).add_instr(Instruction::CopyToDefault(reg));
+                self.free_reg(block, reg);
             }
             CompilableData::Var(name) => {
                 self.compile_node(&node.first_child().unwrap(), block);
@@ -349,6 +351,7 @@ impl Compiler {
                 self.compile_node(&second, block);
 
                 (*block).add_instr(Instruction::BinaryOp(op.clone(), first_reg));
+                self.free_reg(block, first_reg);
             }
             CompilableData::Assignment(name) => {
                 self.compile_node(&node.first_child().unwrap(), block);
@@ -411,9 +414,12 @@ impl Compiler {
                     args_node.value().set_u16("reg", args_reg);
                     self.compile_node(&args_node, block);
                     (*block).add_instr(Instruction::Call(target_reg, Some(args_reg), HashMap::new()));
+                    self.free_reg(block, args_reg);
                 } else {
                     (*block).add_instr(Instruction::Call(target_reg, None, HashMap::new()));
                 }
+
+                self.free_reg(block, target_reg);
             }
             CompilableData::InvocationArguments(_v) => {
                 let reg = node.value().get_u16("reg");
