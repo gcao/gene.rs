@@ -256,8 +256,8 @@ impl VirtualMachine {
 
                             let mut new_scope = Scope::new(target.parent_scope.clone());
 
-                            {
-                                let args_temp = registers.get(*args_reg);
+                            if let Some(reg) = args_reg {
+                                let args_temp = registers.get(*reg);
                                 let args_ = args_temp.borrow();
                                 let args = args_.downcast_ref::<Vec<Rc<RefCell<Value>>>>().unwrap();
 

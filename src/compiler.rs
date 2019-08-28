@@ -245,7 +245,7 @@ impl Compiler {
                     (*block).add_instr(Instruction::SetItem(args_reg, i));
                 }
 
-                (*block).add_instr(Instruction::Call(target_reg, args_reg, options));
+                (*block).add_instr(Instruction::Call(target_reg, Some(args_reg), options));
                 self.free_reg(block, target_reg);
                 self.free_reg(block, args_reg);
             }
@@ -477,7 +477,7 @@ pub enum Instruction {
     CreateArguments(u16),
 
     /// Call(options)
-    Call(u16, u16, HashMap<String, Rc<dyn Any>>),
+    Call(u16, Option<u16>, HashMap<String, Rc<dyn Any>>),
     CallEnd,
 }
 
@@ -575,7 +575,9 @@ impl fmt::Display for Instruction {
                 fmt.write_str("Call ")?;
                 fmt.write_str(&target_reg.to_string())?;
                 fmt.write_str(" ")?;
-                fmt.write_str(&args_reg.to_string())?;
+                if let Some(reg) = args_reg {
+                    fmt.write_str(&args_reg.unwrap().to_string())?;
+                }
             }
             Instruction::CallEnd => {
                 fmt.write_str("CallEnd")?;

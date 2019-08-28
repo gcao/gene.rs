@@ -30,7 +30,7 @@ impl Compiler {
     pub fn compile(&mut self, value: Value) {
         let mut tree = Tree::new(Compilable::new(CompilableData::Block));
         self.translate(&mut tree.root_mut(), &value);
-        let block = self.compile_tree(&tree, "__default__".to_string());
+        let block = self.compile_tree(&tree, "__default__".to_string(), true);
         self.module.set_default_block(block);
     }
 
@@ -129,7 +129,7 @@ impl Compiler {
                             stmts.push(item.clone());
                         }
                         self.translate(&mut tree.root_mut(), &Value::Stream(stmts));
-                        let body = self.compile_tree(&tree, name.clone());
+                        let body = self.compile_tree(&tree, name.clone(), false);
                         let body_id = body.id.clone();
                         self.module.add_block(body);
 
@@ -262,10 +262,14 @@ impl Compiler {
         }
     }
 
-    fn compile_tree(&mut self, tree: &Tree<Compilable>, name: String) -> Block {
+    fn compile_tree(&mut self, tree: &Tree<Compilable>, name: String, is_default: bool) -> Block {
         let mut block = Block::new(name);
 
         self.reg_trackers.insert(block.id.clone(), Vec::new());
+
+        if is_default {
+            block.add_instr(Instruction::Init);
+        }
 
         self.compile_node(&tree.root(), &mut block);
         println!("{}", block);
@@ -464,12 +468,15 @@ impl Compiler {
                 let target_reg = self.get_reg(block);
                 (*block).add_instr(Instruction::CopyFromDefault(target_reg));
 
-                let args_node = target_node.next_sibling().unwrap();
-                self.compile_node(&args_node, block);
-                let args_reg = self.get_reg(block);
-                (*block).add_instr(Instruction::CopyFromDefault(args_reg));
-
-                (*block).add_instr(Instruction::Call(target_reg, args_reg, HashMap::new()));
+                if let Some(args_node) = target_node.next_sibling() {
+                    let args_reg = self.get_reg(block);
+                    // args_node.value().options.insert("reg".to_string(), Box::new(args_reg));
+                    self.compile_node(&args_node, block);
+                    (*block).add_instr(Instruction::CopyFromDefault(args_reg));
+                    (*block).add_instr(Instruction::Call(target_reg, Some(args_reg), HashMap::new()));
+                } else {
+                    (*block).add_instr(Instruction::Call(target_reg, None, HashMap::new()));
+                }
             }
             CompilableData::InvocationArguments(_v) => {
                 let reg = self.get_reg(block);
