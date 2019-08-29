@@ -306,7 +306,7 @@ impl Compiler {
                 (*block).add_instr(Instruction::GetMember(s.to_string()));
             }
             CompilableData::Array(v) => {
-                let reg = self.get_reg(block);
+                let reg = block.get_reg();
                 (*block).add_instr(Instruction::Save(reg, Value::Array(v.clone())));
                 for child in node.children() {
                     match child.value().data {
@@ -318,11 +318,11 @@ impl Compiler {
                     }
                 }
                 (*block).add_instr(Instruction::CopyToDefault(reg));
-                self.free_reg(block, reg);
+                block.free_reg(&reg);
             }
             CompilableData::Map(v) => {
                 (*block).add_instr(Instruction::Default(Value::Map(v.clone())));
-                let reg = self.get_reg(block);
+                let reg = block.get_reg();
                 (*block).add_instr(Instruction::CopyFromDefault(reg));
                 for child in node.children() {
                     match &child.value().data {
@@ -335,7 +335,7 @@ impl Compiler {
                     }
                 }
                 (*block).add_instr(Instruction::CopyToDefault(reg));
-                self.free_reg(block, reg);
+                block.free_reg(&reg);
             }
             CompilableData::Var(name) => {
                 self.compile_node(&node.first_child().unwrap(), block);
@@ -344,14 +344,14 @@ impl Compiler {
             CompilableData::BinaryOp(op) => {
                 let first = node.first_child().unwrap();
                 self.compile_node(&first, block);
-                let first_reg = self.get_reg(block);
+                let first_reg = block.get_reg();
                 (*block).add_instr(Instruction::CopyFromDefault(first_reg));
 
                 let second = first.next_sibling().unwrap();
                 self.compile_node(&second, block);
 
                 (*block).add_instr(Instruction::BinaryOp(op.clone(), first_reg));
-                self.free_reg(block, first_reg);
+                block.free_reg(&first_reg);
             }
             CompilableData::Assignment(name) => {
                 self.compile_node(&node.first_child().unwrap(), block);
@@ -406,20 +406,20 @@ impl Compiler {
             CompilableData::Invocation => {
                 let target_node = node.first_child().unwrap();
                 self.compile_node(&target_node, block);
-                let target_reg = self.get_reg(block);
+                let target_reg = block.get_reg();
                 (*block).add_instr(Instruction::CopyFromDefault(target_reg));
 
                 if let Some(args_node) = target_node.next_sibling() {
-                    let args_reg = self.get_reg(block);
+                    let args_reg = block.get_reg();
                     args_node.value().set_u16("reg", args_reg);
                     self.compile_node(&args_node, block);
                     (*block).add_instr(Instruction::Call(target_reg, Some(args_reg), HashMap::new()));
-                    self.free_reg(block, args_reg);
+                    block.free_reg(&args_reg);
                 } else {
                     (*block).add_instr(Instruction::Call(target_reg, None, HashMap::new()));
                 }
 
-                self.free_reg(block, target_reg);
+                block.free_reg(&target_reg);
             }
             CompilableData::InvocationArguments(_v) => {
                 let reg = node.value().get_u16("reg");
@@ -458,32 +458,6 @@ impl Compiler {
                 (*block).add_instr(Instruction::Break);
             }
             _ => unimplemented!()
-        }
-    }
-
-    /// 1. find and return available register
-    /// 2. if all registers are occupied
-    fn get_reg(&mut self, block: &mut Block) -> u16 {
-        let trackers = self.reg_trackers.get_mut(&block.id).unwrap();
-        for i in 0..16 {
-            let mut available = true;
-            for tracker in trackers.iter() {
-                if *tracker == i as u16 {
-                    available = false;
-                }
-            }
-            if available {
-                trackers.push(i);
-                return i as u16;
-            }
-        }
-        16 + random::<u16>()
-    }
-
-    fn free_reg(&mut self, block: &mut Block, reg: u16) {
-        if reg < 16 {
-            let trackers = self.reg_trackers.get_mut(&block.id).unwrap();
-            trackers.retain(|&tracker| tracker != reg)
         }
     }
 }

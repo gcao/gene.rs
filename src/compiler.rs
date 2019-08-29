@@ -3,7 +3,7 @@ extern crate rand;
 use std::mem;
 use std::any::Any;
 use std::cell::{RefCell, RefMut};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::rc::Rc;
 
@@ -381,6 +381,8 @@ pub struct Block {
     pub id: String,
     pub name: String,
     pub instructions: Vec<Instruction>,
+    pub registers_in_use: HashSet<u16>,
+    pub name_to_registers: HashMap<String, u16>,
 }
 
 impl Block {
@@ -390,6 +392,8 @@ impl Block {
             id: new_uuidv4(),
             name,
             instructions,
+            registers_in_use: HashSet::new(),
+            name_to_registers: HashMap::new(),
         }
     }
 
@@ -403,6 +407,24 @@ impl Block {
 
     pub fn is_empty(&self) -> bool {
         self.len() == 0
+    }
+
+    pub fn get_reg(&mut self) -> u16 {
+        let mut i: u16 = 0;
+        while self.registers_in_use.contains(&i) {
+            i += 1;
+        }
+        self.registers_in_use.insert(i);
+        i
+    }
+
+    pub fn free_reg(&mut self, reg: &u16) {
+        self.registers_in_use.remove(reg);
+    }
+
+    /// Assign a register for member with <name> if not already assigned and return it.
+    pub fn assign_reg(&mut self, name: &str) -> u16 {
+        0
     }
 }
 
