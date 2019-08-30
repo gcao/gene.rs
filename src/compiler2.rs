@@ -17,14 +17,12 @@ use super::compiler::{Module, Block, Instruction, LiteralCheck, is_binary_op};
 
 pub struct Compiler {
     pub module: Module,
-    reg_trackers: HashMap<String, Vec<u16>>,
 }
 
 impl Compiler {
     pub fn new() -> Self {
         Compiler {
             module: Module::new(),
-            reg_trackers: HashMap::new(),
         }
     }
 
@@ -266,7 +264,10 @@ impl Compiler {
     fn compile_tree(&mut self, tree: &Tree<Compilable>, name: String, is_default: bool) -> Block {
         let mut block = Block::new(name);
 
-        self.reg_trackers.insert(block.id.clone(), Vec::new());
+        let name_usage = NodeWrapper(&tree.root()).get_name_usage();
+        for (name, value) in name_usage {
+            block.add_name(&name, value);
+        }
 
         if is_default {
             block.add_instr(Instruction::Init);
@@ -304,6 +305,8 @@ impl Compiler {
             }
             CompilableData::Symbol(s) => {
                 (*block).add_instr(Instruction::GetMember(s.to_string()));
+                let reg = block.get_reg_for(s);
+                (*block).add_instr(Instruction::CopyFromDefault(reg));
             }
             CompilableData::Array(v) => {
                 let reg = block.get_reg();
@@ -340,6 +343,8 @@ impl Compiler {
             CompilableData::Var(name) => {
                 self.compile_node(&node.first_child().unwrap(), block);
                 (*block).add_instr(Instruction::DefMember(name.clone()));
+                let reg = block.get_reg_for(&name);
+                (*block).add_instr(Instruction::CopyFromDefault(reg));
             }
             CompilableData::BinaryOp(op) => {
                 let first = node.first_child().unwrap();
@@ -402,6 +407,8 @@ impl Compiler {
             }
             CompilableData::Function(name, matcher, body) => {
                 (*block).add_instr(Instruction::Function(name.to_string(), matcher.clone(), body.to_string()));
+                let reg = block.get_reg_for(&name);
+                (*block).add_instr(Instruction::CopyFromDefault(reg));
             }
             CompilableData::Invocation => {
                 let target_node = node.first_child().unwrap();
@@ -462,11 +469,37 @@ impl Compiler {
     }
 }
 
-pub struct NodeWrapper<'a>(&'a mut NodeRef<'a, Compilable>);
+pub struct NodeWrapper<'a>(&'a NodeRef<'a, Compilable>);
 
 impl<'a> NodeWrapper<'a> {
-    pub fn use_member(&mut self, name: &str) -> bool {
-        true
+    pub fn get_name_usage(&self) -> HashMap<String, usize> {
+        let mut result = HashMap::new();
+
+        match self.0.value().data {
+            CompilableData::Symbol(ref name) => {
+                result.insert(name.clone(), 1);
+            }
+            CompilableData::Var(ref name) => {
+                result.insert(name.clone(), 1);
+            }
+            CompilableData::Function(ref name, ..) => {
+                result.insert(name.clone(), 1);
+            }
+            _ => {}
+        }
+
+        for child in self.0.children() {
+            let usage = NodeWrapper(&child).get_name_usage();
+            for (name, value) in usage.iter() {
+                if result.contains_key(name) {
+                    result.insert(name.clone(), result[name] + value);
+                } else {
+                    result.insert(name.clone(), *value);
+                }
+            }
+        }
+
+        result
     }
 
     // /// @return Start position in the compiled block

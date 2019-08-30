@@ -382,18 +382,17 @@ pub struct Block {
     pub name: String,
     pub instructions: Vec<Instruction>,
     pub registers_in_use: HashSet<u16>,
-    pub name_to_registers: HashMap<String, u16>,
+    pub name_managers: HashMap<String, NameManager>,
 }
 
 impl Block {
     pub fn new(name: String) -> Self {
-        let instructions = Vec::new();
         Block {
             id: new_uuidv4(),
             name,
-            instructions,
+            instructions: Vec::new(),
             registers_in_use: HashSet::new(),
-            name_to_registers: HashMap::new(),
+            name_managers: HashMap::new(),
         }
     }
 
@@ -422,9 +421,31 @@ impl Block {
         self.registers_in_use.remove(reg);
     }
 
+    pub fn add_name(&mut self, name: &str, total_usage: usize) {
+        let mut name_manager = NameManager::new(name);
+        name_manager.total_usage = total_usage;
+        self.name_managers.insert(name.to_string(), name_manager);
+    }
+
+    pub fn use_name(&mut self, name: &str) {
+        let mut name_manager = self.name_managers.get_mut(name).unwrap();
+        name_manager.usage += 1;
+    }
+
+    pub fn get_name_manager(&self, name: &str) -> &NameManager {
+        &self.name_managers[name]
+    }
+
     /// Assign a register for member with <name> if not already assigned and return it.
-    pub fn assign_reg(&mut self, name: &str) -> u16 {
-        0
+    pub fn get_reg_for(&mut self, name: &str) -> u16 {
+        if let Some(register) = self.get_name_manager(name).register {
+            register
+        } else {
+            let register = self.get_reg();
+            let mut name_manager = self.name_managers.get_mut(name).unwrap();
+            name_manager.register = Some(register);
+            register
+        }
     }
 }
 
@@ -598,7 +619,7 @@ impl fmt::Display for Instruction {
                 fmt.write_str(&target_reg.to_string())?;
                 fmt.write_str(" ")?;
                 if let Some(reg) = args_reg {
-                    fmt.write_str(&args_reg.unwrap().to_string())?;
+                    fmt.write_str(&reg.to_string())?;
                 }
             }
             Instruction::CallEnd => {
@@ -644,5 +665,28 @@ fn normalize(gene: Gene) -> Gene {
             }
             _ => gene,
         }
+    }
+}
+
+#[derive(Debug)]
+pub struct NameManager {
+    pub name: String,
+    pub total_usage: usize,
+    pub usage: usize,
+    pub register: Option<u16>,
+}
+
+impl NameManager {
+    pub fn new(name: &str) -> Self {
+        Self {
+            name: name.to_string(),
+            total_usage: 0,
+            usage: 0,
+            register: None,
+        }
+    }
+
+    pub fn used_first_time(&self) -> bool {
+        self.usage == 0
     }
 }
