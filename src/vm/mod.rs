@@ -65,6 +65,7 @@ impl VirtualMachine {
 
                 while self.pos < block.instructions.len() {
                     instr = &block.instructions[self.pos];
+                    // println!("{}", instr);
 
                     // Handle break from loop
                     if break_from_loop {
