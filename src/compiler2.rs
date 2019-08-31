@@ -304,9 +304,15 @@ impl Compiler {
                 block.add_instr(Instruction::Default(Value::String(v.clone())));
             }
             CompilableData::Symbol(s) => {
-                (*block).add_instr(Instruction::GetMember(s.to_string()));
-                let reg = block.get_reg_for(s);
-                (*block).add_instr(Instruction::CopyFromDefault(reg));
+                let reg = block.get_reg_for(s).clone();
+                let name_manager = block.get_name_manager(s);
+                if name_manager.used_first_time() {
+                    (*block).add_instr(Instruction::GetMember(s.to_string()));
+                    (*block).add_instr(Instruction::CopyFromDefault(reg));
+                } else {
+                    (*block).add_instr(Instruction::CopyToDefault(reg));
+                }
+                block.use_name(s);
             }
             CompilableData::Array(v) => {
                 let reg = block.get_reg();
@@ -345,21 +351,29 @@ impl Compiler {
                 (*block).add_instr(Instruction::DefMember(name.clone()));
                 let reg = block.get_reg_for(&name);
                 (*block).add_instr(Instruction::CopyFromDefault(reg));
+                block.use_name(name);
             }
             CompilableData::BinaryOp(op) => {
                 let first = node.first_child().unwrap();
                 self.compile_node(&first, block);
-                let first_reg = block.get_reg();
-                (*block).add_instr(Instruction::CopyFromDefault(first_reg));
+                let (allocated, first_reg) = block.save_default_to_reg();
 
                 let second = first.next_sibling().unwrap();
                 self.compile_node(&second, block);
 
                 (*block).add_instr(Instruction::BinaryOp(op.clone(), first_reg));
-                block.free_reg(&first_reg);
+                if allocated {
+                    block.free_reg(&first_reg);
+                }
             }
             CompilableData::Assignment(name) => {
                 self.compile_node(&node.first_child().unwrap(), block);
+
+                // Update register allocated for <name>
+                let reg = block.get_reg_for(name);
+                (*block).add_instr(Instruction::CopyFromDefault(reg));
+                block.use_name(name);
+
                 (*block).add_instr(Instruction::SetMember(name.clone()));
             }
             CompilableData::If => {
@@ -409,12 +423,12 @@ impl Compiler {
                 (*block).add_instr(Instruction::Function(name.to_string(), matcher.clone(), body.to_string()));
                 let reg = block.get_reg_for(&name);
                 (*block).add_instr(Instruction::CopyFromDefault(reg));
+                block.use_name(name);
             }
             CompilableData::Invocation => {
                 let target_node = node.first_child().unwrap();
                 self.compile_node(&target_node, block);
-                let target_reg = block.get_reg();
-                (*block).add_instr(Instruction::CopyFromDefault(target_reg));
+                let (allocated, target_reg) = block.save_default_to_reg();
 
                 if let Some(args_node) = target_node.next_sibling() {
                     let args_reg = block.get_reg();
@@ -426,7 +440,9 @@ impl Compiler {
                     (*block).add_instr(Instruction::Call(target_reg, None, HashMap::new()));
                 }
 
-                block.free_reg(&target_reg);
+                if allocated {
+                    block.free_reg(&target_reg);
+                }
             }
             CompilableData::InvocationArguments(_v) => {
                 let reg = node.value().get_u16("reg");

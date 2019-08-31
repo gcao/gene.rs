@@ -447,6 +447,25 @@ impl Block {
             register
         }
     }
+
+    /// return (false, reg) if last instruction is CopyFromDefault or CopyToDefault
+    /// else (true, reg)
+    pub fn save_default_to_reg(&mut self) -> (bool, u16) {
+        if let Some(instr) = self.instructions.last() {
+            match instr {
+                Instruction::CopyFromDefault(reg) => {
+                    return (false, *reg);
+                }
+                Instruction::CopyToDefault(reg) => {
+                    return (false, *reg);
+                }
+                _ => {}
+            }
+        }
+        let reg = self.get_reg();
+        self.add_instr(Instruction::CopyFromDefault(reg));
+        (true, reg)
+    }
 }
 
 impl fmt::Display for Block {
