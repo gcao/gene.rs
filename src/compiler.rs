@@ -558,17 +558,17 @@ impl fmt::Display for Instruction {
                 fmt.write_str(&v.to_string())?;
             }
             Instruction::Save(reg, v) => {
-                fmt.write_str("Save ")?;
+                fmt.write_str("Save R")?;
                 fmt.write_str(&reg.to_string())?;
                 fmt.write_str(" ")?;
                 fmt.write_str(&v.to_string())?;
             }
             Instruction::CopyFromDefault(reg) => {
-                fmt.write_str("CopyFromDefault ")?;
+                fmt.write_str("CopyFromDefault R")?;
                 fmt.write_str(&reg.to_string())?;
             }
             Instruction::CopyToDefault(reg) => {
-                fmt.write_str("CopyToDefault ")?;
+                fmt.write_str("CopyToDefault R")?;
                 fmt.write_str(&reg.to_string())?;
             }
             Instruction::DefMember(name) => {
@@ -584,19 +584,19 @@ impl fmt::Display for Instruction {
                 fmt.write_str(name)?;
             }
             Instruction::GetItem(reg, index) => {
-                fmt.write_str("GetItem ")?;
+                fmt.write_str("GetItem R")?;
                 fmt.write_str(&reg.to_string())?;
                 fmt.write_str(" ")?;
                 fmt.write_str(&index.to_string())?;
             }
             Instruction::SetItem(reg, index) => {
-                fmt.write_str("SetItem ")?;
+                fmt.write_str("SetItem R")?;
                 fmt.write_str(&reg.to_string())?;
                 fmt.write_str(" ")?;
                 fmt.write_str(&index.to_string())?;
             }
             Instruction::SetProp(reg, key) => {
-                fmt.write_str("Get ")?;
+                fmt.write_str("Get R")?;
                 fmt.write_str(&reg.to_string())?;
                 fmt.write_str(" ")?;
                 fmt.write_str(key)?;
@@ -619,6 +619,7 @@ impl fmt::Display for Instruction {
                 fmt.write_str("LoopEnd")?;
             }
             Instruction::BinaryOp(op, first) => {
+                fmt.write_str("R")?;
                 fmt.write_str(&first.to_string())?;
                 fmt.write_str(" ")?;
                 fmt.write_str(op)?;
@@ -634,9 +635,9 @@ impl fmt::Display for Instruction {
                 fmt.write_str(body_id)?;
             }
             Instruction::Call(target_reg, args_reg, _options) => {
-                fmt.write_str("Call ")?;
+                fmt.write_str("Call R")?;
                 fmt.write_str(&target_reg.to_string())?;
-                fmt.write_str(" ")?;
+                fmt.write_str(" R")?;
                 if let Some(reg) = args_reg {
                     fmt.write_str(&reg.to_string())?;
                 }
@@ -645,7 +646,7 @@ impl fmt::Display for Instruction {
                 fmt.write_str("CallEnd")?;
             }
             Instruction::CreateArguments(reg) => {
-                fmt.write_str("CreateArguments ")?;
+                fmt.write_str("CreateArguments R")?;
                 fmt.write_str(&reg.to_string())?;
             }
             _ => {
