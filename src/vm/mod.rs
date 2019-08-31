@@ -3,7 +3,7 @@ pub mod types;
 use std::ptr;
 use std::any::Any;
 use std::cell::{Ref, RefCell, RefMut};
-use std::collections::{BTreeMap, HashMap};
+use std::collections::HashMap;
 use std::rc::Rc;
 use std::time::Instant;
 
@@ -54,15 +54,16 @@ impl VirtualMachine {
 
         self.pos = 0;
         let mut break_from_loop = false;
+        let mut immature_break;
 
         let mut benchmarker = Benchmarker::new();
         benchmarker.loop_start();
 
         // Use two level loop to separate instructions that change registers and those that don't
         // TODO: clean up and document logic
-        'outer: while self.pos < block.instructions.len() {
+        while self.pos < block.instructions.len() {
             let mut instr = &block.instructions[self.pos];
-            let mut immature_break = false;
+            immature_break = false;
 
             {
                 let mut registers = self.registers_store.find(registers_id);
@@ -118,7 +119,7 @@ impl VirtualMachine {
                             benchmarker.op_start("CopyToDefault");
 
                             self.pos += 1;
-                            registers.default = registers.get(to);
+                            registers.default = registers.get(*to);
 
                             benchmarker.op_end();
                         }
@@ -206,7 +207,7 @@ impl VirtualMachine {
                             benchmarker.op_start("BinaryOp");
 
                             self.pos += 1;
-                            let first = registers.get(first);
+                            let first = registers.get(*first);
                             let second = registers.default.clone();
                             let result = binary_op(op, first, second);
                             registers.default = result;
@@ -235,7 +236,7 @@ impl VirtualMachine {
 
                             benchmarker.op_end();
                         }
-                        Instruction::Call(target_reg, args_reg, _options) => {
+                        Instruction::Call(_target_reg, _args_reg, _options) => {
                             immature_break = true;
                             break;
                         }
@@ -258,12 +259,11 @@ impl VirtualMachine {
                             self.pos += 1;
 
                             let value;
-
                             {
                                 let value_ = registers.default.borrow();
                                 value = value_.downcast_ref::<Value>().unwrap().clone();
                             }
-                            let target_temp = registers.get(target_reg);
+                            let target_temp = registers.get(*target_reg);
                             let mut target_ = target_temp.borrow_mut();
                             if let Some(args) = target_.downcast_mut::<Vec<Rc<RefCell<Value>>>>() {
                                 while *index >= args.len() {
@@ -297,7 +297,7 @@ impl VirtualMachine {
                                 let value_ = registers.default.borrow();
                                 value = value_.downcast_ref::<Value>().unwrap().clone();
                             }
-                            let target_temp = registers.get(target_reg);
+                            let target_temp = registers.get(*target_reg);
                             let mut target_ = target_temp.borrow_mut();
                             if let Some(v) = target_.downcast_mut::<Value>() {
                                 match v {
@@ -330,15 +330,15 @@ impl VirtualMachine {
                         let new_context;
 
                         {
-                            let mut registers = self.registers_store.find(registers_id);
-                            borrowed_ = registers.get(target_reg);
+                            let registers = self.registers_store.find(registers_id);
+                            borrowed_ = registers.get(*target_reg);
                             borrowed = borrowed_.borrow();
                             target = borrowed.downcast_ref::<Function>().unwrap();
 
                             let mut new_scope = Scope::new(target.parent_scope.clone());
 
-                            {
-                                let args_temp = registers.get(args_reg);
+                            if let Some(reg) = args_reg {
+                                let args_temp = registers.get(*reg);
                                 let args_ = args_temp.borrow();
                                 let args = args_.downcast_ref::<Vec<Rc<RefCell<Value>>>>().unwrap();
 
@@ -355,9 +355,9 @@ impl VirtualMachine {
 
                         let ret_addr = Address::new(block.id.clone(), self.pos);
                         new_registers.caller = Some(ret_addr);
-                        new_registers.caller_registers = registers_id.clone();
+                        new_registers.caller_registers = registers_id;
 
-                        registers_id = new_registers.id.clone();
+                        registers_id = new_registers.id;
                         block = self.code_manager.blocks[&target.body].clone();
                         self.pos = 0;
 
@@ -372,10 +372,9 @@ impl VirtualMachine {
                         {
                             let registers = self.registers_store.find(registers_id);
                             let caller = registers.caller.as_ref();
-                            if caller.is_some() {
+                            if let Some(ret_addr) = caller {
                                 is_top_level = false; 
 
-                                let ret_addr = caller.unwrap();
                                 block = self.code_manager.blocks[&ret_addr.block_id].clone();
                                 self.pos = ret_addr.pos;
 
@@ -464,11 +463,11 @@ impl Registers {
     }
 
     #[inline]
-    pub fn get(&self, key: &u16) -> Rc<RefCell<dyn Any>> {
-        if *key < 16 {
-            self.cache[*key as usize].clone()
+    pub fn get(&self, key: u16) -> Rc<RefCell<dyn Any>> {
+        if key < 16 {
+            self.cache[key as usize].clone()
         } else {
-            self.store[key].clone()
+            self.store[&key].clone()
         }
      }
 
@@ -514,14 +513,15 @@ impl RegistersStore {
 
     #[inline]
     pub fn get(&mut self, context: Rc<RefCell<Context>>) -> &mut Registers {
-        if self.freed.len() > 0 {
+        if !self.freed.is_empty() {
             let id = self.freed.pop().unwrap();
-            let mut registers: &mut Registers;
-            if id < 32 {
-                registers = &mut self.cache[id];
-            } else {
-                registers = self.store.get_mut(&id).unwrap();
-            }
+            let mut registers =
+                if id < 32 {
+                    &mut self.cache[id]
+                } else {
+                    self.store.get_mut(&id).unwrap()
+                };
+
             {
                 registers.reset();
                 registers.context = context;
@@ -556,6 +556,7 @@ impl RegistersStore {
     }
 }
 
+#[inline]
 fn binary_op<'a>(
     op: &'a str,
     first: Rc<RefCell<dyn Any>>,

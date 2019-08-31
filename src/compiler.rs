@@ -3,7 +3,7 @@ extern crate rand;
 use std::mem;
 use std::any::Any;
 use std::cell::{RefCell, RefMut};
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::rc::Rc;
 
@@ -14,7 +14,7 @@ use super::types::Value;
 use super::vm::types::{Function, Matcher};
 use super::utils::new_uuidv4;
 
-trait LiteralCheck {
+pub trait LiteralCheck {
     fn is_literal(&self) -> bool;
 }
 
@@ -35,9 +35,9 @@ impl LiteralCheck for Vec<Value> {
     }
 }
 
-impl LiteralCheck for BTreeMap<String, Value> {
+impl<S: ::std::hash::BuildHasher> LiteralCheck for HashMap<String, Value, S> {
     fn is_literal(&self) -> bool {
-        false
+        self.values().all(LiteralCheck::is_literal)
     }
 }
 impl LiteralCheck for Gene {
@@ -73,10 +73,10 @@ impl Compiler {
         self.compile_(&mut block, ast);
         block.add_instr(Instruction::CallEnd);
 
-        println!("Block: {}", block);
+        println!("{}", block);
 
         let mut module = self.module.borrow_mut();
-        module.set_default_block(Rc::new(block));
+        module.set_default_block(block);
         self.module.clone()
     }
 
@@ -92,7 +92,7 @@ impl Compiler {
                 self.compile_map(block, m)
             }
             Value::Gene(v) => {
-                self.compile_gene(block, normalize(v));
+                self.compile_gene(block, normalize(*v));
             }
             Value::Stream(stmts) => {
                 for stmt in stmts {
@@ -133,11 +133,11 @@ impl Compiler {
         }
     }
 
-    fn compile_map(&mut self, block: &mut Block, map: BTreeMap<String, Value>) {
+    fn compile_map(&mut self, block: &mut Block, map: HashMap<String, Value>) {
         if map.is_literal() {
             (*block).add_instr(Instruction::Default(Value::Map(map)));
         } else {
-            let mut map2 = BTreeMap::<String, Value>::new();
+            let mut map2 = HashMap::<String, Value>::new();
             for (key, value) in map.iter() {
                 if value.is_literal() {
                     map2.insert(key.clone(), value.clone());
@@ -164,7 +164,7 @@ impl Compiler {
             kind, data, ..
         } = gene;
 
-        match *kind.borrow() {
+        match kind {
             Value::Symbol(ref s) if s == "var" => {
                 let first;
                 {
@@ -172,9 +172,9 @@ impl Compiler {
                 }
                 let second;
                 {
-                    second = data[1].borrow().clone();
+                    second = data[1].clone();
                 }
-                match *first.borrow_mut() {
+                match first {
                     Value::Symbol(ref name) => {
                         self.compile_(block, second.clone());
                         (*block).add_instr(Instruction::DefMember(name.clone()));
@@ -183,22 +183,22 @@ impl Compiler {
                 };
             }
             Value::Symbol(ref s) if s == "fn" => {
-                let name = data[0].borrow().to_string();
+                let name = data[0].to_string();
 
                 let mut body = Block::new(name.clone());
                 let body_id = body.id.clone();
 
                 self.reg_trackers.insert(body_id.clone(), Vec::new());
 
-                let borrowed = data[1].borrow();
-                let matcher =  Matcher::from(&*borrowed);
+                let borrowed = data[1].clone();
+                let matcher =  Matcher::from(&borrowed);
 
                 self.compile_statements(&mut body, &data[2..]);
                 body.add_instr(Instruction::CallEnd);
-                println!("Block: {}", body);
+                println!("{}", body);
 
                 let mut module = self.module.borrow_mut();
-                module.add_block(body_id.clone(), body);
+                module.add_block(body);
 
                 (*block).add_instr(Instruction::Function(name, matcher, body_id));
             }
@@ -206,19 +206,19 @@ impl Compiler {
                 self.compile_if(block, data);
             }
             Value::Symbol(ref s) if s == "=" => {
-                let name = data[0].borrow().to_string();
-                let value = data[1].borrow().clone();
+                let name = data[0].to_string();
+                let value = data[1].clone();
                 self.compile_(block, value);
                 (*block).add_instr(Instruction::SetMember(name));
             }
             Value::Symbol(ref s) if is_binary_op(s) => {
-                let first = data[0].borrow().clone();
+                let first = data[0].clone();
                 self.compile_(block, first);
 
                 let first_reg = self.get_reg(block);
                 (*block).add_instr(Instruction::CopyFromDefault(first_reg));
 
-                let second = data[1].borrow().clone();
+                let second = data[1].clone();
                 self.compile_(block, second);
 
                 (*block).add_instr(Instruction::BinaryOp(s.to_string(), first_reg));
@@ -232,8 +232,7 @@ impl Compiler {
             }
             _ => {
                 // Invocation
-                let borrowed_kind = kind.borrow().clone();
-                self.compile_(block, borrowed_kind);
+                self.compile_(block, kind);
                 let target_reg = self.get_reg(block);
                 (*block).add_instr(Instruction::CopyFromDefault(target_reg));
 
@@ -242,36 +241,33 @@ impl Compiler {
                 let args_reg = self.get_reg(block);
                 (*block).add_instr(Instruction::CreateArguments(args_reg));
                 for (i, item) in data.iter().enumerate() {
-                    let borrowed = item.borrow();
-                    self.compile_(block, (*borrowed).clone());
+                    self.compile_(block, item.clone());
                     (*block).add_instr(Instruction::SetItem(args_reg, i));
                 }
 
-                (*block).add_instr(Instruction::Call(target_reg, args_reg, options));
+                (*block).add_instr(Instruction::Call(target_reg, Some(args_reg), options));
                 self.free_reg(block, target_reg);
                 self.free_reg(block, args_reg);
             }
         };
     }
 
-    fn compile_statements(&mut self, block: &mut Block, stmts: &[Rc<RefCell<Value>>]) {
+    fn compile_statements(&mut self, block: &mut Block, stmts: &[Value]) {
         for item in stmts.iter().cloned() {
-            let borrowed = item.borrow().clone();
-            self.compile_(block, borrowed);
+            self.compile_(block, item);
         }
     }
 
-    fn compile_if(&mut self, block: &mut Block, mut data: Vec<Rc<RefCell<Value>>>) {
+    fn compile_if(&mut self, block: &mut Block, mut data: Vec<Value>) {
         let cond = data.remove(0);
-        let mut then_stmts = Vec::<Rc<RefCell<Value>>>::new();
-        let mut else_stmts = Vec::<Rc<RefCell<Value>>>::new();
+        let mut then_stmts = Vec::new();
+        let mut else_stmts = Vec::new();
         let mut is_else = false;
         for item in data.iter() {
             if is_else {
                 else_stmts.push(item.clone());
             } else {
-                let borrowed_item = item.borrow();
-                match *borrowed_item {
+                match item {
                     Value::Symbol(ref s) if s == "then" => (),
                     Value::Symbol(ref s) if s == "else" => {
                         is_else = true;
@@ -283,7 +279,7 @@ impl Compiler {
                 }
             }
         }
-        self.compile_(block, cond.borrow().clone());
+        self.compile_(block, cond.clone());
         let cond_jump_index = block.instructions.len();
         (*block).add_instr(Instruction::Dummy);
 
@@ -300,18 +296,18 @@ impl Compiler {
         mem::replace(&mut (*block).instructions[then_jump_index], Instruction::Jump(end_index as i16));
     }
 
-    fn compile_while(&mut self, block: &mut Block, mut data: Vec<Rc<RefCell<Value>>>) {
+    fn compile_while(&mut self, block: &mut Block, mut data: Vec<Value>) {
         let start_index = block.instructions.len();
 
         (*block).add_instr(Instruction::LoopStart);
 
         let cond = data.remove(0);
-        self.compile_(block, cond.borrow().clone());
+        self.compile_(block, cond);
         let jump_index = block.instructions.len();
         (*block).add_instr(Instruction::Dummy);
 
         for item in data.iter() {
-            self.compile_(block, item.borrow().clone());
+            self.compile_(block, item.clone());
         }
         (*block).add_instr(Instruction::Jump(start_index as i16));
         (*block).add_instr(Instruction::LoopEnd);
@@ -365,9 +361,9 @@ impl Module {
         }
     }
 
-    pub fn set_default_block(&mut self, block: Rc<Block>) {
+    pub fn set_default_block(&mut self, block: Block) {
         self.default_block_id = block.id.clone();
-        self.blocks.insert(block.id.clone(), block.clone());
+        self.blocks.insert(block.id.clone(), Rc::new(block));
     }
 
     pub fn get_default_block(&self) -> Rc<Block> {
@@ -375,8 +371,8 @@ impl Module {
         block.clone()
     }
 
-    pub fn add_block(&mut self, id: String, block: Block) {
-        self.blocks.insert(id, Rc::new(block));
+    pub fn add_block(&mut self, block: Block) {
+        self.blocks.insert(block.id.clone(), Rc::new(block));
     }
 }
 
@@ -385,20 +381,90 @@ pub struct Block {
     pub id: String,
     pub name: String,
     pub instructions: Vec<Instruction>,
+    pub registers_in_use: HashSet<u16>,
+    pub name_managers: HashMap<String, NameManager>,
 }
 
 impl Block {
     pub fn new(name: String) -> Self {
-        let instructions = vec![];
         Block {
             id: new_uuidv4(),
             name,
-            instructions,
+            instructions: Vec::new(),
+            registers_in_use: HashSet::new(),
+            name_managers: HashMap::new(),
         }
     }
 
     pub fn add_instr(&mut self, instr: Instruction) {
         self.instructions.push(instr);
+    }
+
+    pub fn len(&self) -> usize {
+        self.instructions.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    pub fn get_reg(&mut self) -> u16 {
+        let mut i: u16 = 0;
+        while self.registers_in_use.contains(&i) {
+            i += 1;
+        }
+        self.registers_in_use.insert(i);
+        i
+    }
+
+    pub fn free_reg(&mut self, reg: &u16) {
+        self.registers_in_use.remove(reg);
+    }
+
+    pub fn add_name(&mut self, name: &str, total_usage: usize) {
+        let mut name_manager = NameManager::new(name);
+        name_manager.total_usage = total_usage;
+        self.name_managers.insert(name.to_string(), name_manager);
+    }
+
+    pub fn use_name(&mut self, name: &str) {
+        let mut name_manager = self.name_managers.get_mut(name).unwrap();
+        name_manager.usage += 1;
+    }
+
+    pub fn get_name_manager(&self, name: &str) -> &NameManager {
+        &self.name_managers[name]
+    }
+
+    /// Assign a register for member with <name> if not already assigned and return it.
+    pub fn get_reg_for(&mut self, name: &str) -> u16 {
+        if let Some(register) = self.get_name_manager(name).register {
+            register
+        } else {
+            let register = self.get_reg();
+            let mut name_manager = self.name_managers.get_mut(name).unwrap();
+            name_manager.register = Some(register);
+            register
+        }
+    }
+
+    /// return (false, reg) if last instruction is CopyFromDefault or CopyToDefault
+    /// else (true, reg)
+    pub fn save_default_to_reg(&mut self) -> (bool, u16) {
+        if let Some(instr) = self.instructions.last() {
+            match instr {
+                Instruction::CopyFromDefault(reg) => {
+                    return (false, *reg);
+                }
+                Instruction::CopyToDefault(reg) => {
+                    return (false, *reg);
+                }
+                _ => {}
+            }
+        }
+        let reg = self.get_reg();
+        self.add_instr(Instruction::CopyFromDefault(reg));
+        (true, reg)
     }
 }
 
@@ -453,6 +519,11 @@ pub enum Instruction {
 
     Jump(i16),
     JumpIfFalse(i16),
+    /// Below are pseudo instructions that should be replaced with other jump instructions
+    /// before sent to the VM to execute.
+    JumpToElse,
+    JumpToNextStatement,
+
     Break,
     LoopStart,
     LoopEnd,
@@ -468,7 +539,7 @@ pub enum Instruction {
     CreateArguments(u16),
 
     /// Call(options)
-    Call(u16, u16, HashMap<String, Rc<dyn Any>>),
+    Call(u16, Option<u16>, HashMap<String, Rc<dyn Any>>),
     CallEnd,
 }
 
@@ -487,17 +558,17 @@ impl fmt::Display for Instruction {
                 fmt.write_str(&v.to_string())?;
             }
             Instruction::Save(reg, v) => {
-                fmt.write_str("Save ")?;
+                fmt.write_str("Save R")?;
                 fmt.write_str(&reg.to_string())?;
                 fmt.write_str(" ")?;
                 fmt.write_str(&v.to_string())?;
             }
             Instruction::CopyFromDefault(reg) => {
-                fmt.write_str("CopyFromDefault ")?;
+                fmt.write_str("CopyFromDefault R")?;
                 fmt.write_str(&reg.to_string())?;
             }
             Instruction::CopyToDefault(reg) => {
-                fmt.write_str("CopyToDefault ")?;
+                fmt.write_str("CopyToDefault R")?;
                 fmt.write_str(&reg.to_string())?;
             }
             Instruction::DefMember(name) => {
@@ -513,19 +584,19 @@ impl fmt::Display for Instruction {
                 fmt.write_str(name)?;
             }
             Instruction::GetItem(reg, index) => {
-                fmt.write_str("GetItem ")?;
+                fmt.write_str("GetItem R")?;
                 fmt.write_str(&reg.to_string())?;
                 fmt.write_str(" ")?;
                 fmt.write_str(&index.to_string())?;
             }
             Instruction::SetItem(reg, index) => {
-                fmt.write_str("SetItem ")?;
+                fmt.write_str("SetItem R")?;
                 fmt.write_str(&reg.to_string())?;
                 fmt.write_str(" ")?;
                 fmt.write_str(&index.to_string())?;
             }
             Instruction::SetProp(reg, key) => {
-                fmt.write_str("Get ")?;
+                fmt.write_str("Get R")?;
                 fmt.write_str(&reg.to_string())?;
                 fmt.write_str(" ")?;
                 fmt.write_str(key)?;
@@ -548,6 +619,7 @@ impl fmt::Display for Instruction {
                 fmt.write_str("LoopEnd")?;
             }
             Instruction::BinaryOp(op, first) => {
+                fmt.write_str("R")?;
                 fmt.write_str(&first.to_string())?;
                 fmt.write_str(" ")?;
                 fmt.write_str(op)?;
@@ -563,28 +635,30 @@ impl fmt::Display for Instruction {
                 fmt.write_str(body_id)?;
             }
             Instruction::Call(target_reg, args_reg, _options) => {
-                fmt.write_str("Call ")?;
+                fmt.write_str("Call R")?;
                 fmt.write_str(&target_reg.to_string())?;
-                fmt.write_str(" ")?;
-                fmt.write_str(&args_reg.to_string())?;
+                fmt.write_str(" R")?;
+                if let Some(reg) = args_reg {
+                    fmt.write_str(&reg.to_string())?;
+                }
             }
             Instruction::CallEnd => {
                 fmt.write_str("CallEnd")?;
             }
             Instruction::CreateArguments(reg) => {
-                fmt.write_str("CreateArguments ")?;
+                fmt.write_str("CreateArguments R")?;
                 fmt.write_str(&reg.to_string())?;
             }
-            // _ => {
-            //     fmt.write_str("???")?;
-            // }
+            _ => {
+                fmt.write_str("???")?;
+            }
         }
         fmt.write_str(")")?;
         Ok(())
     }
 }
 
-fn is_binary_op(op: &str) -> bool {
+pub fn is_binary_op(op: &str) -> bool {
     let binary_ops = vec!["+", "-", "*", "/", "<", "<=", ">", ">=", "=="];
     binary_ops.contains(&op)
 }
@@ -593,17 +667,16 @@ fn normalize(gene: Gene) -> Gene {
     if gene.data.is_empty() {
         gene
     } else {
-        let borrowed = gene.data[0].clone();
-        let first = borrowed.borrow_mut();
-        match *first {
+        let first = gene.data[0].clone();
+        match first {
             Value::Symbol(ref s) if is_binary_op(s) || s == "=" => {
                 let Gene {
                     kind,
-                    mut data,
                     props,
+                    mut data,
                 } = gene;
                 let new_kind = data.remove(0);
-                data.insert(0, kind);
+                data.insert(0, kind.clone());
                 Gene {
                     kind: new_kind,
                     props,
@@ -612,5 +685,28 @@ fn normalize(gene: Gene) -> Gene {
             }
             _ => gene,
         }
+    }
+}
+
+#[derive(Debug)]
+pub struct NameManager {
+    pub name: String,
+    pub total_usage: usize,
+    pub usage: usize,
+    pub register: Option<u16>,
+}
+
+impl NameManager {
+    pub fn new(name: &str) -> Self {
+        Self {
+            name: name.to_string(),
+            total_usage: 0,
+            usage: 0,
+            register: None,
+        }
+    }
+
+    pub fn used_first_time(&self) -> bool {
+        self.usage == 0
     }
 }

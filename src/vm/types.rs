@@ -1,6 +1,6 @@
 use std::any::Any;
 use std::cell::RefCell;
-use std::collections::{BTreeMap, HashMap};
+use std::collections::HashMap;
 use std::rc::Rc;
 
 use super::super::types::Value;
@@ -172,10 +172,9 @@ impl Scope {
             let parent_ = self.parent.clone().unwrap();
             let parent = parent_.borrow();
             let v = parent.get_member(name);
-            if v.is_some() {
-                Some(v.unwrap().clone())
-            } else {
-                None
+            match v {
+                Some(value) => Some(value.clone()),
+                None => None,
             }
         } else {
             value.cloned()

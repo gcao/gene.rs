@@ -1,7 +1,7 @@
 use std::str::CharIndices;
 
 use std::cell::{RefCell, RefMut};
-use std::collections::BTreeMap;
+use std::collections::HashMap;
 use std::rc::Rc;
 
 use ordered_float::OrderedFloat;
@@ -43,10 +43,10 @@ impl<'a> Parser<'a> {
 
         loop {
             let item = self.read();
-            if item.is_none() {
-                break;
+            if let Some(value) = item {
+                result.push(value.unwrap());
             } else {
-                result.push(item.unwrap().unwrap());
+                break;
             }
         }
 
@@ -68,9 +68,9 @@ impl<'a> Parser<'a> {
         if ch == '(' {
             self.next();
             let mut kind_is_set = false;
-            let mut kind = Value::Null;
-            let mut props = BTreeMap::<String, Rc<RefCell<Value>>>::new();
-            let mut data = Vec::<Rc<RefCell<Value>>>::new();
+            let mut kind = Value::Void;
+            let mut props = HashMap::new();
+            let mut data = Vec::new();
             loop {
                 self.skip_whitespaces();
 
@@ -79,16 +79,16 @@ impl<'a> Parser<'a> {
                     break;
                 } else if self.chr.unwrap() == '^' {
                     let result = self.read_pair();
-                    if result.is_some() {
-                        let pair = result.unwrap().unwrap();
-                        props.insert(pair.key, Rc::new(RefCell::new(pair.val)));
+                    if let Some(v) = result {
+                        let pair = v.unwrap();
+                        props.insert(pair.key, pair.val);
                     }
                 } else {
                     let result = self.read();
-                    if result.is_some() {
-                        let val = result.unwrap().unwrap();
+                    if let Some(v) = result {
+                        let val = v.unwrap();
                         if kind_is_set {
-                            data.push(Rc::new(RefCell::new(val)));
+                            data.push(val);
                         } else {
                             kind_is_set = true;
                             kind = val;
@@ -96,14 +96,14 @@ impl<'a> Parser<'a> {
                     }
                 }
             }
-            return Some(Ok(Value::Gene(Gene {
-                kind: Rc::new(RefCell::new(kind)),
+            return Some(Ok(Value::Gene(Box::new(Gene {
+                kind,
                 props,
                 data,
-            })));
+            }))));
         } else if ch == '[' {
             self.next();
-            let mut arr: Vec<Value> = vec![];
+            let mut arr: Vec<Value> = Vec::new();
             loop {
                 self.skip_whitespaces();
 
@@ -112,15 +112,15 @@ impl<'a> Parser<'a> {
                     break;
                 } else {
                     let val = self.read();
-                    if val.is_some() {
-                        arr.push(val.unwrap().unwrap());
+                    if let Some(v) = val {
+                        arr.push(v.unwrap());
                     }
                 }
             }
             return Some(Ok(Value::Array(arr)));
         } else if ch == '{' {
             self.next();
-            let mut map = BTreeMap::new();
+            let mut map = HashMap::new();
             loop {
                 self.skip_whitespaces();
 
@@ -129,8 +129,8 @@ impl<'a> Parser<'a> {
                     break;
                 } else {
                     let result = self.read_pair();
-                    if result.is_some() {
-                        let pair = result.unwrap().unwrap();
+                    if let Some(v) = result {
+                        let pair = v.unwrap();
                         map.insert(pair.key, pair.val);
                     }
                 }
@@ -161,8 +161,8 @@ impl<'a> Parser<'a> {
             self.next();
             let mut gene = Gene::new(Value::Symbol("#QUOTE".to_string()));
             gene.data
-                .push(Rc::new(RefCell::new(self.read().unwrap().unwrap())));
-            return Some(Ok(Value::Gene(gene)));
+                .push(self.read().unwrap().unwrap());
+            return Some(Ok(Value::Gene(Box::new(gene))));
         } else if is_symbol_head(ch) {
             return self.read_keyword_or_symbol();
         } else {
@@ -217,8 +217,8 @@ impl<'a> Parser<'a> {
 
         let mut s = String::from("");
         let word = self.read_word();
-        if word.is_some() {
-            s.push_str(&word.unwrap().unwrap());
+        if let Some(v) = word {
+            s.push_str(&v.unwrap());
         }
 
         if is_escape {

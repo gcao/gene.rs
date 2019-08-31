@@ -1,7 +1,7 @@
 #[macro_use]
 extern crate gene;
 
-use std::collections::BTreeMap;
+use std::collections::HashMap;
 
 use ordered_float::OrderedFloat;
 
@@ -92,7 +92,7 @@ fn test_basic_stmts() {
         let result_temp = vm.load_module(module);
         let borrowed = result_temp.borrow();
         let result = borrowed.downcast_ref::<Value>().unwrap();
-        assert_eq!(*result, Value::Map(BTreeMap::new()));
+        assert_eq!(*result, Value::Map(HashMap::new()));
     }
     {
         let mut parser = Parser::new("{^key 1}");
