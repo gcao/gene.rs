@@ -466,6 +466,16 @@ impl Block {
         self.add_instr(Instruction::CopyFromDefault(reg));
         (true, reg)
     }
+
+    pub fn set_default(&mut self, value: Value) {
+        if self.len() > 0 {
+            let last_instr = &self.instructions[self.len() - 1];
+            if let Instruction::CopyToDefault(_) = last_instr {
+                self.instructions.remove(self.len() - 1);
+            }
+        }
+        self.instructions.push(Instruction::Default(value));
+    }
 }
 
 impl fmt::Display for Block {
@@ -548,94 +558,102 @@ impl fmt::Display for Instruction {
         fmt.write_str("(")?;
         match &self {
             Instruction::Dummy => {
-                fmt.write_str("Dummy")?;
+                fmt.write_str("Dummy           Dummy")?;
             }
             Instruction::Init => {
-                fmt.write_str("Init")?;
+                fmt.write_str("Init            Init")?;
             }
             Instruction::Default(v) => {
-                fmt.write_str("Default ")?;
+                fmt.write_str("Default         Default = ")?;
                 fmt.write_str(&v.to_string())?;
             }
             Instruction::Save(reg, v) => {
-                fmt.write_str("Save R")?;
+                fmt.write_str("Save            R")?;
                 fmt.write_str(&reg.to_string())?;
-                fmt.write_str(" ")?;
+                fmt.write_str(" = ")?;
                 fmt.write_str(&v.to_string())?;
             }
             Instruction::CopyFromDefault(reg) => {
                 fmt.write_str("CopyFromDefault R")?;
                 fmt.write_str(&reg.to_string())?;
+                fmt.write_str(" = Default")?;
             }
             Instruction::CopyToDefault(reg) => {
-                fmt.write_str("CopyToDefault R")?;
+                fmt.write_str("CopyToDefault   Default = R")?;
                 fmt.write_str(&reg.to_string())?;
             }
             Instruction::DefMember(name) => {
-                fmt.write_str("DefMember ")?;
+                fmt.write_str("DefMember       <")?;
                 fmt.write_str(name)?;
+                fmt.write_str("> = Default")?;
             }
             Instruction::GetMember(name) => {
-                fmt.write_str("GetMember ")?;
+                fmt.write_str("GetMember       Default = <")?;
                 fmt.write_str(name)?;
+                fmt.write_str(">")?;
             }
             Instruction::SetMember(name) => {
-                fmt.write_str("SetMember ")?;
+                fmt.write_str("SetMember       <")?;
                 fmt.write_str(name)?;
+                fmt.write_str("> = Default")?;
             }
             Instruction::GetItem(reg, index) => {
-                fmt.write_str("GetItem R")?;
+                fmt.write_str("GetItem         Default = R")?;
                 fmt.write_str(&reg.to_string())?;
-                fmt.write_str(" ")?;
+                fmt.write_str("[")?;
                 fmt.write_str(&index.to_string())?;
+                fmt.write_str("]")?;
             }
             Instruction::SetItem(reg, index) => {
-                fmt.write_str("SetItem R")?;
+                fmt.write_str("SetItem         R")?;
                 fmt.write_str(&reg.to_string())?;
-                fmt.write_str(" ")?;
+                fmt.write_str("[")?;
                 fmt.write_str(&index.to_string())?;
+                fmt.write_str("] = Default")?;
             }
             Instruction::SetProp(reg, key) => {
-                fmt.write_str("Get R")?;
+                fmt.write_str("SetProp         R")?;
                 fmt.write_str(&reg.to_string())?;
-                fmt.write_str(" ")?;
+                fmt.write_str("[")?;
                 fmt.write_str(key)?;
+                fmt.write_str("] = Default")?;
             }
             Instruction::Jump(pos) => {
-                fmt.write_str("Jump ")?;
+                fmt.write_str("Jump            Jump to ")?;
                 fmt.write_str(&pos.to_string())?;
             }
             Instruction::JumpIfFalse(pos) => {
-                fmt.write_str("JumpIfFalse ")?;
+                fmt.write_str("JumpIfFalse     Jump to ")?;
                 fmt.write_str(&pos.to_string())?;
+                fmt.write_str(" if Default is falsy")?;
             }
             Instruction::Break => {
-                fmt.write_str("Break")?;
+                fmt.write_str("Break           Break")?;
             }
             Instruction::LoopStart => {
-                fmt.write_str("LoopStart")?;
+                fmt.write_str("LoopStart       LoopStart")?;
             }
             Instruction::LoopEnd => {
-                fmt.write_str("LoopEnd")?;
+                fmt.write_str("LoopEnd         LoopEnd")?;
             }
             Instruction::BinaryOp(op, first) => {
-                fmt.write_str("R")?;
+                fmt.write_str("BinaryOp        Default = R")?;
                 fmt.write_str(&first.to_string())?;
                 fmt.write_str(" ")?;
                 fmt.write_str(op)?;
                 fmt.write_str(" Default")?;
             }
             Instruction::Function(name, _matcher, body_id) => {
-                fmt.write_str("Function ")?;
+                fmt.write_str("Function        Default = Function <")?;
                 fmt.write_str(name)?;
-                fmt.write_str(" ")?;
+                fmt.write_str("> ")?;
                 // TODO: matcher to string
                 // fmt.write_str(&matcher)?;
                 // fmt.write_str(" ")?;
                 fmt.write_str(body_id)?;
             }
             Instruction::Call(target_reg, args_reg, _options) => {
-                fmt.write_str("Call R")?;
+                fmt.write_str("Call            Default = Call R")?;
                 fmt.write_str(&target_reg.to_string())?;
                 fmt.write_str(" R")?;
                 if let Some(reg) = args_reg {
@@ -643,14 +661,15 @@ impl fmt::Display for Instruction {
                 }
             }
             Instruction::CallEnd => {
-                fmt.write_str("CallEnd")?;
+                fmt.write_str("CallEnd         CallEnd")?;
             }
             Instruction::CreateArguments(reg) => {
                 fmt.write_str("CreateArguments R")?;
                 fmt.write_str(&reg.to_string())?;
+                fmt.write_str(" = CreateArguments")?;
             }
             _ => {
-                fmt.write_str("???")?;
+                fmt.write_str("???             ???")?;
             }
         }
         fmt.write_str(")")?;
