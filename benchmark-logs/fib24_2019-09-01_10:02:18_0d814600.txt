@@ -1,0 +1,72 @@
+Testcase: fib24
+2019-09-01 10:02:18
+0d814600
+1abe0395 0d814600
+
+============================
+Application log starts below
+vvvvvvvvvvvvvvvvvvvvvvvvvvvv
+
+(Block fibonacci
+    0 (GetMember       Default = <n>)
+    1 (CopyFromDefault R0 = Default)
+    2 (Default         Default = 2)
+    3 (BinaryOp        Default = R0 < Default)
+    4 (JumpIfFalse     Jump to 7 if Default is falsy)
+    5 (CopyToDefault   Default = R0)
+    6 (Jump            Jump to 22)
+    7 (GetMember       Default = <fibonacci>)
+    8 (CopyFromDefault R1 = Default)
+    9 (CreateArguments R2 = CreateArguments)
+   10 (Default         Default = 1)
+   11 (BinaryOp        Default = R0 - Default)
+   12 (SetItem         R2[0] = Default)
+   13 (Call            Default = Call R1 R2)
+   14 (CopyFromDefault R2 = Default)
+   15 (CopyToDefault   Default = R1)
+   16 (CreateArguments R3 = CreateArguments)
+   17 (Default         Default = 2)
+   18 (BinaryOp        Default = R0 - Default)
+   19 (SetItem         R3[0] = Default)
+   20 (Call            Default = Call R1 R3)
+   21 (BinaryOp        Default = R2 + Default)
+   22 (CallEnd         CallEnd)
+)
+(Block __default__
+    0 (Init            Init)
+    1 (Function        Default = Function <fibonacci> b8957581-433e-4bb4-b8d9-03db6c6d7ff9)
+    2 (CopyFromDefault R0 = Default)
+    3 (CopyToDefault   Default = R0)
+    4 (CreateArguments R1 = CreateArguments)
+    5 (Default         Default = 24)
+    6 (SetItem         R1[0] = Default)
+    7 (Call            Default = Call R0 R1)
+    8 (CallEnd         CallEnd)
+)
+<<< BENCHMARK BEGIN >>>
+
+               Total: 100.000%    0.90742418
+                Loop:  48.232%    0.43767287 /  2175713 =      201 ns
+                Call:  16.192%    0.14692851 /   150049 =      979 ns
+            BinaryOp:   7.999%    0.07258514 /   375121 =      193 ns
+     CreateArguments:   4.757%    0.04316260 /   150049 =      288 ns
+             SetItem:   4.719%    0.04282235 /   150049 =      285 ns
+             Default:   4.176%    0.03789507 /   300098 =      126 ns
+           GetMember:   4.028%    0.03655292 /   225073 =      162 ns
+     CopyFromDefault:   3.910%    0.03548218 /   300098 =      118 ns
+             CallEnd:   2.938%    0.02666439 /   150050 =      178 ns
+       CopyToDefault:   1.659%    0.01505239 /   150050 =      100 ns
+         JumpIfFalse:   1.006%    0.00912710 /   150049 =       61 ns
+                Jump:   0.382%    0.00346905 /    75025 =       46 ns
+                Init:   0.001%    0.00000633 /        1 =     6333 ns
+            Function:   0.000%    0.00000327 /        1 =     3270 ns
+
+<<<  BENCHMARK END  >>>
+
+
+Execution time: 0.907517 seconds
+Result: 46368
+
+real	0m0.920s
+user	0m0.911s
+sys	0m0.005s
