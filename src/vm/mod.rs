@@ -57,14 +57,13 @@ impl VirtualMachine {
         // Use two level loop to separate instructions that change registers and those that don't
         // TODO: clean up and document logic
         while self.pos < block.instructions.len() {
-            let mut instr = &block.instructions[self.pos];
             immature_break = false;
 
             {
                 let mut registers = self.registers_store.find(registers_id);
 
                 while self.pos < block.instructions.len() {
-                    instr = &block.instructions[self.pos];
+                    let instr = &block.instructions[self.pos];
 
                     // Handle break from loop
                     if break_from_loop {
@@ -239,6 +238,7 @@ impl VirtualMachine {
             }
 
             if immature_break {
+                let instr = &block.instructions[self.pos];
                 match instr {
                     Instruction::Call(target_reg, args_reg, _options) => {
                         self.pos += 1;
