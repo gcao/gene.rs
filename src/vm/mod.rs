@@ -57,15 +57,13 @@ impl VirtualMachine {
         // Use two level loop to separate instructions that change registers and those that don't
         // TODO: clean up and document logic
         while self.pos < block.instructions.len() {
-            let mut instr = &block.instructions[self.pos];
             immature_break = false;
 
             {
                 let mut registers = self.registers_store.find(registers_id);
 
                 while self.pos < block.instructions.len() {
-                    instr = &block.instructions[self.pos];
-                    // println!("{}", instr);
+                    let instr = &block.instructions[self.pos];
 
                     // Handle break from loop
                     if break_from_loop {
@@ -91,11 +89,7 @@ impl VirtualMachine {
                         }
                         Instruction::CopyFromDefault(to) => {
                             self.pos += 1;
-                            let default;
-                            {
-                                default = registers.default.clone();
-                            }
-                            registers.insert(to.clone(), default);
+                            registers.insert(to.clone(), registers.default.clone());
                         }
                         Instruction::CopyToDefault(to) => {
                             self.pos += 1;
@@ -104,10 +98,8 @@ impl VirtualMachine {
                         Instruction::DefMember(name) => {
                             self.pos += 1;
                             let value = registers.default.clone();
-                            {
-                                let mut context = registers.context.borrow_mut();
-                                context.def_member(name.clone(), value, VarType::SCOPE);
-                            }
+                            let mut context = registers.context.borrow_mut();
+                            context.def_member(name.clone(), value, VarType::SCOPE);
                         }
                         Instruction::GetMember(name) => {
                             self.pos += 1;
@@ -116,11 +108,7 @@ impl VirtualMachine {
                         }
                         Instruction::SetMember(name) => {
                             self.pos += 1;
-                            let value;
-                            {
-                                value = registers.default.clone();
-                            }
-                            registers.set_member(name.clone(), value);
+                            registers.set_member(name.clone(), registers.default.clone());
                         }
                         Instruction::Jump(pos) => {
                             self.pos = *pos as usize;
@@ -216,7 +204,6 @@ impl VirtualMachine {
                             self.pos += 1;
 
                             let value;
-
                             {
                                 let value_ = registers.default.borrow();
                                 value = value_.downcast_ref::<Value>().unwrap().clone();
@@ -240,6 +227,7 @@ impl VirtualMachine {
             }
 
             if immature_break {
+                let instr = &block.instructions[self.pos];
                 match instr {
                     Instruction::Call(target_reg, args_reg, _options) => {
                         self.pos += 1;
