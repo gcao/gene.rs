@@ -1,0 +1,82 @@
+Testcase: fib24
+2019-09-01 10:05:31
+a71b43a9
+0d814600 a71b43a9
+
+============================
+Application log starts below
+vvvvvvvvvvvvvvvvvvvvvvvvvvvv
+
+Increment struct property:  2.500 ns
+Increment local variable:  2.500 ns
+Report_start/report_end: 25.700 ns
+Access array: 39.400 ns
+Access map: 725.000 ns
+
+(Block fibonacci
+    0 (GetMember       Default = <n>)
+    1 (CopyFromDefault R0 = Default)
+    2 (Default         Default = 2)
+    3 (BinaryOp        Default = R0 < Default)
+    4 (JumpIfFalse     Jump to 7 if Default is falsy)
+    5 (CopyToDefault   Default = R0)
+    6 (Jump            Jump to 22)
+    7 (GetMember       Default = <fibonacci>)
+    8 (CopyFromDefault R1 = Default)
+    9 (CreateArguments R2 = CreateArguments)
+   10 (Default         Default = 1)
+   11 (BinaryOp        Default = R0 - Default)
+   12 (SetItem         R2[0] = Default)
+   13 (Call            Default = Call R1 R2)
+   14 (CopyFromDefault R2 = Default)
+   15 (CopyToDefault   Default = R1)
+   16 (CreateArguments R3 = CreateArguments)
+   17 (Default         Default = 2)
+   18 (BinaryOp        Default = R0 - Default)
+   19 (SetItem         R3[0] = Default)
+   20 (Call            Default = Call R1 R3)
+   21 (BinaryOp        Default = R2 + Default)
+   22 (CallEnd         CallEnd)
+)
+(Block __default__
+    0 (Init            Init)
+    1 (Function        Default = Function <fibonacci> 06d323f0-941d-4ba2-9012-fca6f1a56a18)
+    2 (CopyFromDefault R0 = Default)
+    3 (CopyToDefault   Default = R0)
+    4 (CreateArguments R1 = CreateArguments)
+    5 (Default         Default = 24)
+    6 (SetItem         R1[0] = Default)
+    7 (Call            Default = Call R0 R1)
+    8 (CallEnd         CallEnd)
+)
+<<< BENCHMARK BEGIN >>>
+
+               Total: 100.000%    0.50571589
+                Loop:  22.717%    0.11488493 /  2175713 =       53 ns
+                Call:  28.238%    0.14280583 /   150049 =      952 ns
+            BinaryOp:  11.517%    0.05824489 /   375121 =      155 ns
+             SetItem:   7.667%    0.03877177 /   150049 =      258 ns
+           GetMember:   6.466%    0.03269764 /   225073 =      145 ns
+     CreateArguments:   6.272%    0.03171666 /   150049 =      211 ns
+             Default:   4.930%    0.02493151 /   300098 =       83 ns
+     CopyFromDefault:   4.722%    0.02387810 /   300098 =       80 ns
+             CallEnd:   4.255%    0.02152049 /   150050 =      143 ns
+       CopyToDefault:   2.066%    0.01044756 /   150050 =       70 ns
+         JumpIfFalse:   0.838%    0.00423920 /   150049 =       28 ns
+                Jump:   0.311%    0.00157432 /    75025 =       21 ns
+            Function:   0.001%    0.00000295 /        1 =     2953 ns
+                Init:   0.000%    0.00000003 /        1 =       33 ns
+                Save:   0.000%    0.00000000 /        0 =      NaN ns
+           DefMember:   0.000%    0.00000000 /        0 =      NaN ns
+           SetMember:   0.000%    0.00000000 /        0 =      NaN ns
+             GetItem:   0.000%    0.00000000 /        0 =      NaN ns
+
+<<<  BENCHMARK END  >>>
+
+
+Execution time: 0.505863 seconds
+Result: 46368
+
+real	0m0.518s
+user	0m0.510s
+sys	0m0.004s
