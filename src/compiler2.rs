@@ -289,19 +289,24 @@ impl Compiler {
                 block.add_instr(Instruction::CallEnd);
             }
             CompilableData::Null => {
-                block.add_instr(Instruction::Default(Value::Null));
+                // block.add_instr(Instruction::Default(Value::Null));
+                block.set_default(Value::Null);
             }
             CompilableData::Bool(v) => {
-                block.add_instr(Instruction::Default(Value::Boolean(*v)));
+                // block.add_instr(Instruction::Default(Value::Boolean(*v)));
+                block.set_default(Value::Boolean(*v));
             }
             CompilableData::Int(v) => {
-                block.add_instr(Instruction::Default(Value::Integer(*v)));
+                // block.add_instr(Instruction::Default(Value::Integer(*v)));
+                block.set_default(Value::Integer(*v));
             }
             CompilableData::Float(v) => {
-                block.add_instr(Instruction::Default(Value::Float(*v)));
+                // block.add_instr(Instruction::Default(Value::Float(*v)));
+                block.set_default(Value::Float(*v));
             }
             CompilableData::String(v) => {
-                block.add_instr(Instruction::Default(Value::String(v.clone())));
+                // block.add_instr(Instruction::Default(Value::String(v.clone())));
+                block.set_default(Value::String(v.clone()));
             }
             CompilableData::Symbol(s) => {
                 let reg = block.get_reg_for(s).clone();
@@ -330,7 +335,8 @@ impl Compiler {
                 block.free_reg(&reg);
             }
             CompilableData::Map(v) => {
-                (*block).add_instr(Instruction::Default(Value::Map(v.clone())));
+                // (*block).add_instr(Instruction::Default(Value::Map(v.clone())));
+                block.set_default(Value::Map(v.clone()));
                 let reg = block.get_reg();
                 (*block).add_instr(Instruction::CopyFromDefault(reg));
                 for child in node.children() {

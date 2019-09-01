@@ -62,7 +62,6 @@ impl VirtualMachine {
         // Use two level loop to separate instructions that change registers and those that don't
         // TODO: clean up and document logic
         while self.pos < block.instructions.len() {
-            let mut instr = &block.instructions[self.pos];
             immature_break = false;
 
             {
@@ -71,7 +70,7 @@ impl VirtualMachine {
                 while self.pos < block.instructions.len() {
                     benchmarker.report_loop();
 
-                    instr = &block.instructions[self.pos];
+                    let instr = &block.instructions[self.pos];
 
                     // Handle break from loop
                     if break_from_loop {
@@ -107,11 +106,7 @@ impl VirtualMachine {
                             benchmarker.copy_from_default_time.report_start();
 
                             self.pos += 1;
-                            let default;
-                            {
-                                default = registers.default.clone();
-                            }
-                            registers.insert(to.clone(), default);
+                            registers.insert(to.clone(), registers.default.clone());
 
                             benchmarker.copy_from_default_time.report_end();
                         }
@@ -128,10 +123,8 @@ impl VirtualMachine {
 
                             self.pos += 1;
                             let value = registers.default.clone();
-                            {
-                                let mut context = registers.context.borrow_mut();
-                                context.def_member(name.clone(), value, VarType::SCOPE);
-                            }
+                            let mut context = registers.context.borrow_mut();
+                            context.def_member(name.clone(), value, VarType::SCOPE);
 
                             benchmarker.def_member_time.report_end();
                         }
@@ -148,11 +141,7 @@ impl VirtualMachine {
                             benchmarker.set_member_time.report_start();
 
                             self.pos += 1;
-                            let value;
-                            {
-                                value = registers.default.clone();
-                            }
-                            registers.set_member(name.clone(), value);
+                            registers.set_member(name.clone(), registers.default.clone());
 
                             benchmarker.set_member_time.report_end();
                         }
@@ -292,7 +281,6 @@ impl VirtualMachine {
                             self.pos += 1;
 
                             let value;
-
                             {
                                 let value_ = registers.default.borrow();
                                 value = value_.downcast_ref::<Value>().unwrap().clone();
@@ -318,6 +306,7 @@ impl VirtualMachine {
             }
 
             if immature_break {
+                let instr = &block.instructions[self.pos];
                 match instr {
                     Instruction::Call(target_reg, args_reg, _options) => {
                         benchmarker.call_time.report_start();

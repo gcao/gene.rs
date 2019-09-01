@@ -1,0 +1,51 @@
+Testcase: fib24
+2019-09-01 09:58:12
+1abe0395
+9eebf644 1abe0395
+
+============================
+Application log starts below
+vvvvvvvvvvvvvvvvvvvvvvvvvvvv
+
+(Block fibonacci
+    0 (GetMember       Default = <n>)
+    1 (CopyFromDefault R0 = Default)
+    2 (Default         Default = 2)
+    3 (BinaryOp        Default = R0 < Default)
+    4 (JumpIfFalse     Jump to 7 if Default is falsy)
+    5 (CopyToDefault   Default = R0)
+    6 (Jump            Jump to 22)
+    7 (GetMember       Default = <fibonacci>)
+    8 (CopyFromDefault R1 = Default)
+    9 (CreateArguments R2 = CreateArguments)
+   10 (Default         Default = 1)
+   11 (BinaryOp        Default = R0 - Default)
+   12 (SetItem         R2[0] = Default)
+   13 (Call            Default = Call R1 R2)
+   14 (CopyFromDefault R2 = Default)
+   15 (CopyToDefault   Default = R1)
+   16 (CreateArguments R3 = CreateArguments)
+   17 (Default         Default = 2)
+   18 (BinaryOp        Default = R0 - Default)
+   19 (SetItem         R3[0] = Default)
+   20 (Call            Default = Call R1 R3)
+   21 (BinaryOp        Default = R2 + Default)
+   22 (CallEnd         CallEnd)
+)
+(Block __default__
+    0 (Init            Init)
+    1 (Function        Default = Function <fibonacci> 2ccb147d-c684-451b-bbc8-4957e994e6ce)
+    2 (CopyFromDefault R0 = Default)
+    3 (CopyToDefault   Default = R0)
+    4 (CreateArguments R1 = CreateArguments)
+    5 (Default         Default = 24)
+    6 (SetItem         R1[0] = Default)
+    7 (Call            Default = Call R0 R1)
+    8 (CallEnd         CallEnd)
+)
+Execution time: 0.348617 seconds
+Result: 46368
+
+real	0m0.361s
+user	0m0.354s
+sys	0m0.004s
