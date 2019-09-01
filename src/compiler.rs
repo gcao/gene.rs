@@ -466,6 +466,16 @@ impl Block {
         self.add_instr(Instruction::CopyFromDefault(reg));
         (true, reg)
     }
+
+    pub fn set_default(&mut self, value: Value) {
+        if self.len() > 0 {
+            let last_instr = &self.instructions[self.len() - 1];
+            if let Instruction::CopyToDefault(_) = last_instr {
+                self.instructions.remove(self.len() - 1);
+            }
+        }
+        self.instructions.push(Instruction::Default(value));
+    }
 }
 
 impl fmt::Display for Block {
