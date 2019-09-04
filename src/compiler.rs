@@ -576,7 +576,7 @@ impl fmt::Display for Instruction {
                 fmt.write_str(&target_reg.to_string())?;
                 fmt.write_str(" ")?;
                 if let Some(reg) = args_reg {
-                    fmt.write_str(&args_reg.unwrap().to_string())?;
+                    fmt.write_str(&reg.to_string())?;
                 }
             }
             Instruction::CallEnd => {

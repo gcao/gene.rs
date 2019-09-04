@@ -21,3 +21,10 @@ ego-tree = "*"
 default = []
 dev = ["clippy"]
 wip_tests = []
+
+[dev-dependencies]
+criterion = "0.3"
+
+[[bench]]
+name = "fibonacci"
+harness = false
