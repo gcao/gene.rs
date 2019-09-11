@@ -45,8 +45,11 @@ Vagrant.configure(2) do |config|
     sudo apt-get install texinfo flex bison python-dev ncurses-dev -y
     sudo apt-get install cmake libssl-dev -y
 
-    python3 -m pip install --upgrade pip
-    python3 -m pip install requests
+    # Install linux-tools which contains perf
+    sudo apt-get install linux-tools-4.15.0-51-generic
+
+    sudo python3 -m pip install --upgrade pip
+    sudo python3 -m pip install requests
 
     curl -sf https://raw.githubusercontent.com/phil-opp/binutils-gdb/rust-os/build-rust-os-gdb.sh | sh
 
@@ -54,9 +57,10 @@ Vagrant.configure(2) do |config|
 
     export PATH="$HOME/.cargo/bin:$PATH"
     rustup component add rust-src
-    cargo install --force xbuild
+    cargo install --force cargo-xbuild
 
-    echo "export PATH="$HOME/.cargo/bin:$PATH"" >> $HOME/.bashrc
+    mkdir /apps
+    echo "export PATH="$HOME/bin:$HOME/.cargo/bin:$PATH"" >> $HOME/.bashrc
     echo "cd #{APP_DIR}" >> $HOME/.bashrc
   SHELL
 
