@@ -21,3 +21,15 @@ ego-tree = "*"
 default = []
 dev = ["clippy"]
 wip_tests = []
+
+[dev-dependencies]
+criterion = "0.3"
+
+[[bench]]
+name = "fibonacci"
+harness = false
+
+# # Below options are set for profiling with perf. When not profiling, comment them out.
+# [profile.release]
+# debug = true
+# lto = false
