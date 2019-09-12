@@ -39,6 +39,7 @@ Vagrant.configure(2) do |config|
     sudo apt-get update
     sudo apt-get upgrade
     sudo apt-get autoremove
+    sudo apt-get install ruby
     sudo apt-get install python3 python3-dev python3-pip -y
     sudo apt-get install vim git nasm -y
     #sudo apt-get install xorriso -y
@@ -59,10 +60,11 @@ Vagrant.configure(2) do |config|
     rustup component add rust-src
     cargo install --force cargo-xbuild
 
-    mkdir /apps
+    mkdir -f /apps
     echo "export PATH="$HOME/bin:$HOME/.cargo/bin:$PATH"" >> $HOME/.bashrc
     echo "cd #{APP_DIR}" >> $HOME/.bashrc
   SHELL
 
-  config.vm.synced_folder "", APP_DIR, type: "nfs"
+  config.vm.synced_folder "",        APP_DIR,      type: "nfs"
+  config.vm.synced_folder "../gene", "/apps/gene", type: "nfs"
 end
