@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Benchmark</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@2.8.0"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+</head>
+
+<body>
+    <h1>Gene.rs benchmark</h1>
+    <canvas id="chart"></canvas>
+    <div id="app">
+        <table>
+            <thead>
+                <th>COMMIT</th>
+                <th>EXE TIME</th>
+                <th>NOTES</th>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>A123</td>
+                    <td>2.33</td>
+                    <td>Without optimization</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    <script>
+        var data = {
+            name: 'fib24',
+            description: 'Fibonacci(24)',
+            data: [
+                {
+                    commit: '123',
+                    exe_time: 2.50,
+                    notes: '',
+                },
+            ]
+        }
+
+        var ctx = document.getElementById('chart').getContext('2d')
+        var color = Chart.helpers.color
+        var chartColors = {
+            red: 'rgb(255, 99, 132)',
+            orange: 'rgb(255, 159, 64)',
+            yellow: 'rgb(255, 205, 86)',
+            green: 'rgb(75, 192, 192)',
+            blue: 'rgb(54, 162, 235)',
+            purple: 'rgb(153, 102, 255)',
+            grey: 'rgb(201, 203, 207)'
+        }
+        var chart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                datasets: [{
+                    label: data.name,
+                    backgroundColor: color(chartColors.red).alpha(0.5).rgbString(),
+                    borderColor: chartColors.red,
+                    borderWidth: 1,
+                    labels: ['test', 'test2'],
+                    data: [0, 10],
+                }]
+            },
+            options: {
+            },
+        })
+
+        var app = new Vue({
+            el: '#app',
+            data: function () {
+                return processData(window.data)
+            },
+        })
+
+        function processData(data) {
+            return data
+        }
+    </script>
+</body>
+
+</html>

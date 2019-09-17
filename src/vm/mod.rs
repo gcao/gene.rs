@@ -340,6 +340,7 @@ impl VirtualMachine {
                             let new_namespace = Namespace::new(target.parent_namespace.clone());
                             new_context = Context::new(Rc::new(RefCell::new(new_namespace)), Rc::new(RefCell::new(new_scope)), None);
                         }
+
                         let new_registers = self.registers_store.get(Rc::new(RefCell::new(new_context)));
 
                         let ret_addr = Address::new(block.id.clone(), self.pos);
@@ -355,15 +356,12 @@ impl VirtualMachine {
                     Instruction::CallEnd => {
                         benchmarker.call_end_time.report_start();
 
-                        let mut is_top_level = true;
                         let old_registers_id = registers_id;
 
                         {
                             let registers = self.registers_store.find(registers_id);
                             let caller = registers.caller.as_ref();
                             if let Some(ret_addr) = caller {
-                                is_top_level = false; 
-
                                 block = self.code_manager.blocks[&ret_addr.block_id].clone();
                                 self.pos = ret_addr.pos;
 
@@ -374,14 +372,12 @@ impl VirtualMachine {
                                 caller_registers.default = value;
 
                                 registers_id = caller_reg_id;
+                            } else {
+                                self.pos += 1;
                             }
                         }
 
                         self.registers_store.free(old_registers_id);
-
-                        if is_top_level {
-                            self.pos += 1;
-                        }
 
                         benchmarker.call_end_time.report_end();
                     }
@@ -511,10 +507,7 @@ impl RegistersStore {
                     self.store.get_mut(&id).unwrap()
                 };
 
-            {
-                registers.reset();
-                registers.context = context;
-            }
+            registers.context = context;
             registers
         } else if self.next < 32 {
             let mut registers = &mut self.cache[self.next];
@@ -541,6 +534,7 @@ impl RegistersStore {
 
     #[inline]
     pub fn free(&mut self, id: usize) {
+        self.find(id).reset();
         self.freed.push(id);
     }
 }
