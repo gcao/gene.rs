@@ -1,9 +1,7 @@
 #[macro_use]
 extern crate gene;
 
-use std::cell::RefCell;
 use std::collections::HashMap;
-use std::rc::Rc;
 
 use ordered_float::OrderedFloat;
 
@@ -123,38 +121,30 @@ fn test_read_map() {
         Parser::new("{}").read(),
         Some(Ok(Value::Map(HashMap::new())))
     );
-    {
-        assert_eq!(
-            Parser::new("{^key 123}").read(),
-            Some(Ok(Value::Map(map! {
-                "key" => Value::Integer(123),
-            })))
-        );
-    }
-    {
-        assert_eq!(
-            Parser::new("{^^key}").read(),
-            Some(Ok(Value::Map(map! {
-                "key" => Value::Boolean(true),
-            })))
-        );
-    }
-    {
-        assert_eq!(
-            Parser::new("{^!key}").read(),
-            Some(Ok(Value::Map(map! {
-                "key" => Value::Boolean(false),
-            })))
-        );
-    }
-    {
-        assert_eq!(
-            Parser::new("{^key [123]}").read(),
-            Some(Ok(Value::Map(map! {
-                "key" => Value::Array(vec![Value::Integer(123)]),
-            })))
-        );
-    }
+    assert_eq!(
+        Parser::new("{^key 123}").read(),
+        Some(Ok(Value::Map(map! {
+            "key" => Value::Integer(123),
+        })))
+    );
+    assert_eq!(
+        Parser::new("{^^key}").read(),
+        Some(Ok(Value::Map(map! {
+            "key" => Value::Boolean(true),
+        })))
+    );
+    assert_eq!(
+        Parser::new("{^!key}").read(),
+        Some(Ok(Value::Map(map! {
+            "key" => Value::Boolean(false),
+        })))
+    );
+    assert_eq!(
+        Parser::new("{^key [123]}").read(),
+        Some(Ok(Value::Map(map! {
+            "key" => Value::Array(vec![Value::Integer(123)]),
+        })))
+    );
 }
 
 #[test]
@@ -174,9 +164,7 @@ fn test_read_gene() {
     }
     {
         let mut result = Gene::new(Value::Integer(1));
-        result
-            .props
-            .insert("key".to_string(), Value::Integer(2));
+        result.props.insert("key".to_string(), Value::Integer(2));
         result.data.push(Value::Integer(3));
         assert_eq!(
             Parser::new("(1 ^key 2 3)").read(),
@@ -185,20 +173,13 @@ fn test_read_gene() {
     }
     {
         let mut result = Gene::new(Value::Integer(1));
-        result
-            .data
-            .push(Value::Array(Vec::new()));
+        result.data.push(Value::Array(Vec::new()));
         assert_eq!(Parser::new("(1 [])").read(), Some(Ok(Value::Gene(Box::new(result)))));
     }
     {
         let mut result = Gene::new(Value::Integer(1));
-        result.props.insert(
-            "key".to_string(),
-            Value::Integer(123),
-        );
-        result
-            .data
-            .push(Value::Array(Vec::new()));
+        result.props.insert("key".to_string(), Value::Integer(123));
+        result.data.push(Value::Array(Vec::new()));
         assert_eq!(
             Parser::new("(1 ^key 123 [])").read(),
             Some(Ok(Value::Gene(Box::new(result))))
@@ -210,23 +191,17 @@ fn test_read_gene() {
 fn test_quote() {
     {
         let mut result = Gene::new(Value::Symbol("#QUOTE".to_string()));
-        result
-            .data
-            .push(Value::Symbol("ab".to_string()));
+        result.data.push(Value::Symbol("ab".to_string()));
         assert_eq!(Parser::new("`ab").read(), Some(Ok(Value::Gene(Box::new(result)))));
     }
     {
         let mut result = Gene::new(Value::Symbol("#QUOTE".to_string()));
-        result
-            .data
-            .push(Value::Boolean(true));
+        result.data.push(Value::Boolean(true));
         assert_eq!(Parser::new("`true").read(), Some(Ok(Value::Gene(Box::new(result)))));
     }
     {
         let mut result = Gene::new(Value::Symbol("#QUOTE".to_string()));
-        result
-            .data
-            .push(Value::Array(Vec::new()));
+        result.data.push(Value::Array(Vec::new()));
         assert_eq!(Parser::new("`[]").read(), Some(Ok(Value::Gene(Box::new(result)))));
     }
 }
