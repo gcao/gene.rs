@@ -4,6 +4,8 @@
 
 Gene is a pet language I'm building. It is written in Gene data format. There is Gene data format, then there is Gene language, not like JS vs JSON.
 
+It was originally written in Ruby (see [here](https://github.com/gcao/gene)), and now being rewritten in Rust.
+
 ## MISC
 
 <pre>while 1; do fswatch -v -r src tests Cargo.toml | cargo test; sleep 0.2; done</pre>
