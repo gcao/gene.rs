@@ -19,7 +19,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
                 ((fibonacci (n - 1)) + (fibonacci (n - 2)))
             )
         )
-        (fibonacci 20)
+        (fibonacci 24)
     ");
     let parsed = parser.parse();
     let mut compiler = Compiler::new();
@@ -27,7 +27,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
     let module = compiler.module;
     let mut vm = VirtualMachine::new();
 
-    c.bench_function("fib 20", |b| b.iter(||
+    c.bench_function("fib 24", |b| b.iter(||
         vm.load_module(&module)
     ));
 }
