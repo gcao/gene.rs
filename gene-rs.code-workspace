@@ -1,9 +1,15 @@
 {
 	"folders": [
 		{
+			"name": "gene.rs",
 			"path": "."
 		},
 		{
+			"name": "gene",
+			"path": "/Users/gcao/proj/gene"
+		},
+		{
+			"name": "chasm",
 			"path": "/Users/gcao/proj/chasm"
 		}
 	],

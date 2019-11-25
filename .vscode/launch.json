@@ -15,7 +15,19 @@
     // },
     {
       // https://github.com/vadimcn/vscode-lldb/issues/35#issuecomment-380634734
-      "name": "Debug-LLDB-Lib",
+      "name": "Gene",
+      "type": "lldb",
+      "request": "launch",
+      "program": "${workspaceRoot}/target/debug/gene",
+      "args": [],
+      "cwd": "${workspaceRoot}",
+      "env": {
+        "RUST_BACKTRACE": "1",
+      },
+    },
+    {
+      // https://github.com/vadimcn/vscode-lldb/issues/35#issuecomment-380634734
+      "name": "WIP",
       "type": "lldb",
       "request": "launch",
       "preLaunchTask": "rust lib debug copier",
