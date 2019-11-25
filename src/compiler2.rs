@@ -312,7 +312,7 @@ impl Compiler {
                 let reg = block.get_reg_for(s).clone();
                 let name_manager = block.get_name_manager(s);
                 if name_manager.used_first_time() {
-                    (*block).add_instr(Instruction::GetMember(s.to_string()));
+                    (*block).add_instr(Instruction::GetMemberInScope(s.to_string()));
                     (*block).add_instr(Instruction::CopyFromDefault(reg));
                 } else {
                     (*block).add_instr(Instruction::CopyToDefault(reg));
@@ -354,7 +354,7 @@ impl Compiler {
             }
             CompilableData::Var(name) => {
                 self.compile_node(&node.first_child().unwrap(), block);
-                (*block).add_instr(Instruction::DefMember(name.clone()));
+                (*block).add_instr(Instruction::DefMemberInScope(name.clone()));
                 let reg = block.get_reg_for(&name);
                 (*block).add_instr(Instruction::CopyFromDefault(reg));
                 block.use_name(name);
@@ -380,7 +380,7 @@ impl Compiler {
                 (*block).add_instr(Instruction::CopyFromDefault(reg));
                 block.use_name(name);
 
-                (*block).add_instr(Instruction::SetMember(name.clone()));
+                (*block).add_instr(Instruction::SetMemberInScope(name.clone()));
             }
             CompilableData::If => {
                 let start_pos = block.len();
