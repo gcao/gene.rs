@@ -101,14 +101,33 @@ impl VirtualMachine {
                             let mut context = registers.context.borrow_mut();
                             context.def_member(name.clone(), value, VarType::SCOPE);
                         }
+                        Instruction::DefMemberInScope(name) => {
+                            self.pos += 1;
+                            let value = registers.default.clone();
+                            let context = registers.context.borrow();
+                            let mut scope = context.scope.borrow_mut();
+                            scope.def_member(name.clone(), value);
+                        }
                         Instruction::GetMember(name) => {
                             self.pos += 1;
                             let value = registers.get_member(name).unwrap();
                             registers.default = value;
                         }
+                        Instruction::GetMemberInScope(name) => {
+                            self.pos += 1;
+                            let context = registers.context.borrow();
+                            let value = context.scope.borrow().get_member(name).unwrap();
+                            registers.default = value;
+                        }
                         Instruction::SetMember(name) => {
                             self.pos += 1;
                             registers.set_member(name.clone(), registers.default.clone());
+                        }
+                        Instruction::SetMemberInScope(name) => {
+                            self.pos += 1;
+                            let context = registers.context.borrow();
+                            let mut scope = context.scope.borrow_mut();
+                            scope.set_member(name.clone(), registers.default.clone());
                         }
                         Instruction::Jump(pos) => {
                             self.pos = *pos as usize;
@@ -151,10 +170,12 @@ impl VirtualMachine {
                             self.pos += 1;
                             let function_temp;
                             {
-                                let mut context = registers.context.borrow_mut();
+                                let context = registers.context.borrow_mut();
                                 let function = Function::new(name.clone(), (*args).clone(), body_id.clone(), true, context.namespace.clone(), context.scope.clone());
                                 function_temp = Rc::new(RefCell::new(function));
-                                context.def_member(name.clone(), function_temp.clone(), VarType::NAMESPACE);
+                                // context.def_member(name.clone(), function_temp.clone(), VarType::NAMESPACE);
+                                let mut scope = context.scope.borrow_mut();
+                                scope.def_member(name.clone(), function_temp.clone());
                             }
                             registers.default = function_temp.clone();
                         }

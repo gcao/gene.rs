@@ -83,7 +83,7 @@ impl Compiler {
     fn compile_(&mut self, block: &mut Block, ast: Value) {
         match ast {
             Value::Symbol(s) => {
-                (*block).add_instr(Instruction::GetMember(s));
+                (*block).add_instr(Instruction::GetMemberInScope(s));
             }
             Value::Array(v) => {
                 self.compile_array(block, v)
@@ -177,7 +177,7 @@ impl Compiler {
                 match first {
                     Value::Symbol(ref name) => {
                         self.compile_(block, second.clone());
-                        (*block).add_instr(Instruction::DefMember(name.clone()));
+                        (*block).add_instr(Instruction::DefMemberInScope(name.clone()));
                     }
                     _ => unimplemented!(),
                 };
@@ -209,7 +209,7 @@ impl Compiler {
                 let name = data[0].to_string();
                 let value = data[1].clone();
                 self.compile_(block, value);
-                (*block).add_instr(Instruction::SetMember(name));
+                (*block).add_instr(Instruction::SetMemberInScope(name));
             }
             Value::Symbol(ref s) if is_binary_op(s) => {
                 let first = data[0].clone();
@@ -506,8 +506,14 @@ pub enum Instruction {
     CopyToDefault(u16),
 
     DefMember(String),
+    DefMemberInScope(String),
+    DefMemberInNS(String),
     GetMember(String),
+    GetMemberInScope(String),
+    GetMemberInNS(String),
     SetMember(String),
+    SetMemberInScope(String),
+    SetMemberInNS(String),
 
     /// GetItem(target reg, index)
     GetItem(u16, usize),
@@ -587,13 +593,43 @@ impl fmt::Display for Instruction {
                 fmt.write_str(name)?;
                 fmt.write_str("> = Default")?;
             }
+            Instruction::DefMemberInScope(name) => {
+                fmt.write_str("DefMemberInScope <")?;
+                fmt.write_str(name)?;
+                fmt.write_str("> = Default")?;
+            }
+            Instruction::DefMemberInNS(name) => {
+                fmt.write_str("DefMemberInNS   <")?;
+                fmt.write_str(name)?;
+                fmt.write_str("> = Default")?;
+            }
             Instruction::GetMember(name) => {
                 fmt.write_str("GetMember       Default = <")?;
                 fmt.write_str(name)?;
                 fmt.write_str(">")?;
             }
+            Instruction::GetMemberInScope(name) => {
+                fmt.write_str("GetMemberInScope Default = <")?;
+                fmt.write_str(name)?;
+                fmt.write_str(">")?;
+            }
+            Instruction::GetMemberInNS(name) => {
+                fmt.write_str("GetMemberInNS   Default = <")?;
+                fmt.write_str(name)?;
+                fmt.write_str(">")?;
+            }
             Instruction::SetMember(name) => {
                 fmt.write_str("SetMember       <")?;
+                fmt.write_str(name)?;
+                fmt.write_str("> = Default")?;
+            }
+            Instruction::SetMemberInScope(name) => {
+                fmt.write_str("SetMemberInScope <")?;
+                fmt.write_str(name)?;
+                fmt.write_str("> = Default")?;
+            }
+            Instruction::SetMemberInNS(name) => {
+                fmt.write_str("SetMemberInNS   <")?;
                 fmt.write_str(name)?;
                 fmt.write_str("> = Default")?;
             }
