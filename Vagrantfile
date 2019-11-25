@@ -65,4 +65,5 @@ Vagrant.configure(2) do |config|
   SHELL
 
   config.vm.synced_folder "", APP_DIR, type: "nfs"
+  config.vm.synced_folder "../gene", "/apps/gene", type: "nfs"
 end
