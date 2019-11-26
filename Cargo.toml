@@ -33,3 +33,8 @@ harness = false
 # [profile.release]
 # debug = true
 # lto = false
+
+[[bin]]
+name = "fibonacci"
+path = "src/bin/fibonacci.rs"
+doc = false
