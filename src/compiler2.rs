@@ -491,6 +491,40 @@ impl Compiler {
     }
 }
 
+/// Analyze names referenced
+/// For each name, we want to know
+///   - Whether it is a member of namespace or a variable in local scope or parent scope
+///   - How many time is it used (considered many if it's used inside a loop)
+///   - Whether it should be hoisted
+///     If it is defined in a if branch, it should be rewritten like
+///     Example 1:
+///     (if a then (var b 1))
+///     vvv
+///     (if a then (var b 1) else (var b))
+///
+///     Example 2:
+///     (if a then
+///       (if b then (var c 1))
+///     )
+///     vvv
+///     (if a then
+///       (if b then (var c 1) else (var c))
+///     else
+///       (var c)
+///     )
+///
+///     Example 3:
+///     (a && (var b = 1))
+///     vvv
+///     ???
+///
+///     Example 4:
+///     (a || (var b = 1))
+///     vvv
+///     ???
+pub fn analyze_names<'a>(node: &'a mut NodeRef<'a, Compilable>) {
+}
+
 pub struct NodeWrapper<'a>(&'a NodeRef<'a, Compilable>);
 
 impl<'a> NodeWrapper<'a> {
@@ -612,7 +646,10 @@ pub enum CompilableData {
     Function(String, Matcher, String),
     Invocation,
     InvocationArguments(Vec<Value>),
+    // Loop,
     While,
+    // WhileCondition,
+    // WhileBody,
     Break,
 }
 
