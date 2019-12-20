@@ -12,14 +12,24 @@ use gene::vm::VirtualMachine;
 
 #[test]
 fn test_basic_stmts() {
-    let mut compiler = Compiler::new();
-    let mut vm = VirtualMachine::new();
+    {
+        let mut parser = Parser::new("null");
+        let parsed = parser.parse();
+        let mut compiler = Compiler::new();
+        compiler.compile(parsed.unwrap());
+        let module = compiler.module;
+        let result_temp = VirtualMachine::new().load_module(&module);
+        let borrowed = result_temp.borrow();
+        let result = borrowed.downcast_ref::<Value>().unwrap();
+        assert_eq!(*result, Value::Null);
+    }
     {
         let mut parser = Parser::new("1");
         let parsed = parser.parse();
-        let module_temp = compiler.compile(parsed.unwrap());
-        let module = &module_temp.borrow();
-        let result_temp = vm.load_module(module);
+        let mut compiler = Compiler::new();
+        compiler.compile(parsed.unwrap());
+        let module = compiler.module;
+        let result_temp = VirtualMachine::new().load_module(&module);
         let borrowed = result_temp.borrow();
         let result = borrowed.downcast_ref::<Value>().unwrap();
         assert_eq!(*result, Value::Integer(1));
@@ -27,49 +37,43 @@ fn test_basic_stmts() {
     {
         let mut parser = Parser::new("1.1");
         let parsed = parser.parse();
-        let module_temp = compiler.compile(parsed.unwrap());
-        let module = &module_temp.borrow();
-        let result_temp = vm.load_module(module);
+        let mut compiler = Compiler::new();
+        compiler.compile(parsed.unwrap());
+        let module = compiler.module;
+        let result_temp = VirtualMachine::new().load_module(&module);
         let borrowed = result_temp.borrow();
         let result = borrowed.downcast_ref::<Value>().unwrap();
         assert_eq!(*result, Value::Float(OrderedFloat(1.1)));
     }
     {
-        let mut parser = Parser::new("\"ab\"");
-        let parsed = parser.parse();
-        let module_temp = compiler.compile(parsed.unwrap());
-        let module = &module_temp.borrow();
-        let result_temp = vm.load_module(module);
-        let borrowed = result_temp.borrow();
-        let result = borrowed.downcast_ref::<Value>().unwrap();
-        assert_eq!(*result, Value::String("ab".to_string()));
-    }
-    {
-        let mut parser = Parser::new("null");
-        let parsed = parser.parse();
-        let module_temp = compiler.compile(parsed.unwrap());
-        let module = &module_temp.borrow();
-        let result_temp = vm.load_module(module);
-        let borrowed = result_temp.borrow();
-        let result = borrowed.downcast_ref::<Value>().unwrap();
-        assert_eq!(*result, Value::Null);
-    }
-    {
         let mut parser = Parser::new("true");
         let parsed = parser.parse();
-        let module_temp = compiler.compile(parsed.unwrap());
-        let module = &module_temp.borrow();
-        let result_temp = vm.load_module(module);
+        let mut compiler = Compiler::new();
+        compiler.compile(parsed.unwrap());
+        let module = compiler.module;
+        let result_temp = VirtualMachine::new().load_module(&module);
         let borrowed = result_temp.borrow();
         let result = borrowed.downcast_ref::<Value>().unwrap();
         assert_eq!(*result, Value::Boolean(true));
     }
     {
+        let mut parser = Parser::new("\"ab\"");
+        let parsed = parser.parse();
+        let mut compiler = Compiler::new();
+        compiler.compile(parsed.unwrap());
+        let module = compiler.module;
+        let result_temp = VirtualMachine::new().load_module(&module);
+        let borrowed = result_temp.borrow();
+        let result = borrowed.downcast_ref::<Value>().unwrap();
+        assert_eq!(*result, Value::String("ab".to_string()));
+    }
+    {
         let mut parser = Parser::new("[]");
         let parsed = parser.parse();
-        let module_temp = compiler.compile(parsed.unwrap());
-        let module = &module_temp.borrow();
-        let result_temp = vm.load_module(module);
+        let mut compiler = Compiler::new();
+        compiler.compile(parsed.unwrap());
+        let module = compiler.module;
+        let result_temp = VirtualMachine::new().load_module(&module);
         let borrowed = result_temp.borrow();
         let result = borrowed.downcast_ref::<Value>().unwrap();
         assert_eq!(*result, Value::Array(Vec::new()));
@@ -77,9 +81,10 @@ fn test_basic_stmts() {
     {
         let mut parser = Parser::new("[1]");
         let parsed = parser.parse();
-        let module_temp = compiler.compile(parsed.unwrap());
-        let module = &module_temp.borrow();
-        let result_temp = vm.load_module(module);
+        let mut compiler = Compiler::new();
+        compiler.compile(parsed.unwrap());
+        let module = compiler.module;
+        let result_temp = VirtualMachine::new().load_module(&module);
         let borrowed = result_temp.borrow();
         let result = borrowed.downcast_ref::<Value>().unwrap();
         assert_eq!(*result, Value::Array(vec![Value::Integer(1)]));
@@ -87,9 +92,10 @@ fn test_basic_stmts() {
     {
         let mut parser = Parser::new("{}");
         let parsed = parser.parse();
-        let module_temp = compiler.compile(parsed.unwrap());
-        let module = &module_temp.borrow();
-        let result_temp = vm.load_module(module);
+        let mut compiler = Compiler::new();
+        compiler.compile(parsed.unwrap());
+        let module = compiler.module;
+        let result_temp = VirtualMachine::new().load_module(&module);
         let borrowed = result_temp.borrow();
         let result = borrowed.downcast_ref::<Value>().unwrap();
         assert_eq!(*result, Value::Map(HashMap::new()));
@@ -97,9 +103,10 @@ fn test_basic_stmts() {
     {
         let mut parser = Parser::new("{^key 1}");
         let parsed = parser.parse();
-        let module_temp = compiler.compile(parsed.unwrap());
-        let module = &module_temp.borrow();
-        let result_temp = vm.load_module(module);
+        let mut compiler = Compiler::new();
+        compiler.compile(parsed.unwrap());
+        let module = compiler.module;
+        let result_temp = VirtualMachine::new().load_module(&module);
         let borrowed = result_temp.borrow();
         let result = borrowed.downcast_ref::<Value>().unwrap();
         assert_eq!(
@@ -113,8 +120,6 @@ fn test_basic_stmts() {
 
 #[test]
 fn test_variables() {
-    let mut compiler = Compiler::new();
-    let mut vm = VirtualMachine::new();
     {
         let mut parser = Parser::new("
             # Define variable <a>
@@ -123,9 +128,11 @@ fn test_variables() {
             a
         ");
         let parsed = parser.parse();
-        let module_temp = compiler.compile(parsed.unwrap());
-        let module = &module_temp.borrow();
-        let result_temp = vm.load_module(module);
+        let mut compiler = Compiler::new();
+        compiler.compile(parsed.unwrap());
+        let module = compiler.module;
+        dbg!(module.get_default_block());
+        let result_temp = VirtualMachine::new().load_module(&module);
         let borrowed = result_temp.borrow();
         let result = borrowed.downcast_ref::<Value>().unwrap();
         assert_eq!(*result, Value::Integer(1));
@@ -137,9 +144,11 @@ fn test_variables() {
             [a 2 b]
         ");
         let parsed = parser.parse();
-        let module_temp = compiler.compile(parsed.unwrap());
-        let module = &module_temp.borrow();
-        let result_temp = vm.load_module(module);
+        let mut compiler = Compiler::new();
+        compiler.compile(parsed.unwrap());
+        let module = compiler.module;
+        dbg!(module.get_default_block());
+        let result_temp = VirtualMachine::new().load_module(&module);
         let borrowed = result_temp.borrow();
         let result = borrowed.downcast_ref::<Value>().unwrap();
         assert_eq!(*result, Value::Array(vec![
@@ -155,9 +164,11 @@ fn test_variables() {
             [a b (a + b)]
         ");
         let parsed = parser.parse();
-        let module_temp = compiler.compile(parsed.unwrap());
-        let module = &module_temp.borrow();
-        let result_temp = vm.load_module(module);
+        let mut compiler = Compiler::new();
+        compiler.compile(parsed.unwrap());
+        let module = compiler.module;
+        dbg!(module.get_default_block());
+        let result_temp = VirtualMachine::new().load_module(&module);
         let borrowed = result_temp.borrow();
         let result = borrowed.downcast_ref::<Value>().unwrap();
         assert_eq!(*result, Value::Array(vec![
@@ -173,9 +184,11 @@ fn test_variables() {
             {^ka a ^kb b}
         ");
         let parsed = parser.parse();
-        let module_temp = compiler.compile(parsed.unwrap());
-        let module = &module_temp.borrow();
-        let result_temp = vm.load_module(module);
+        let mut compiler = Compiler::new();
+        compiler.compile(parsed.unwrap());
+        let module = compiler.module;
+        dbg!(module.get_default_block());
+        let result_temp = VirtualMachine::new().load_module(&module);
         let borrowed = result_temp.borrow();
         let result = borrowed.downcast_ref::<Value>().unwrap();
         assert_eq!(
@@ -193,9 +206,11 @@ fn test_variables() {
             {^ka 1 ^kb (a + b)}
         ");
         let parsed = parser.parse();
-        let module_temp = compiler.compile(parsed.unwrap());
-        let module = &module_temp.borrow();
-        let result_temp = vm.load_module(module);
+        let mut compiler = Compiler::new();
+        compiler.compile(parsed.unwrap());
+        let module = compiler.module;
+        dbg!(module.get_default_block());
+        let result_temp = VirtualMachine::new().load_module(&module);
         let borrowed = result_temp.borrow();
         let result = borrowed.downcast_ref::<Value>().unwrap();
         assert_eq!(
@@ -210,16 +225,16 @@ fn test_variables() {
 
 #[test]
 fn test_binary_operations() {
-    let mut compiler = Compiler::new();
-    let mut vm = VirtualMachine::new();
     {
         let mut parser = Parser::new("
             (1 + 2)
         ");
         let parsed = parser.parse();
-        let module_temp = compiler.compile(parsed.unwrap());
-        let module = &module_temp.borrow();
-        let result_temp = vm.load_module(module);
+        let mut compiler = Compiler::new();
+        compiler.compile(parsed.unwrap());
+        let module = compiler.module;
+        dbg!(module.get_default_block());
+        let result_temp = VirtualMachine::new().load_module(&module);
         let borrowed = result_temp.borrow();
         let result = borrowed.downcast_ref::<Value>().unwrap();
         assert_eq!(*result, Value::Integer(3));
@@ -229,9 +244,11 @@ fn test_binary_operations() {
             (1 < 2)
         ");
         let parsed = parser.parse();
-        let module_temp = compiler.compile(parsed.unwrap());
-        let module = &module_temp.borrow();
-        let result_temp = vm.load_module(module);
+        let mut compiler = Compiler::new();
+        compiler.compile(parsed.unwrap());
+        let module = compiler.module;
+        dbg!(module.get_default_block());
+        let result_temp = VirtualMachine::new().load_module(&module);
         let borrowed = result_temp.borrow();
         let result = borrowed.downcast_ref::<Value>().unwrap();
         assert_eq!(*result, Value::Boolean(true));
@@ -240,8 +257,6 @@ fn test_binary_operations() {
 
 #[test]
 fn test_assignments() {
-    let mut compiler = Compiler::new();
-    let mut vm = VirtualMachine::new();
     {
         let mut parser = Parser::new("
             (var a 1)
@@ -249,9 +264,11 @@ fn test_assignments() {
             a
         ");
         let parsed = parser.parse();
-        let module_temp = compiler.compile(parsed.unwrap());
-        let module = &module_temp.borrow();
-        let result_temp = vm.load_module(module);
+        let mut compiler = Compiler::new();
+        compiler.compile(parsed.unwrap());
+        let module = compiler.module;
+        dbg!(module.get_default_block());
+        let result_temp = VirtualMachine::new().load_module(&module);
         let borrowed = result_temp.borrow();
         let result = borrowed.downcast_ref::<Value>().unwrap();
         assert_eq!(*result, Value::Integer(2));
@@ -259,102 +276,17 @@ fn test_assignments() {
 }
 
 #[test]
-fn test_functions() {
-    let mut compiler = Compiler::new();
-    let mut vm = VirtualMachine::new();
-    {
-        let mut parser = Parser::new("
-            (fn f _ 1)
-            (f)
-        ");
-        let parsed = parser.parse();
-        let module_temp = compiler.compile(parsed.unwrap());
-        let module = &module_temp.borrow();
-        let result_temp = vm.load_module(module);
-        let borrowed = result_temp.borrow();
-        let result = borrowed.downcast_ref::<Value>().unwrap();
-        assert_eq!(*result, Value::Integer(1));
-    }
-    {
-        let mut parser = Parser::new("
-            ((fn f _ 1))
-        ");
-        let parsed = parser.parse();
-        let module_temp = compiler.compile(parsed.unwrap());
-        let module = &module_temp.borrow();
-        let result_temp = vm.load_module(module);
-        let borrowed = result_temp.borrow();
-        let result = borrowed.downcast_ref::<Value>().unwrap();
-        assert_eq!(*result, Value::Integer(1));
-    }
-    {
-        let mut parser = Parser::new("
-            (fn f a a)
-            (f 1)
-        ");
-        let parsed = parser.parse();
-        let module_temp = compiler.compile(parsed.unwrap());
-        let module = &module_temp.borrow();
-        let result_temp = vm.load_module(module);
-        let borrowed = result_temp.borrow();
-        let result = borrowed.downcast_ref::<Value>().unwrap();
-        assert_eq!(*result, Value::Integer(1));
-    }
-    {
-        let mut parser = Parser::new("
-            (fn f [a b] (a + b))
-            (f 1 2)
-        ");
-        let parsed = parser.parse();
-        let module_temp = compiler.compile(parsed.unwrap());
-        let module = &module_temp.borrow();
-        let result_temp = vm.load_module(module);
-        let borrowed = result_temp.borrow();
-        let result = borrowed.downcast_ref::<Value>().unwrap();
-        assert_eq!(*result, Value::Integer(3));
-    }
-    {
-        let mut parser = Parser::new("
-            (fn f _ 1)
-            (fn g _ (f))
-            (g)
-        ");
-        let parsed = parser.parse();
-        let module_temp = compiler.compile(parsed.unwrap());
-        let module = &module_temp.borrow();
-        let result_temp = vm.load_module(module);
-        let borrowed = result_temp.borrow();
-        let result = borrowed.downcast_ref::<Value>().unwrap();
-        assert_eq!(*result, Value::Integer(1));
-    }
-    {
-        let mut parser = Parser::new("
-            (fn f [a b] (a + b))
-            (fn g [c d] (f c d))
-            (g 1 2)
-        ");
-        let parsed = parser.parse();
-        let module_temp = compiler.compile(parsed.unwrap());
-        let module = &module_temp.borrow();
-        let result_temp = vm.load_module(module);
-        let borrowed = result_temp.borrow();
-        let result = borrowed.downcast_ref::<Value>().unwrap();
-        assert_eq!(*result, Value::Integer(3));
-    }
-}
-
-#[test]
 fn test_ifs() {
-    let mut compiler = Compiler::new();
-    let mut vm = VirtualMachine::new();
     {
         let mut parser = Parser::new("
             (if true 1 else 2)
         ");
         let parsed = parser.parse();
-        let module_temp = compiler.compile(parsed.unwrap());
-        let module = &module_temp.borrow();
-        let result_temp = vm.load_module(module);
+        let mut compiler = Compiler::new();
+        compiler.compile(parsed.unwrap());
+        let module = compiler.module;
+        dbg!(module.get_default_block());
+        let result_temp = VirtualMachine::new().load_module(&module);
         let borrowed = result_temp.borrow();
         let result = borrowed.downcast_ref::<Value>().unwrap();
         assert_eq!(*result, Value::Integer(1));
@@ -364,9 +296,11 @@ fn test_ifs() {
             (if false 1 else 2)
         ");
         let parsed = parser.parse();
-        let module_temp = compiler.compile(parsed.unwrap());
-        let module = &module_temp.borrow();
-        let result_temp = vm.load_module(module);
+        let mut compiler = Compiler::new();
+        compiler.compile(parsed.unwrap());
+        let module = compiler.module;
+        dbg!(module.get_default_block());
+        let result_temp = VirtualMachine::new().load_module(&module);
         let borrowed = result_temp.borrow();
         let result = borrowed.downcast_ref::<Value>().unwrap();
         assert_eq!(*result, Value::Integer(2));
@@ -376,9 +310,11 @@ fn test_ifs() {
             (if true 1 2 else 3 4)
         ");
         let parsed = parser.parse();
-        let module_temp = compiler.compile(parsed.unwrap());
-        let module = &module_temp.borrow();
-        let result_temp = vm.load_module(module);
+        let mut compiler = Compiler::new();
+        compiler.compile(parsed.unwrap());
+        let module = compiler.module;
+        dbg!(module.get_default_block());
+        let result_temp = VirtualMachine::new().load_module(&module);
         let borrowed = result_temp.borrow();
         let result = borrowed.downcast_ref::<Value>().unwrap();
         assert_eq!(*result, Value::Integer(2));
@@ -388,9 +324,11 @@ fn test_ifs() {
             (if false 1 2 else 3 4)
         ");
         let parsed = parser.parse();
-        let module_temp = compiler.compile(parsed.unwrap());
-        let module = &module_temp.borrow();
-        let result_temp = vm.load_module(module);
+        let mut compiler = Compiler::new();
+        compiler.compile(parsed.unwrap());
+        let module = compiler.module;
+        dbg!(module.get_default_block());
+        let result_temp = VirtualMachine::new().load_module(&module);
         let borrowed = result_temp.borrow();
         let result = borrowed.downcast_ref::<Value>().unwrap();
         assert_eq!(*result, Value::Integer(4));
@@ -399,8 +337,6 @@ fn test_ifs() {
 
 #[test]
 fn test_loops() {
-    let mut compiler = Compiler::new();
-    let mut vm = VirtualMachine::new();
     {
         let mut parser = Parser::new("
             (var a 0)
@@ -410,9 +346,11 @@ fn test_loops() {
             a
         ");
         let parsed = parser.parse();
-        let module_temp = compiler.compile(parsed.unwrap());
-        let module = &module_temp.borrow();
-        let result_temp = vm.load_module(module);
+        let mut compiler = Compiler::new();
+        compiler.compile(parsed.unwrap());
+        let module = compiler.module;
+        dbg!(module.get_default_block());
+        let result_temp = VirtualMachine::new().load_module(&module);
         let borrowed = result_temp.borrow();
         let result = borrowed.downcast_ref::<Value>().unwrap();
         assert_eq!(*result, Value::Integer(2));
@@ -427,9 +365,11 @@ fn test_loops() {
             a
         ");
         let parsed = parser.parse();
-        let module_temp = compiler.compile(parsed.unwrap());
-        let module = &module_temp.borrow();
-        let result_temp = vm.load_module(module);
+        let mut compiler = Compiler::new();
+        compiler.compile(parsed.unwrap());
+        let module = compiler.module;
+        dbg!(module.get_default_block());
+        let result_temp = VirtualMachine::new().load_module(&module);
         let borrowed = result_temp.borrow();
         let result = borrowed.downcast_ref::<Value>().unwrap();
         assert_eq!(*result, Value::Integer(1));
@@ -437,9 +377,102 @@ fn test_loops() {
 }
 
 #[test]
+fn test_functions() {
+    {
+        let mut parser = Parser::new("
+            (fn f _ 1)
+            (f)
+        ");
+        let parsed = parser.parse();
+        let mut compiler = Compiler::new();
+        compiler.compile(parsed.unwrap());
+        let module = compiler.module;
+        dbg!(module.get_default_block());
+        let result_temp = VirtualMachine::new().load_module(&module);
+        let borrowed = result_temp.borrow();
+        let result = borrowed.downcast_ref::<Value>().unwrap();
+        assert_eq!(*result, Value::Integer(1));
+    }
+    {
+        let mut parser = Parser::new("
+            (fn f a a)
+            (f 1)
+        ");
+        let parsed = parser.parse();
+        let mut compiler = Compiler::new();
+        compiler.compile(parsed.unwrap());
+        let module = compiler.module;
+        dbg!(module.get_default_block());
+        let result_temp = VirtualMachine::new().load_module(&module);
+        let borrowed = result_temp.borrow();
+        let result = borrowed.downcast_ref::<Value>().unwrap();
+        assert_eq!(*result, Value::Integer(1));
+    }
+    {
+        let mut parser = Parser::new("
+            (fn f [a b] (a + b))
+            (f 1 2)
+        ");
+        let parsed = parser.parse();
+        let mut compiler = Compiler::new();
+        compiler.compile(parsed.unwrap());
+        let module = compiler.module;
+        dbg!(module.get_default_block());
+        let result_temp = VirtualMachine::new().load_module(&module);
+        let borrowed = result_temp.borrow();
+        let result = borrowed.downcast_ref::<Value>().unwrap();
+        assert_eq!(*result, Value::Integer(3));
+    }
+    {
+        let mut parser = Parser::new("
+            ((fn f _ 1))
+        ");
+        let parsed = parser.parse();
+        let mut compiler = Compiler::new();
+        compiler.compile(parsed.unwrap());
+        let module = compiler.module;
+        dbg!(module.get_default_block());
+        let result_temp = VirtualMachine::new().load_module(&module);
+        let borrowed = result_temp.borrow();
+        let result = borrowed.downcast_ref::<Value>().unwrap();
+        assert_eq!(*result, Value::Integer(1));
+    }
+    {
+        let mut parser = Parser::new("
+            (fn f _ 1)
+            (fn g _ (f))
+            (g)
+        ");
+        let parsed = parser.parse();
+        let mut compiler = Compiler::new();
+        compiler.compile(parsed.unwrap());
+        let module = compiler.module;
+        dbg!(module.get_default_block());
+        let result_temp = VirtualMachine::new().load_module(&module);
+        let borrowed = result_temp.borrow();
+        let result = borrowed.downcast_ref::<Value>().unwrap();
+        assert_eq!(*result, Value::Integer(1));
+    }
+    {
+        let mut parser = Parser::new("
+            (fn f [a b] (a + b))
+            (fn g [c d] (f c d))
+            (g 1 2)
+        ");
+        let parsed = parser.parse();
+        let mut compiler = Compiler::new();
+        compiler.compile(parsed.unwrap());
+        let module = compiler.module;
+        dbg!(module.get_default_block());
+        let result_temp = VirtualMachine::new().load_module(&module);
+        let borrowed = result_temp.borrow();
+        let result = borrowed.downcast_ref::<Value>().unwrap();
+        assert_eq!(*result, Value::Integer(3));
+    }
+}
+
+#[test]
 fn test_fibonacci() {
-    let mut compiler = Compiler::new();
-    let mut vm = VirtualMachine::new();
     {
         let mut parser = Parser::new("
             (fn fibonacci n
@@ -452,9 +485,11 @@ fn test_fibonacci() {
             (fibonacci 6)
         ");
         let parsed = parser.parse();
-        let module_temp = compiler.compile(parsed.unwrap());
-        let module = &module_temp.borrow();
-        let result_temp = vm.load_module(module);
+        let mut compiler = Compiler::new();
+        compiler.compile(parsed.unwrap());
+        let module = compiler.module;
+        dbg!(module.get_default_block());
+        let result_temp = VirtualMachine::new().load_module(&module);
         let borrowed = result_temp.borrow();
         let result = borrowed.downcast_ref::<Value>().unwrap();
         assert_eq!(*result, Value::Integer(8));

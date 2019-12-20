@@ -2,7 +2,7 @@ extern crate gene;
 
 use std::env;
 
-use gene::compiler2::Compiler;
+use gene::compiler::Compiler;
 use gene::parser::Parser;
 use gene::types::Value;
 use gene::vm::VirtualMachine;

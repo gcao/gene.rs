@@ -10,7 +10,7 @@ extern crate gene;
 use ordered_float::OrderedFloat;
 use std::collections::HashMap;
 
-use gene::compiler2::Compiler;
+use gene::compiler::Compiler;
 use gene::parser::Parser;
 use gene::types::Gene;
 use gene::types::Value;
