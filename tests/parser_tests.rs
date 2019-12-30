@@ -1,9 +1,7 @@
 #[macro_use]
 extern crate gene;
 
-use std::cell::RefCell;
 use std::collections::HashMap;
-use std::rc::Rc;
 
 use ordered_float::OrderedFloat;
 

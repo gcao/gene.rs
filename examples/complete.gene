@@ -1,0 +1,26 @@
+$app # The application object
+$pkg # The package object
+$global # The global namespace object
+$pkg_ns # The package namespace object
+$ns # The current namespace object
+$scope # The current scope object
+$file # Include directory
+$file_only # Does not include directory
+$file_ns
+$dir
+$line # The line number (0-based) - should be a constant created during compilation
+$column # The column number of '$' (0-based) - should be a constant created during compilation
+$working_dir # The directory where the program is invoked from
+$program # The program that is run
+$program_args # The arguments passed to the program
+$stdin, $stdout, $stderr
+$function # The current function object
+$args # The arguments passed to the function
+$env # Environment variables
+$self # The self object
+
+# With working directory, program, arguments and environment, we know
+# how the application is started
+
+$string_len # The native function that returns length of a string
+$string_substr

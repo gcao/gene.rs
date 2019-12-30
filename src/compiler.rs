@@ -254,11 +254,9 @@ pub enum Instruction {
     LoopStart,
     LoopEnd,
 
-    /// BinaryOp(op, first reg)
-    /// Second operand is in default reg
-    /// Result is stored in default reg
-    BinaryOp(String, u16),
+    /// reg + default
     Add(u16),
+    /// reg - default
     Sub(u16),
     Eq(u16),
     Lt(u16),
@@ -387,13 +385,6 @@ impl fmt::Display for Instruction {
             Instruction::LoopEnd => {
                 fmt.write_str("LoopEnd         LoopEnd")?;
             }
-            Instruction::BinaryOp(op, first) => {
-                fmt.write_str("BinaryOp        Default = R")?;
-                fmt.write_str(&first.to_string())?;
-                fmt.write_str(" ")?;
-                fmt.write_str(op)?;
-                fmt.write_str(" Default")?;
-            }
             Instruction::Add(first) => {
                 fmt.write_str("Add             Default = Default + R")?;
                 fmt.write_str(&first.to_string())?;
@@ -453,30 +444,30 @@ pub fn is_binary_op(op: &str) -> bool {
     binary_ops.contains(&op)
 }
 
-fn normalize(gene: Gene) -> Gene {
-    if gene.data.is_empty() {
-        gene
-    } else {
-        let first = gene.data[0].clone();
-        match first {
-            Value::Symbol(ref s) if is_binary_op(s) || s == "=" => {
-                let Gene {
-                    kind,
-                    props,
-                    mut data,
-                } = gene;
-                let new_kind = data.remove(0);
-                data.insert(0, kind.clone());
-                Gene {
-                    kind: new_kind,
-                    props,
-                    data,
-                }
-            }
-            _ => gene,
-        }
-    }
-}
+// fn normalize(gene: Gene) -> Gene {
+//     if gene.data.is_empty() {
+//         gene
+//     } else {
+//         let first = gene.data[0].clone();
+//         match first {
+//             Value::Symbol(ref s) if is_binary_op(s) || s == "=" => {
+//                 let Gene {
+//                     kind,
+//                     props,
+//                     mut data,
+//                 } = gene;
+//                 let new_kind = data.remove(0);
+//                 data.insert(0, kind.clone());
+//                 Gene {
+//                     kind: new_kind,
+//                     props,
+//                     data,
+//                 }
+//             }
+//             _ => gene,
+//         }
+//     }
+// }
 
 #[derive(Debug)]
 pub struct NameManager {

@@ -3,11 +3,9 @@ extern crate criterion;
 extern crate gene;
 
 use criterion::Criterion;
-use criterion::black_box;
 
 use gene::compiler::Compiler;
 use gene::parser::Parser;
-use gene::types::Value;
 use gene::vm::VirtualMachine;
 
 pub fn criterion_benchmark(c: &mut Criterion) {

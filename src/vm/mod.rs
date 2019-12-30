@@ -156,13 +156,6 @@ impl VirtualMachine {
                         Instruction::LoopEnd => {
                             self.pos += 1;
                         }
-                        // Instruction::BinaryOp(op, first) => {
-                        //     self.pos += 1;
-                        //     let first = registers.get(*first);
-                        //     let second = registers.default.clone();
-                        //     let result = binary_op(op, first, second);
-                        //     registers.default = result;
-                        // }
                         Instruction::Add(first) => {
                             self.pos += 1;
                             let first = registers.get(*first);
@@ -490,75 +483,6 @@ impl RegistersStore {
         self.freed.push(id);
     }
 }
-
-// #[inline]
-// fn binary_op<'a>(
-//     op: &'a str,
-//     first: Rc<RefCell<dyn Any>>,
-//     second: Rc<RefCell<dyn Any>>,
-// ) -> Rc<RefCell<dyn Any>> {
-//     let borrowed1 = first.borrow();
-//     let borrowed2 = second.borrow();
-//     let value1 = borrowed1.downcast_ref::<Value>().unwrap();
-//     let value2 = borrowed2.downcast_ref::<Value>().unwrap();
-//     match op {
-//         "+" => {
-//             match (value1, value2) {
-//                 (Value::Integer(a), Value::Integer(b)) => Rc::new(RefCell::new(Value::Integer(a + b))),
-//                 _ => unimplemented!()
-//             }
-//         }
-//         "-" => {
-//             match (value1, value2) {
-//                 (Value::Integer(a), Value::Integer(b)) => Rc::new(RefCell::new(Value::Integer(a - b))),
-//                 _ => unimplemented!()
-//             }
-//         }
-//         "*" => {
-//             match (value1, value2) {
-//                 (Value::Integer(a), Value::Integer(b)) => Rc::new(RefCell::new(Value::Integer(a * b))),
-//                 _ => unimplemented!()
-//             }
-//         }
-//         "/" => {
-//             match (value1, value2) {
-//                 (Value::Integer(a), Value::Integer(b)) => Rc::new(RefCell::new(Value::Integer(a / b))),
-//                 _ => unimplemented!()
-//             }
-//         }
-//         "<" => {
-//             match (value1, value2) {
-//                 (Value::Integer(a), Value::Integer(b)) => Rc::new(RefCell::new(Value::Boolean(a < b))),
-//                 _ => unimplemented!()
-//             }
-//         }
-//         "<=" => {
-//             match (value1, value2) {
-//                 (Value::Integer(a), Value::Integer(b)) => Rc::new(RefCell::new(Value::Boolean(a <= b))),
-//                 _ => unimplemented!()
-//             }
-//         }
-//         ">" => {
-//             match (value1, value2) {
-//                 (Value::Integer(a), Value::Integer(b)) => Rc::new(RefCell::new(Value::Boolean(a > b))),
-//                 _ => unimplemented!()
-//             }
-//         }
-//         ">=" => {
-//             match (value1, value2) {
-//                 (Value::Integer(a), Value::Integer(b)) => Rc::new(RefCell::new(Value::Boolean(a >= b))),
-//                 _ => unimplemented!()
-//             }
-//         }
-//         "==" => {
-//             match (value1, value2) {
-//                 (Value::Integer(a), Value::Integer(b)) => Rc::new(RefCell::new(Value::Boolean(a == b))),
-//                 _ => unimplemented!()
-//             }
-//         }
-//         _ => unimplemented!()
-//     }
-// }
 
 #[inline]
 fn add<'a>(
