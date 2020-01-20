@@ -67,12 +67,12 @@ impl VirtualMachine {
 
                     // Handle break from loop
                     if break_from_loop {
-                        self.pos += 1;
                         match instr {
                             Instruction::LoopEnd => {
                                 break_from_loop = false;
                             }
                             _ => {
+                                self.pos += 1;
                                 continue;
                             }
                         }
@@ -175,6 +175,13 @@ impl VirtualMachine {
                             let first = registers.get(*first);
                             let second = registers.default.clone();
                             let result = lt(first, second);
+                            registers.default = result;
+                        }
+                        Instruction::Gt(first) => {
+                            self.pos += 1;
+                            let first = registers.get(*first);
+                            let second = registers.default.clone();
+                            let result = gt(first, second);
                             registers.default = result;
                         }
                         Instruction::Init => {
@@ -525,6 +532,21 @@ fn lt<'a>(
     let value2 = borrowed2.downcast_ref::<Value>().unwrap();
     match (value1, value2) {
         (Value::Integer(a), Value::Integer(b)) => Rc::new(RefCell::new(Value::Boolean(a < b))),
+        _ => unimplemented!()
+    }
+}
+
+#[inline]
+fn gt<'a>(
+    first: Rc<RefCell<dyn Any>>,
+    second: Rc<RefCell<dyn Any>>,
+) -> Rc<RefCell<dyn Any>> {
+    let borrowed1 = first.borrow();
+    let borrowed2 = second.borrow();
+    let value1 = borrowed1.downcast_ref::<Value>().unwrap();
+    let value2 = borrowed2.downcast_ref::<Value>().unwrap();
+    match (value1, value2) {
+        (Value::Integer(a), Value::Integer(b)) => Rc::new(RefCell::new(Value::Boolean(a > b))),
         _ => unimplemented!()
     }
 }

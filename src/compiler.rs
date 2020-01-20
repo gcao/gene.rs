@@ -386,24 +386,29 @@ impl fmt::Display for Instruction {
                 fmt.write_str("LoopEnd         LoopEnd")?;
             }
             Instruction::Add(first) => {
-                fmt.write_str("Add             Default = Default + R")?;
+                fmt.write_str("Add             Default = R")?;
                 fmt.write_str(&first.to_string())?;
+                fmt.write_str(" + Default")?;
             }
             Instruction::Sub(first) => {
-                fmt.write_str("Sub             Default = Default - R")?;
+                fmt.write_str("Sub             Default = R")?;
                 fmt.write_str(&first.to_string())?;
+                fmt.write_str(" - Default")?;
             }
             Instruction::Eq(first) => {
-                fmt.write_str("Lt              Default = Default == R")?;
+                fmt.write_str("Lt              Default = R")?;
                 fmt.write_str(&first.to_string())?;
+                fmt.write_str(" == Default")?;
             }
             Instruction::Lt(first) => {
-                fmt.write_str("Lt              Default = Default < R")?;
+                fmt.write_str("Lt              Default = R")?;
                 fmt.write_str(&first.to_string())?;
+                fmt.write_str(" < Default")?;
             }
             Instruction::Gt(first) => {
-                fmt.write_str("Gt              Default = Default > R")?;
+                fmt.write_str("Gt              Default = R")?;
                 fmt.write_str(&first.to_string())?;
+                fmt.write_str(" > Default")?;
             }
             Instruction::Function(name, _matcher, body_id) => {
                 fmt.write_str("Function        Default = Function <")?;
@@ -652,6 +657,12 @@ impl Compiler {
                             for stmt in else_stmts {
                                 self.translate(&mut if_else_stmts, &stmt);
                             }
+                        }
+                    }
+                    Value::Symbol(ref s) if s == "loop" => {
+                        let mut node = parent.append(Compilable::new(CompilableData::Loop));
+                        for stmt in data {
+                            self.translate(&mut node, &stmt);
                         }
                     }
                     Value::Symbol(ref s) if s == "break" => {
@@ -949,6 +960,14 @@ impl Compiler {
                     }
                 }
             }
+            CompilableData::Loop => {
+                let start_pos = block.len();
+                for node in node.children() {
+                    self.compile_node(&node, block);
+                }
+                (*block).add_instr(Instruction::Jump(start_pos as i16));
+                (*block).add_instr(Instruction::LoopEnd);
+            }
             CompilableData::While => {
                 let start_pos = block.len();
                 let cond_node = node.first_child().unwrap();
@@ -965,6 +984,7 @@ impl Compiler {
                 }
 
                 (*block).add_instr(Instruction::Jump(start_pos as i16));
+                (*block).add_instr(Instruction::LoopEnd);
 
                 let end_pos = block.len();
                 mem::replace(&mut (*block).instructions[jump_pos], Instruction::JumpIfFalse(end_pos as i16));
@@ -1132,7 +1152,7 @@ pub enum CompilableData {
     Function(String, Matcher, String),
     Invocation,
     InvocationArguments(Vec<Value>),
-    // Loop,
+    Loop,
     While,
     // WhileCondition,
     // WhileBody,
