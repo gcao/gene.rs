@@ -76,7 +76,6 @@ impl Context {
             panic!("Undefined variable: {}", name);
         }
     }
-
 }
 
 #[derive(Clone, Debug)]
@@ -143,6 +142,7 @@ impl Namespace {
 pub struct Scope {
     pub parent: Option<Rc<RefCell<Scope>>>,
     pub members: HashMap<String, Rc<RefCell<dyn Any>>>,
+    pub top_level_members: Vec<Rc<RefCell<dyn Any>>>,
 }
 
 impl Scope {
@@ -150,6 +150,7 @@ impl Scope {
         Scope {
             parent: Some(parent),
             members: HashMap::new(),
+            top_level_members: Vec::new(),
         }
     }
 
@@ -157,6 +158,7 @@ impl Scope {
         Scope {
             parent: None,
             members: HashMap::new(),
+            top_level_members: Vec::new(),
         }
     }
 
@@ -199,6 +201,21 @@ impl Scope {
         } else {
             false
         }
+    }
+
+    #[inline]
+    pub fn add_top_level_member(&mut self, value: Rc<RefCell<dyn Any>>) {
+        self.top_level_members.push(value);
+    }
+
+    #[inline]
+    pub fn set_top_level_member(&mut self, index: usize, value: Rc<RefCell<dyn Any>>) {
+        self.top_level_members[index] = value;
+    }
+
+    #[inline]
+    pub fn get_top_level_member(&self, index: usize) -> Rc<RefCell<dyn Any>> {
+        self.top_level_members[index].clone()
     }
 }
 

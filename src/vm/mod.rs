@@ -65,6 +65,11 @@ impl VirtualMachine {
                 while self.pos < block.instructions.len() {
                     let instr = &block.instructions[self.pos];
 
+                    // {
+                    //     let instr = &block.instructions[self.pos];
+                    //     println!("{: >5} {}", self.pos, instr);
+                    // }
+
                     // Handle break from loop
                     if break_from_loop {
                         match instr {
@@ -360,29 +365,18 @@ pub struct Registers {
     pub caller_registers: usize,
     pub default: Rc<RefCell<dyn Any>>,
     pub context: Rc<RefCell<Context>>,
-    pub cache: [Rc<RefCell<dyn Any>>; 16],
-    pub store: HashMap<u16, Rc<RefCell<dyn Any>>>,
-    // pub members_cache: HashMap<String, Rc<RefCell<dyn Any>>>,
+    pub store: Vec<Option<Rc<RefCell<dyn Any>>>>,
 }
 
 impl Registers {
     pub fn new(id: usize, context: Rc<RefCell<Context>>) -> Self {
-        let dummy = Rc::new(RefCell::new(0));
-
         Registers {
             id,
             caller: None,
             caller_registers: 0,
-            default: dummy.clone(),
+            default: Rc::new(RefCell::new(0)),
             context,
-            cache: [
-                dummy.clone(), dummy.clone(), dummy.clone(), dummy.clone(),
-                dummy.clone(), dummy.clone(), dummy.clone(), dummy.clone(),
-                dummy.clone(), dummy.clone(), dummy.clone(), dummy.clone(),
-                dummy.clone(), dummy.clone(), dummy.clone(), dummy.clone(),
-            ],
-            store: HashMap::new(),
-            // members_cache: HashMap::new(),
+            store: Vec::new(),
         }
     }
 
@@ -392,20 +386,22 @@ impl Registers {
 
     #[inline]
     pub fn insert(&mut self, key: u16, val: Rc<RefCell<dyn Any>>) {
-        if key < 16 {
-            self.cache[key as usize] = val;
+        let len = self.store.len() as u16;
+        if key < len {
+            self.store[key as usize].replace(val);
         } else {
-            self.store.insert(key, val);
+            if key > len {
+                for _i in len..key {
+                    self.store.push(None);
+                }
+            }
+            self.store.push(Some(val));
         }
     }
 
     #[inline]
     pub fn get(&self, key: u16) -> Rc<RefCell<dyn Any>> {
-        if key < 16 {
-            self.cache[key as usize].clone()
-        } else {
-            self.store[&key].clone()
-        }
+        self.store[key as usize].as_ref().unwrap().clone()
      }
 
     #[inline]
@@ -422,27 +418,15 @@ impl Registers {
 }
 
 pub struct RegistersStore {
-    cache: [Registers; 32],
-    store: HashMap<usize, Registers>,
+    store: Vec<Registers>,
     freed: Vec<usize>,
     next: usize,
 }
 
 impl RegistersStore {
     pub fn new() -> Self {
-        let dummy = Rc::new(RefCell::new(Context::root()));
         RegistersStore {
-            cache: [
-                Registers::new(0,  dummy.clone()), Registers::new(1,  dummy.clone()), Registers::new(2,  dummy.clone()), Registers::new(3,  dummy.clone()),
-                Registers::new(4,  dummy.clone()), Registers::new(5,  dummy.clone()), Registers::new(6,  dummy.clone()), Registers::new(7,  dummy.clone()),
-                Registers::new(8,  dummy.clone()), Registers::new(9,  dummy.clone()), Registers::new(10, dummy.clone()), Registers::new(11, dummy.clone()),
-                Registers::new(12, dummy.clone()), Registers::new(13, dummy.clone()), Registers::new(14, dummy.clone()), Registers::new(15, dummy.clone()),
-                Registers::new(16, dummy.clone()), Registers::new(17, dummy.clone()), Registers::new(18, dummy.clone()), Registers::new(19, dummy.clone()),
-                Registers::new(20, dummy.clone()), Registers::new(21, dummy.clone()), Registers::new(22, dummy.clone()), Registers::new(23, dummy.clone()),
-                Registers::new(24, dummy.clone()), Registers::new(25, dummy.clone()), Registers::new(26, dummy.clone()), Registers::new(27, dummy.clone()),
-                Registers::new(28, dummy.clone()), Registers::new(29, dummy.clone()), Registers::new(30, dummy.clone()), Registers::new(31, dummy.clone()),
-            ],
-            store: HashMap::new(),
+            store: Vec::new(),
             freed: Vec::new(),
             next: 0,
         }
@@ -450,38 +434,23 @@ impl RegistersStore {
 
     #[inline]
     pub fn get(&mut self, context: Rc<RefCell<Context>>) -> &mut Registers {
-        if !self.freed.is_empty() {
-            let id = self.freed.pop().unwrap();
-            let mut registers =
-                if id < 32 {
-                    &mut self.cache[id]
-                } else {
-                    self.store.get_mut(&id).unwrap()
-                };
-
-            registers.context = context;
-            registers
-        } else if self.next < 32 {
-            let mut registers = &mut self.cache[self.next];
-            self.next += 1;
-            registers.context = context;
-            registers
-        } else {
+        if self.freed.is_empty() {
             let id = self.next;
             let registers = Registers::new(id, context);
             self.store.insert(self.next, registers);
             self.next += 1;
-            self.store.get_mut(&id).unwrap()
+            self.store.get_mut(id).unwrap()
+        } else {
+            let id = self.freed.pop().unwrap();
+            let registers = self.store.get_mut(id).unwrap();
+            registers.context = context;
+            registers
         }
     }
 
     #[inline]
     pub fn find(&mut self, id: usize) -> &mut Registers {
-        if id < 32 {
-            &mut self.cache[id]
-        } else {
-            self.store.get_mut(&id).unwrap()
-        }
+        self.store.get_mut(id).unwrap()
     }
 
     #[inline]
@@ -585,3 +554,41 @@ impl CodeManager {
         self.blocks.insert(id, block);
     }
 }
+
+// struct Scope {
+//     pub id: usize,
+//     /// Total usage of the scope
+//     ///   When the scope is created/re-used, incremented by 1
+//     ///   When the current block ends, decremented by 1
+//     ///   When a member is referenced in a child scope, incremented by 1
+//     ///   When the member is not used any more, or the child block ends, decrement by 1
+//     ///   When usage is 0, clear members, deep_members etc
+//     pub usage: usize,
+//     pub parent: Option<usize>,
+//     pub members: Vec<Rc<RefCell<dyn Any>>>,
+//     pub deep_members: HashMap<String, Rc<RefCell<dyn Any>>>,
+//     pub inherited_members: Option<HashMap<String, ScopeRef>>,
+// }
+
+// impl Scope {
+//     pub fn new(id: usize) -> Self {
+//         Scope {
+//             id,
+//             usage: 1,
+//             parent: None,
+//             members: Vec::new(),
+//             deep_members: HashMap::new(),
+//             inherited_members: None,
+//         }
+//     }
+// }
+
+// enum ScopeRef {
+//     /// Member(scope id, index to members)
+//     Member(usize, usize),
+//     /// DeepMember(scope id, name in deep_members)
+//     DeepMember(usize, String),
+// }
+
+// struct ScopeManager {
+// }

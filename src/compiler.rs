@@ -593,7 +593,11 @@ impl Compiler {
                     }
                     Value::Symbol(ref s) if s == "var" => {
                         if let Value::Symbol(name) = &data[0] {
-                            let mut node = parent.append(Compilable::new(CompilableData::Var(name.clone())));
+                            let mut is_top_level = false;
+                            if let CompilableData::Block = parent.value().data {
+                                is_top_level = true;
+                            }
+                            let mut node = parent.append(Compilable::new(CompilableData::Var(name.clone(), is_top_level)));
                             let value = data[1].clone();
                             self.translate(&mut node, &value);
                         }
@@ -840,7 +844,7 @@ impl Compiler {
                 (*block).add_instr(Instruction::CopyToDefault(reg));
                 block.free_reg(&reg);
             }
-            CompilableData::Var(name) => {
+            CompilableData::Var(name, is_top_level) => {
                 self.compile_node(&node.first_child().unwrap(), block);
                 (*block).add_instr(Instruction::DefMemberInScope(name.clone()));
                 let reg = block.get_reg_for(&name);
@@ -1041,7 +1045,7 @@ impl<'a> NodeWrapper<'a> {
             CompilableData::Symbol(ref name) => {
                 result.insert(name.clone(), 1);
             }
-            CompilableData::Var(ref name) => {
+            CompilableData::Var(ref name, _is_top_level) => {
                 result.insert(name.clone(), 1);
             }
             CompilableData::Function(ref name, ..) => {
@@ -1141,7 +1145,8 @@ pub enum CompilableData {
     GeneKind, // the gene kind may have to be compiled, this is the indicator/parent for it
     GeneProp(String),
     GeneDataChild(usize),
-    Var(String),
+    /// Var(name, is_top_level)
+    Var(String, bool),
     BinaryOp(String),
     Assignment(String),
     If,
@@ -1149,6 +1154,7 @@ pub enum CompilableData {
     IfPairCondition,
     IfPairThen,
     IfElse,
+    /// Function(name, arguments, body block uuid)
     Function(String, Matcher, String),
     Invocation,
     InvocationArguments(Vec<Value>),
