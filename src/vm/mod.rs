@@ -13,8 +13,9 @@ use super::types::Value;
 use super::utils::new_uuidv4;
 
 pub struct VirtualMachine {
-    registers_store: RegistersStore,
     pos: usize,
+    registers_manager: RegistersManager,
+    scope_manager: ScopeManager,
     // app: Application,
     code_manager: CodeManager,
 }
@@ -22,8 +23,9 @@ pub struct VirtualMachine {
 impl VirtualMachine {
     pub fn new() -> Self {
         VirtualMachine {
-            registers_store: RegistersStore::new(),
             pos: 0,
+            registers_manager: RegistersManager::new(),
+            scope_manager: ScopeManager::new(),
             // app: Application::new(),
             code_manager: CodeManager::new(),
         }
@@ -45,8 +47,7 @@ impl VirtualMachine {
 
         let mut registers_id;
         {
-            let root_context = Context::root();
-            let registers = self.registers_store.get(Rc::new(RefCell::new(root_context)));
+            let registers = self.registers_manager.get();
             registers_id = registers.id;
         }
 
@@ -60,7 +61,7 @@ impl VirtualMachine {
             immature_break = false;
 
             {
-                let mut registers = self.registers_store.find(registers_id);
+                let mut registers = self.registers_manager.find(registers_id);
 
                 while self.pos < block.instructions.len() {
                     let instr = &block.instructions[self.pos];
@@ -100,40 +101,40 @@ impl VirtualMachine {
                             self.pos += 1;
                             registers.default = registers.get(*to);
                         }
-                        Instruction::DefMember(name) => {
-                            self.pos += 1;
-                            let value = registers.default.clone();
-                            let mut context = registers.context.borrow_mut();
-                            context.def_member(name.clone(), value, VarType::SCOPE);
-                        }
-                        Instruction::DefMemberInScope(name) => {
-                            self.pos += 1;
-                            let value = registers.default.clone();
-                            let context = registers.context.borrow();
-                            let mut scope = context.scope.borrow_mut();
-                            scope.def_member(name.clone(), value);
-                        }
-                        Instruction::GetMember(name) => {
-                            self.pos += 1;
-                            let value = registers.get_member(name).unwrap();
-                            registers.default = value;
-                        }
-                        Instruction::GetMemberInScope(name) => {
-                            self.pos += 1;
-                            let context = registers.context.borrow();
-                            let value = context.scope.borrow().get_member(name).unwrap();
-                            registers.default = value;
-                        }
-                        Instruction::SetMember(name) => {
-                            self.pos += 1;
-                            registers.set_member(name.clone(), registers.default.clone());
-                        }
-                        Instruction::SetMemberInScope(name) => {
-                            self.pos += 1;
-                            let context = registers.context.borrow();
-                            let mut scope = context.scope.borrow_mut();
-                            scope.set_member(name.clone(), registers.default.clone());
-                        }
+                        // Instruction::DefMember(name) => {
+                        //     self.pos += 1;
+                        //     let value = registers.default.clone();
+                        //     let mut context = registers.context.borrow_mut();
+                        //     context.def_member(name.clone(), value, VarType::SCOPE);
+                        // }
+                        // Instruction::DefMemberInScope(name) => {
+                        //     self.pos += 1;
+                        //     let value = registers.default.clone();
+                        //     let context = registers.context.borrow();
+                        //     let mut scope = context.scope.borrow_mut();
+                        //     scope.def_member(name.clone(), value);
+                        // }
+                        // Instruction::GetMember(name) => {
+                        //     self.pos += 1;
+                        //     let value = registers.get_member(name).unwrap();
+                        //     registers.default = value;
+                        // }
+                        // Instruction::GetMemberInScope(name) => {
+                        //     self.pos += 1;
+                        //     let context = registers.context.borrow();
+                        //     let value = context.scope.borrow().get_member(name).unwrap();
+                        //     registers.default = value;
+                        // }
+                        // Instruction::SetMember(name) => {
+                        //     self.pos += 1;
+                        //     registers.set_member(name.clone(), registers.default.clone());
+                        // }
+                        // Instruction::SetMemberInScope(name) => {
+                        //     self.pos += 1;
+                        //     let context = registers.context.borrow();
+                        //     let mut scope = context.scope.borrow_mut();
+                        //     scope.set_member(name.clone(), registers.default.clone());
+                        // }
                         Instruction::Jump(pos) => {
                             self.pos = *pos as usize;
                         }
@@ -192,19 +193,19 @@ impl VirtualMachine {
                         Instruction::Init => {
                             self.pos += 1;
                         }
-                        Instruction::Function(name, args, body_id) => {
-                            self.pos += 1;
-                            let function_temp;
-                            {
-                                let context = registers.context.borrow_mut();
-                                let function = Function::new(name.clone(), (*args).clone(), body_id.clone(), true, context.namespace.clone(), context.scope.clone());
-                                function_temp = Rc::new(RefCell::new(function));
-                                // context.def_member(name.clone(), function_temp.clone(), VarType::NAMESPACE);
-                                let mut scope = context.scope.borrow_mut();
-                                scope.def_member(name.clone(), function_temp.clone());
-                            }
-                            registers.default = function_temp.clone();
-                        }
+                        // Instruction::Function(name, args, body_id) => {
+                        //     self.pos += 1;
+                        //     let function_temp;
+                        //     {
+                        //         let context = registers.context.borrow_mut();
+                        //         let function = Function::new(name.clone(), (*args).clone(), body_id.clone(), true, context.namespace.clone(), context.scope.clone());
+                        //         function_temp = Rc::new(RefCell::new(function));
+                        //         // context.def_member(name.clone(), function_temp.clone(), VarType::NAMESPACE);
+                        //         let mut scope = context.scope.borrow_mut();
+                        //         scope.def_member(name.clone(), function_temp.clone());
+                        //     }
+                        //     registers.default = function_temp.clone();
+                        // }
                         Instruction::Call(_target_reg, _args_reg, _options) => {
                             immature_break = true;
                             break;
@@ -276,71 +277,71 @@ impl VirtualMachine {
             if immature_break {
                 let instr = &block.instructions[self.pos];
                 match instr {
-                    Instruction::Call(target_reg, args_reg, _options) => {
-                        self.pos += 1;
+                    // Instruction::Call(target_reg, args_reg, _options) => {
+                    //     self.pos += 1;
 
-                        let borrowed_;
-                        let borrowed;
-                        let target;
-                        let new_context;
+                    //     let borrowed_;
+                    //     let borrowed;
+                    //     let target;
+                    //     let new_context;
 
-                        {
-                            let registers = self.registers_store.find(registers_id);
-                            borrowed_ = registers.get(*target_reg);
-                            borrowed = borrowed_.borrow();
-                            target = borrowed.downcast_ref::<Function>().unwrap();
+                    //     {
+                    //         let registers = self.registers_manager.find(registers_id);
+                    //         borrowed_ = registers.get(*target_reg);
+                    //         borrowed = borrowed_.borrow();
+                    //         target = borrowed.downcast_ref::<Function>().unwrap();
 
-                            let mut new_scope = Scope::new(target.parent_scope.clone());
+                    //         let mut new_scope = Scope::new(target.parent_scope.clone());
 
-                            if let Some(reg) = args_reg {
-                                let args_temp = registers.get(*reg);
-                                let args_ = args_temp.borrow();
-                                let args = args_.downcast_ref::<Vec<Rc<RefCell<Value>>>>().unwrap();
+                    //         if let Some(reg) = args_reg {
+                    //             let args_temp = registers.get(*reg);
+                    //             let args_ = args_temp.borrow();
+                    //             let args = args_.downcast_ref::<Vec<Rc<RefCell<Value>>>>().unwrap();
 
-                                for matcher in target.args.data_matchers.iter() {
-                                    let arg_value = args[matcher.index].clone();
-                                    new_scope.def_member(matcher.name.clone(), arg_value);
-                                }
-                            }
+                    //             for matcher in target.args.data_matchers.iter() {
+                    //                 let arg_value = args[matcher.index].clone();
+                    //                 new_scope.def_member(matcher.name.clone(), arg_value);
+                    //             }
+                    //         }
 
-                            let new_namespace = Namespace::new(target.parent_namespace.clone());
-                            new_context = Context::new(Rc::new(RefCell::new(new_namespace)), Rc::new(RefCell::new(new_scope)), None);
-                        }
+                    //         let new_namespace = Namespace::new(target.parent_namespace.clone());
+                    //         new_context = Context::new(Rc::new(RefCell::new(new_namespace)), Rc::new(RefCell::new(new_scope)), None);
+                    //     }
 
-                        let new_registers = self.registers_store.get(Rc::new(RefCell::new(new_context)));
+                    //     let new_registers = self.registers_manager.get(Rc::new(RefCell::new(new_context)));
 
-                        let ret_addr = Address::new(block.id.clone(), self.pos);
-                        new_registers.caller = Some(ret_addr);
-                        new_registers.caller_registers = registers_id;
+                    //     let ret_addr = Address::new(block.id.clone(), self.pos);
+                    //     new_registers.caller = Some(ret_addr);
+                    //     new_registers.caller_registers = registers_id;
 
-                        registers_id = new_registers.id;
-                        block = self.code_manager.blocks[&target.body].clone();
-                        self.pos = 0;
-                    }
-                    Instruction::CallEnd => {
-                        let old_registers_id = registers_id;
+                    //     registers_id = new_registers.id;
+                    //     block = self.code_manager.blocks[&target.body].clone();
+                    //     self.pos = 0;
+                    // }
+                    // Instruction::CallEnd => {
+                    //     let old_registers_id = registers_id;
 
-                        {
-                            let registers = self.registers_store.find(registers_id);
-                            let caller = registers.caller.as_ref();
-                            if let Some(ret_addr) = caller {
-                                block = self.code_manager.blocks[&ret_addr.block_id].clone();
-                                self.pos = ret_addr.pos;
+                    //     {
+                    //         let registers = self.registers_manager.find(registers_id);
+                    //         let caller = registers.caller.as_ref();
+                    //         if let Some(ret_addr) = caller {
+                    //             block = self.code_manager.blocks[&ret_addr.block_id].clone();
+                    //             self.pos = ret_addr.pos;
 
-                                let value = registers.default.clone();
-                                let caller_reg_id = registers.caller_registers;
-                                let caller_registers = self.registers_store.find(caller_reg_id);
-                                // Save returned value in caller's default register
-                                caller_registers.default = value;
+                    //             let value = registers.default.clone();
+                    //             let caller_reg_id = registers.caller_registers;
+                    //             let caller_registers = self.registers_manager.find(caller_reg_id);
+                    //             // Save returned value in caller's default register
+                    //             caller_registers.default = value;
 
-                                registers_id = caller_reg_id;
-                            } else {
-                                self.pos += 1;
-                            }
-                        }
+                    //             registers_id = caller_reg_id;
+                    //         } else {
+                    //             self.pos += 1;
+                    //         }
+                    //     }
 
-                        self.registers_store.free(old_registers_id);
-                    }
+                    //     self.registers_manager.free(old_registers_id);
+                    // }
                     _ => unimplemented!()
                 }
             } else {
@@ -348,7 +349,7 @@ impl VirtualMachine {
             }
         }
 
-        let registers = self.registers_store.find(registers_id);
+        let registers = self.registers_manager.find(registers_id);
         let result = registers.default.clone();
         // dbg!(result.borrow().downcast_ref::<Value>().unwrap());
 
@@ -364,18 +365,18 @@ pub struct Registers {
     pub caller: Option<Address>,
     pub caller_registers: usize,
     pub default: Rc<RefCell<dyn Any>>,
-    pub context: Rc<RefCell<Context>>,
+    pub scope_id: usize,
     pub store: Vec<Option<Rc<RefCell<dyn Any>>>>,
 }
 
 impl Registers {
-    pub fn new(id: usize, context: Rc<RefCell<Context>>) -> Self {
+    pub fn new(id: usize) -> Self {
         Registers {
             id,
             caller: None,
             caller_registers: 0,
             default: Rc::new(RefCell::new(0)),
-            context,
+            scope_id: 0,
             store: Vec::new(),
         }
     }
@@ -404,28 +405,28 @@ impl Registers {
         self.store[key as usize].as_ref().unwrap().clone()
      }
 
-    #[inline]
-    fn get_member(&self, name: &str) -> Option<Rc<RefCell<dyn Any>>> {
-        let context = self.context.borrow();
-        context.get_member(name)
-    }
+    // #[inline]
+    // fn get_member(&self, name: &str) -> Option<Rc<RefCell<dyn Any>>> {
+    //     let scope = self.scope.borrow();
+    //     scope.get_member(name)
+    // }
 
-    #[inline]
-    fn set_member(&mut self, name: String, value: Rc<RefCell<dyn Any>>) {
-        let mut context = self.context.borrow_mut();
-        context.set_member(name.clone(), value.clone());
-    }
+    // #[inline]
+    // fn set_member(&mut self, name: String, value: Rc<RefCell<dyn Any>>) {
+    //     let mut context = self.context.borrow_mut();
+    //     context.set_member(name.clone(), value.clone());
+    // }
 }
 
-pub struct RegistersStore {
+pub struct RegistersManager {
     store: Vec<Registers>,
     freed: Vec<usize>,
     next: usize,
 }
 
-impl RegistersStore {
+impl RegistersManager {
     pub fn new() -> Self {
-        RegistersStore {
+        RegistersManager {
             store: Vec::new(),
             freed: Vec::new(),
             next: 0,
@@ -433,17 +434,16 @@ impl RegistersStore {
     }
 
     #[inline]
-    pub fn get(&mut self, context: Rc<RefCell<Context>>) -> &mut Registers {
+    pub fn get(&mut self) -> &mut Registers {
         if self.freed.is_empty() {
             let id = self.next;
-            let registers = Registers::new(id, context);
+            let registers = Registers::new(id);
             self.store.insert(self.next, registers);
             self.next += 1;
             self.store.get_mut(id).unwrap()
         } else {
             let id = self.freed.pop().unwrap();
             let registers = self.store.get_mut(id).unwrap();
-            registers.context = context;
             registers
         }
     }
@@ -555,40 +555,84 @@ impl CodeManager {
     }
 }
 
-// struct Scope {
-//     pub id: usize,
-//     /// Total usage of the scope
-//     ///   When the scope is created/re-used, incremented by 1
-//     ///   When the current block ends, decremented by 1
-//     ///   When a member is referenced in a child scope, incremented by 1
-//     ///   When the member is not used any more, or the child block ends, decrement by 1
-//     ///   When usage is 0, clear members, deep_members etc
-//     pub usage: usize,
-//     pub parent: Option<usize>,
-//     pub members: Vec<Rc<RefCell<dyn Any>>>,
-//     pub deep_members: HashMap<String, Rc<RefCell<dyn Any>>>,
-//     pub inherited_members: Option<HashMap<String, ScopeRef>>,
-// }
+#[derive(Debug)]
+struct Scope {
+    pub id: usize,
+    /// Total usage of the scope
+    ///   When the scope is created/re-used, incremented by 1
+    ///   When the current block ends, decremented by 1
+    ///   When a member is referenced in a child scope, incremented by 1
+    ///   When the member is not used any more, or the child block ends, decrement by 1
+    ///   When usage is 0, clear members, deep_members etc
+    pub usage: usize,
+    /// scope id of ancestor scopes
+    /// 0: parent, 1: grandparent, 2: ...
+    /// Compiler should know whether a member comes from a parent or a grand-parent
+    pub ancestors: Option<Vec<usize>>,
+    pub members: Vec<Rc<RefCell<dyn Any>>>,
+    pub deep_members: Option<HashMap<String, Rc<RefCell<dyn Any>>>>,
+}
 
-// impl Scope {
-//     pub fn new(id: usize) -> Self {
-//         Scope {
-//             id,
-//             usage: 1,
-//             parent: None,
-//             members: Vec::new(),
-//             deep_members: HashMap::new(),
-//             inherited_members: None,
-//         }
-//     }
-// }
+impl Scope {
+    pub fn new(id: usize) -> Self {
+        Scope {
+            id,
+            usage: 1,
+            ancestors: None,
+            members: Vec::new(),
+            deep_members: None,
+        }
+    }
+}
 
-// enum ScopeRef {
-//     /// Member(scope id, index to members)
-//     Member(usize, usize),
-//     /// DeepMember(scope id, name in deep_members)
-//     DeepMember(usize, String),
-// }
+#[derive(Debug)]
+enum ScopeRef {
+    /// index in members
+    Index(usize),
+    /// name in deep_members
+    Name(String),
+    /// (ancestors index, index in members)
+    InheritedIndex(usize, usize),
+    /// (ancestors index, name in deep_members)
+    InheritedName(usize, String),
+}
 
-// struct ScopeManager {
-// }
+struct ScopeManager {
+    store: Vec<Scope>,
+    freed: Vec<usize>,
+    next: usize,
+}
+
+impl ScopeManager {
+    pub fn new() -> Self {
+        ScopeManager {
+            store: Vec::new(),
+            freed: Vec::new(),
+            next: 0,
+        }
+    }
+
+    #[inline]
+    pub fn get(&mut self) -> &mut Scope {
+        if self.freed.is_empty() {
+            let id = self.next;
+            let scope = Scope::new(id);
+            self.store.insert(self.next, scope);
+            self.next += 1;
+            self.store.get_mut(id).unwrap()
+        } else {
+            let id = self.freed.pop().unwrap();
+            self.store.get_mut(id).unwrap()
+        }
+    }
+
+    #[inline]
+    pub fn find(&mut self, id: usize) -> &mut Scope {
+        self.store.get_mut(id).unwrap()
+    }
+
+    #[inline]
+    pub fn free(&mut self, id: usize) {
+        self.freed.push(id);
+    }
+}

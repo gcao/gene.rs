@@ -215,6 +215,15 @@ pub enum Instruction {
     CopyFromDefault(u16),
     CopyToDefault(u16),
 
+    /// index in scope, register
+    ScopeDefMemberByIndex(usize, usize),
+    /// name, register
+    ScopeDefMemberByName(String, usize),
+    ScopeSetMemberByIndex(usize, usize),
+    ScopeSetMemberByName(String, usize),
+    ScopeGetMemberByIndex(usize),
+    ScopeGetMemberByName(String),
+
     DefMember(String),
     DefMemberInScope(String),
     DefMemberInNS(String),

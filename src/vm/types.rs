@@ -15,209 +15,209 @@ impl Application {
     }
 }
 
-#[derive(Debug)]
-pub struct Context {
-    pub namespace: Rc<RefCell<Namespace>>,
-    pub scope: Rc<RefCell<Scope>>,
-    pub _self: Option<Rc<RefCell<dyn Any>>>,
-}
+// #[derive(Debug)]
+// pub struct Context {
+//     pub namespace: Rc<RefCell<Namespace>>,
+//     pub scope: Rc<RefCell<Scope>>,
+//     pub _self: Option<Rc<RefCell<dyn Any>>>,
+// }
 
-pub enum VarType {
-    SCOPE,
-    NAMESPACE,
-}
+// pub enum VarType {
+//     SCOPE,
+//     NAMESPACE,
+// }
 
-impl Context {
-    pub fn new(namespace: Rc<RefCell<Namespace>>, scope: Rc<RefCell<Scope>>, _self: Option<Rc<RefCell<dyn Any>>>) -> Self {
-        Self {
-            namespace,
-            scope,
-            _self,
-        }
-    }
+// impl Context {
+//     pub fn new(namespace: Rc<RefCell<Namespace>>, scope: Rc<RefCell<Scope>>, _self: Option<Rc<RefCell<dyn Any>>>) -> Self {
+//         Self {
+//             namespace,
+//             scope,
+//             _self,
+//         }
+//     }
 
-    pub fn root() -> Self {
-        Self {
-            namespace: Rc::new(RefCell::new(Namespace::root())),
-            scope: Rc::new(RefCell::new(Scope::root())),
-            _self: None,
-        }
-    }
+//     pub fn root() -> Self {
+//         Self {
+//             namespace: Rc::new(RefCell::new(Namespace::root())),
+//             scope: Rc::new(RefCell::new(Scope::root())),
+//             _self: None,
+//         }
+//     }
 
-    #[inline]
-    pub fn def_member(&mut self, name: String, value: Rc<RefCell<dyn Any>>, var_type: VarType) {
-        match var_type {
-            VarType::SCOPE => {
-                self.scope.borrow_mut().def_member(name, value);
-            }
-            VarType::NAMESPACE => {
-                self.namespace.borrow_mut().def_member(name, value);
-            }
-        }
-    }
+//     #[inline]
+//     pub fn def_member(&mut self, name: String, value: Rc<RefCell<dyn Any>>, var_type: VarType) {
+//         match var_type {
+//             VarType::SCOPE => {
+//                 self.scope.borrow_mut().def_member(name, value);
+//             }
+//             VarType::NAMESPACE => {
+//                 self.namespace.borrow_mut().def_member(name, value);
+//             }
+//         }
+//     }
 
-    #[inline]
-    pub fn get_member(&self, name: &str) -> Option<Rc<RefCell<dyn Any>>> {
-        let result = self.scope.borrow().get_member(name);
-        if result.is_none() {
-            self.namespace.borrow().get_member(name)
-        } else {
-            result
-        }
-    }
+//     #[inline]
+//     pub fn get_member(&self, name: &str) -> Option<Rc<RefCell<dyn Any>>> {
+//         let result = self.scope.borrow().get_member(name);
+//         if result.is_none() {
+//             self.namespace.borrow().get_member(name)
+//         } else {
+//             result
+//         }
+//     }
 
-    #[inline]
-    pub fn set_member(&mut self, name: String, value: Rc<RefCell<dyn Any>>) {
-        if self.scope.borrow().has_member(name.clone()) {
-            self.scope.borrow_mut().set_member(name, value);
-        } else if self.namespace.borrow().has_member(name.clone()) {
-            self.namespace.borrow_mut().set_member(name, value);
-        } else {
-            panic!("Undefined variable: {}", name);
-        }
-    }
-}
+//     #[inline]
+//     pub fn set_member(&mut self, name: String, value: Rc<RefCell<dyn Any>>) {
+//         if self.scope.borrow().has_member(name.clone()) {
+//             self.scope.borrow_mut().set_member(name, value);
+//         } else if self.namespace.borrow().has_member(name.clone()) {
+//             self.namespace.borrow_mut().set_member(name, value);
+//         } else {
+//             panic!("Undefined variable: {}", name);
+//         }
+//     }
+// }
 
-#[derive(Clone, Debug)]
-pub struct Namespace {
-    parent: Option<Rc<RefCell<Namespace>>>,
-    members: HashMap<String, Rc<RefCell<dyn Any>>>,
-}
+// #[derive(Clone, Debug)]
+// pub struct Namespace {
+//     parent: Option<Rc<RefCell<Namespace>>>,
+//     members: HashMap<String, Rc<RefCell<dyn Any>>>,
+// }
 
-impl Namespace {
-    pub fn new(parent: Rc<RefCell<Namespace>>) -> Self {
-        Self {
-            parent: Some(parent),
-            members: HashMap::new(),
-        }
-    }
+// impl Namespace {
+//     pub fn new(parent: Rc<RefCell<Namespace>>) -> Self {
+//         Self {
+//             parent: Some(parent),
+//             members: HashMap::new(),
+//         }
+//     }
 
-    pub fn root() -> Self {
-        Self {
-            parent: None,
-            members: HashMap::new(),
-        }
-    }
+//     pub fn root() -> Self {
+//         Self {
+//             parent: None,
+//             members: HashMap::new(),
+//         }
+//     }
 
-    #[inline]
-    pub fn def_member(&mut self, name: String, value: Rc<RefCell<dyn Any>>) {
-        self.members.insert(name, value);
-    }
+//     #[inline]
+//     pub fn def_member(&mut self, name: String, value: Rc<RefCell<dyn Any>>) {
+//         self.members.insert(name, value);
+//     }
 
-    #[inline]
-    pub fn get_member(&self, name: &str) -> Option<Rc<RefCell<dyn Any>>> {
-        if self.members.contains_key(name) {
-            self.members.get(name).cloned()
-        } else if self.parent.is_some() {
-            self.parent.clone().unwrap().borrow().get_member(name)
-        } else {
-            None
-        }
-    }
+//     #[inline]
+//     pub fn get_member(&self, name: &str) -> Option<Rc<RefCell<dyn Any>>> {
+//         if self.members.contains_key(name) {
+//             self.members.get(name).cloned()
+//         } else if self.parent.is_some() {
+//             self.parent.clone().unwrap().borrow().get_member(name)
+//         } else {
+//             None
+//         }
+//     }
 
-    #[inline]
-    pub fn set_member(&mut self, name: String, value: Rc<RefCell<dyn Any>>) {
-        if self.members.contains_key(&name) {
-            self.members.insert(name.clone(), value);
-        } else {
-            let parent = self.parent.clone().unwrap();
-            let mut borrowed = parent.borrow_mut();
-            borrowed.set_member(name, value);
-        }
-    }
+//     #[inline]
+//     pub fn set_member(&mut self, name: String, value: Rc<RefCell<dyn Any>>) {
+//         if self.members.contains_key(&name) {
+//             self.members.insert(name.clone(), value);
+//         } else {
+//             let parent = self.parent.clone().unwrap();
+//             let mut borrowed = parent.borrow_mut();
+//             borrowed.set_member(name, value);
+//         }
+//     }
 
-    #[inline]
-    pub fn has_member(&self, name: String) -> bool {
-        if self.members.contains_key(&name) {
-            true
-        } else if self.parent.is_some() {
-            self.parent.clone().unwrap().borrow().has_member(name)
-        } else {
-            false
-        }
-    }
-}
+//     #[inline]
+//     pub fn has_member(&self, name: String) -> bool {
+//         if self.members.contains_key(&name) {
+//             true
+//         } else if self.parent.is_some() {
+//             self.parent.clone().unwrap().borrow().has_member(name)
+//         } else {
+//             false
+//         }
+//     }
+// }
 
-#[derive(Clone, Debug)]
-pub struct Scope {
-    pub parent: Option<Rc<RefCell<Scope>>>,
-    pub members: HashMap<String, Rc<RefCell<dyn Any>>>,
-    pub top_level_members: Vec<Rc<RefCell<dyn Any>>>,
-}
+// #[derive(Clone, Debug)]
+// pub struct Scope {
+//     pub parent: Option<Rc<RefCell<Scope>>>,
+//     pub members: HashMap<String, Rc<RefCell<dyn Any>>>,
+//     pub top_level_members: Vec<Rc<RefCell<dyn Any>>>,
+// }
 
-impl Scope {
-    pub fn new(parent: Rc<RefCell<Scope>>) -> Self {
-        Scope {
-            parent: Some(parent),
-            members: HashMap::new(),
-            top_level_members: Vec::new(),
-        }
-    }
+// impl Scope {
+//     pub fn new(parent: Rc<RefCell<Scope>>) -> Self {
+//         Scope {
+//             parent: Some(parent),
+//             members: HashMap::new(),
+//             top_level_members: Vec::new(),
+//         }
+//     }
 
-    pub fn root() -> Self {
-        Scope {
-            parent: None,
-            members: HashMap::new(),
-            top_level_members: Vec::new(),
-        }
-    }
+//     pub fn root() -> Self {
+//         Scope {
+//             parent: None,
+//             members: HashMap::new(),
+//             top_level_members: Vec::new(),
+//         }
+//     }
 
-    #[inline]
-    pub fn def_member(&mut self, name: String, value: Rc<RefCell<dyn Any>>) {
-        self.members.insert(name, value);
-    }
+//     #[inline]
+//     pub fn def_member(&mut self, name: String, value: Rc<RefCell<dyn Any>>) {
+//         self.members.insert(name, value);
+//     }
 
-    #[inline]
-    pub fn get_member(&self, name: &str) -> Option<Rc<RefCell<dyn Any>>> {
-        let value = self.members.get(name);
-        if value.is_none() && self.parent.is_some() {
-            let parent_ = self.parent.clone().unwrap();
-            let parent = parent_.borrow();
-            let v = parent.get_member(name);
-            match v {
-                Some(value) => Some(value.clone()),
-                None => None,
-            }
-        } else {
-            value.cloned()
-        }
-    }
+//     #[inline]
+//     pub fn get_member(&self, name: &str) -> Option<Rc<RefCell<dyn Any>>> {
+//         let value = self.members.get(name);
+//         if value.is_none() && self.parent.is_some() {
+//             let parent_ = self.parent.clone().unwrap();
+//             let parent = parent_.borrow();
+//             let v = parent.get_member(name);
+//             match v {
+//                 Some(value) => Some(value.clone()),
+//                 None => None,
+//             }
+//         } else {
+//             value.cloned()
+//         }
+//     }
 
-    #[inline]
-    pub fn set_member(&mut self, name: String, value: Rc<RefCell<dyn Any>>) {
-        if self.members.contains_key(&name) {
-            self.members.insert(name.clone(), value);
-        } else {
-            self.parent.clone().unwrap().borrow_mut().set_member(name, value);
-        }
-    }
+//     #[inline]
+//     pub fn set_member(&mut self, name: String, value: Rc<RefCell<dyn Any>>) {
+//         if self.members.contains_key(&name) {
+//             self.members.insert(name.clone(), value);
+//         } else {
+//             self.parent.clone().unwrap().borrow_mut().set_member(name, value);
+//         }
+//     }
 
-    #[inline]
-    pub fn has_member(&self, name: String) -> bool {
-        if self.members.contains_key(&name) {
-            true
-        } else if self.parent.is_some() {
-            self.parent.clone().unwrap().borrow().has_member(name)
-        } else {
-            false
-        }
-    }
+//     #[inline]
+//     pub fn has_member(&self, name: String) -> bool {
+//         if self.members.contains_key(&name) {
+//             true
+//         } else if self.parent.is_some() {
+//             self.parent.clone().unwrap().borrow().has_member(name)
+//         } else {
+//             false
+//         }
+//     }
 
-    #[inline]
-    pub fn add_top_level_member(&mut self, value: Rc<RefCell<dyn Any>>) {
-        self.top_level_members.push(value);
-    }
+//     #[inline]
+//     pub fn add_top_level_member(&mut self, value: Rc<RefCell<dyn Any>>) {
+//         self.top_level_members.push(value);
+//     }
 
-    #[inline]
-    pub fn set_top_level_member(&mut self, index: usize, value: Rc<RefCell<dyn Any>>) {
-        self.top_level_members[index] = value;
-    }
+//     #[inline]
+//     pub fn set_top_level_member(&mut self, index: usize, value: Rc<RefCell<dyn Any>>) {
+//         self.top_level_members[index] = value;
+//     }
 
-    #[inline]
-    pub fn get_top_level_member(&self, index: usize) -> Rc<RefCell<dyn Any>> {
-        self.top_level_members[index].clone()
-    }
-}
+//     #[inline]
+//     pub fn get_top_level_member(&self, index: usize) -> Rc<RefCell<dyn Any>> {
+//         self.top_level_members[index].clone()
+//     }
+// }
 
 #[derive(Debug, Clone)]
 pub struct DataMatcher {
@@ -275,8 +275,8 @@ pub struct Function {
     pub args: Matcher,
     pub body: String,
     pub inherit_scope: bool,
-    pub parent_namespace: Rc<RefCell<Namespace>>,
-    pub parent_scope: Rc<RefCell<Scope>>,
+    // pub parent_namespace: Rc<RefCell<Namespace>>,
+    // pub parent_scope: Rc<RefCell<Scope>>,
 }
 
 impl<'a> Function {
@@ -285,16 +285,16 @@ impl<'a> Function {
         args: Matcher,
         body: String,
         inherit_scope: bool,
-        parent_namespace: Rc<RefCell<Namespace>>,
-        parent_scope: Rc<RefCell<Scope>>,
+        // parent_namespace: Rc<RefCell<Namespace>>,
+        // parent_scope: Rc<RefCell<Scope>>,
     ) -> Self {
         Function {
             name,
             args,
             body,
             inherit_scope,
-            parent_namespace,
-            parent_scope,
+            // parent_namespace,
+            // parent_scope,
         }
     }
 }
